@@ -1,0 +1,31 @@
+node_modules/
+dist/
+release/
+coverage/
+.stryker-data/
+data/
+mock-fl/
+artifacts/
+
+# Local runtime state and personal data
+fl-hub-config.json
+server/users.json
+*.log
+*.tmp
+
+# Generated backups and binaries
+mock-fl/sider_backups/
+STRYKER-Launcher.exe
+public/STRYKER-Launcher.exe
+server/picker.exe
+/stryker.ico
+src/assets/stryker-logo.png
+
+# Environment and editor files
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

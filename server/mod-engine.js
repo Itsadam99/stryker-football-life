@@ -1,0 +1,529 @@
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import { assertPathInside, sanitizeSegment } from "./paths.js";
+import { inferCategory } from "./sider-manager.js";
+import { extractZipSafely } from "./zip-extractor.js";
+
+const MAX_ARCHIVE_BYTES = 20 * 1024 * 1024 * 1024;
+const MAX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024 * 1024;
+const MAX_FILES = 200_000;
+const BLOCKED_EXECUTABLE_EXTENSIONS = new Set([".exe", ".dll", ".bat", ".cmd", ".com", ".msi", ".ps1", ".vbs"]);
+const ALLOWED_CATEGORIES = new Set(["gameplay", "turf", "menu", "audio", "kit", "face", "scoreboard", "other"]);
+
+function cleanText(value, fallback, maxLength = 200) {
+  const text = typeof value === "string" ? value.replace(/[\u0000-\u001f\u007f]/g, " ").trim() : "";
+  return (text || fallback).slice(0, maxLength);
+}
+
+function hashFile(filePath) {
+  const hash = crypto.createHash("sha256");
+  const descriptor = fs.openSync(filePath, "r");
+  const buffer = Buffer.allocUnsafe(1024 * 1024);
+  try {
+    let bytesRead = 0;
+    do {
+      bytesRead = fs.readSync(descriptor, buffer, 0, buffer.length, null);
+      if (bytesRead > 0) hash.update(buffer.subarray(0, bytesRead));
+    } while (bytesRead > 0);
+  } finally {
+    fs.closeSync(descriptor);
+  }
+  return hash.digest("hex");
+}
+
+function walkFiles(root, { maxFiles = MAX_FILES } = {}) {
+  const results = [];
+  const stack = [root];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isSymbolicLink()) throw new Error("Les liens symboliques ne sont pas acceptés dans les archives.");
+      if (entry.isDirectory()) stack.push(fullPath);
+      if (entry.isFile()) {
+        results.push(fullPath);
+        if (results.length > maxFiles) throw new Error(`Archive trop volumineuse : plus de ${maxFiles.toLocaleString("fr-FR")} fichiers.`);
+      }
+    }
+  }
+  return results;
+}
+
+function relativeFiles(root) {
+  return walkFiles(root).map((file) => path.relative(root, file).replace(/\\/g, "/").toLowerCase());
+}
+
+function findDirectoriesNamed(root, targetName, maxDepth = 4) {
+  const matches = [];
+  const queue = [{ directory: root, depth: 0 }];
+  while (queue.length > 0) {
+    const { directory, depth } = queue.shift();
+    if (depth > maxDepth) continue;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const fullPath = path.join(directory, entry.name);
+      if (entry.name.toLowerCase() === targetName.toLowerCase()) matches.push(fullPath);
+      else queue.push({ directory: fullPath, depth: depth + 1 });
+    }
+  }
+  return matches;
+}
+
+function findManifest(extractRoot) {
+  const candidates = walkFiles(extractRoot, { maxFiles: MAX_FILES })
+    .filter((file) => ["stryker.mod.json", "mod.json"].includes(path.basename(file).toLowerCase()))
+    .sort((a, b) => a.split(path.sep).length - b.split(path.sep).length);
+
+  for (const candidate of candidates) {
+    try {
+      const manifest = JSON.parse(fs.readFileSync(candidate, "utf-8"));
+      if (manifest && Array.isArray(manifest.components)) {
+        return { manifest, manifestPath: candidate, baseDir: path.dirname(candidate) };
+      }
+    } catch {
+      // A community mod.json without STRYKER fields is treated as ordinary metadata.
+    }
+  }
+  return null;
+}
+
+function validateManifestComponents(manifestInfo, extractRoot) {
+  return manifestInfo.manifest.components.map((component) => {
+    if (!component || !["livecpk", "lua"].includes(component.type)) {
+      throw new Error("Le manifeste contient un type de composant non pris en charge.");
+    }
+    if (!component.root || typeof component.root !== "string") {
+      throw new Error("Chaque composant du manifeste doit définir une racine.");
+    }
+    const absoluteRoot = path.resolve(manifestInfo.baseDir, component.root);
+    assertPathInside(extractRoot, absoluteRoot, "Composant du manifeste");
+    if (!fs.existsSync(absoluteRoot) || !fs.statSync(absoluteRoot).isDirectory()) {
+      throw new Error(`Composant introuvable : ${component.root}`);
+    }
+
+    const normalized = {
+      type: component.type,
+      root: path.relative(extractRoot, absoluteRoot),
+    };
+    if (component.type === "livecpk") normalized.files = relativeFiles(absoluteRoot);
+    if (component.type === "lua") {
+      const entrypoints = Array.isArray(component.entrypoints) ? component.entrypoints : [];
+      if (entrypoints.length === 0) throw new Error("Un composant Lua doit déclarer au moins un entrypoint.");
+      normalized.entrypoints = entrypoints.map((entrypoint) => {
+        const absoluteEntry = path.resolve(absoluteRoot, entrypoint);
+        assertPathInside(absoluteRoot, absoluteEntry, "Entrée Lua");
+        if (!fs.existsSync(absoluteEntry) || !absoluteEntry.toLowerCase().endsWith(".lua")) {
+          throw new Error(`Entrée Lua invalide : ${entrypoint}`);
+        }
+        return path.relative(absoluteRoot, absoluteEntry).replace(/\\/g, "/");
+      });
+    }
+    return normalized;
+  });
+}
+
+function analyzeHeuristically(extractRoot) {
+  const components = [];
+  const directLivecpk = findDirectoriesNamed(extractRoot, "livecpk", 3)
+    .sort((a, b) => a.split(path.sep).length - b.split(path.sep).length)[0];
+
+  if (directLivecpk) {
+    for (const entry of fs.readdirSync(directLivecpk, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const root = path.join(directLivecpk, entry.name);
+      const files = relativeFiles(root);
+      if (files.length > 0) {
+        components.push({ type: "livecpk", root: path.relative(extractRoot, root), files });
+      }
+    }
+  }
+
+  if (components.length === 0) {
+    const commonDirectories = findDirectoriesNamed(extractRoot, "common", 4);
+    const uniqueParents = [...new Set(commonDirectories.map((directory) => path.dirname(directory)))];
+    for (const root of uniqueParents) {
+      components.push({ type: "livecpk", root: path.relative(extractRoot, root), files: relativeFiles(root) });
+    }
+  }
+
+  const modulesDirectory = findDirectoriesNamed(extractRoot, "modules", 3)
+    .sort((a, b) => a.split(path.sep).length - b.split(path.sep).length)[0];
+  if (modulesDirectory) {
+    const luaFiles = walkFiles(modulesDirectory).filter((file) => file.toLowerCase().endsWith(".lua"));
+    if (luaFiles.length === 1) {
+      components.push({
+        type: "lua",
+        root: path.relative(extractRoot, modulesDirectory),
+        entrypoints: [path.relative(modulesDirectory, luaFiles[0]).replace(/\\/g, "/")],
+      });
+    } else if (luaFiles.length > 1) {
+      throw new Error(
+        "Plusieurs modules Lua ont été détectés. Ajoutez un fichier stryker.mod.json déclarant explicitement les entrypoints pour éviter une installation incorrecte."
+      );
+    }
+  }
+
+  if (components.length === 0) {
+    throw new Error(
+      "Aucune structure LiveCPK ou module Lua simple n’a été reconnue. Cette archive nécessite un manifeste stryker.mod.json ou une installation manuelle."
+    );
+  }
+
+  return components;
+}
+
+function inspectExtractedContent(extractRoot) {
+  const files = walkFiles(extractRoot);
+  let totalBytes = 0;
+  for (const file of files) {
+    totalBytes += fs.statSync(file).size;
+    if (totalBytes > MAX_UNCOMPRESSED_BYTES) {
+      throw new Error("Archive refusée : taille décompressée supérieure à 100 Go.");
+    }
+  }
+  const blocked = files
+    .filter((file) => BLOCKED_EXECUTABLE_EXTENSIONS.has(path.extname(file).toLowerCase()))
+    .map((file) => path.relative(extractRoot, file));
+  if (blocked.length > 0) {
+    throw new Error(
+      `Archive contenant du code exécutable (${blocked.slice(0, 3).join(", ")}). STRYKER refuse l’installation automatique de ce type de mod.`
+    );
+  }
+}
+
+export class ModEngine {
+  constructor({ store, siderManager, dataDirectories }) {
+    this.store = store;
+    this.siderManager = siderManager;
+    this.dataDirectories = dataDirectories;
+  }
+
+  activeProfile(state = this.store.snapshot()) {
+    const profile = state.profiles.find((item) => item.id === state.activeProfileId);
+    if (!profile) throw new Error("Profil actif introuvable.");
+    return profile;
+  }
+
+  list() {
+    const state = this.store.snapshot();
+    const profile = this.activeProfile(state);
+    const enabled = new Set(profile.enabledMods);
+    return profile.modOrder
+      .map((id, index) => state.mods[id] ? { ...state.mods[id], enabled: enabled.has(id), priority: index + 1 } : null)
+      .filter(Boolean);
+  }
+
+  async installArchive(archivePath, metadata = {}) {
+    if (!archivePath || typeof archivePath !== "string") throw new Error("Sélectionnez une archive ZIP.");
+    const resolvedArchive = path.resolve(archivePath);
+    if (!fs.existsSync(resolvedArchive) || !fs.statSync(resolvedArchive).isFile()) throw new Error("Archive introuvable.");
+    if (path.extname(resolvedArchive).toLowerCase() !== ".zip") {
+      throw new Error("Seules les archives ZIP sont installées automatiquement. Extrayez les archives RAR/7z puis créez un ZIP ou utilisez les instructions de l’auteur.");
+    }
+    if (fs.statSync(resolvedArchive).size > MAX_ARCHIVE_BYTES) throw new Error("Archive supérieure à la limite de sécurité de 20 Go.");
+
+    const archiveHash = hashFile(resolvedArchive);
+    const existing = Object.values(this.store.snapshot().mods).find((mod) => mod.archiveHash === archiveHash);
+    if (existing) throw new Error(`Cette archive est déjà installée sous le nom « ${existing.name} ».`);
+
+    const tempRoot = path.join(this.dataDirectories.temp, `install-${crypto.randomUUID()}`);
+    fs.mkdirSync(tempRoot, { recursive: true });
+    let totalFiles = 0;
+    let totalBytes = 0;
+
+    try {
+      await extractZipSafely(resolvedArchive, tempRoot, {
+        onEntry: (entry) => {
+          totalFiles += 1;
+          totalBytes += Number(entry.uncompressedSize || 0);
+          if (totalFiles > MAX_FILES || totalBytes > MAX_UNCOMPRESSED_BYTES) {
+            throw new Error("Archive refusée : limite de fichiers ou de taille décompressée dépassée.");
+          }
+        },
+      });
+
+      inspectExtractedContent(tempRoot);
+      const manifestInfo = findManifest(tempRoot);
+      const components = manifestInfo
+        ? validateManifestComponents(manifestInfo, tempRoot)
+        : analyzeHeuristically(tempRoot);
+
+      const manifest = manifestInfo?.manifest || {};
+      const requestedName = cleanText(metadata.name || manifest.name, path.basename(resolvedArchive, path.extname(resolvedArchive)), 120);
+      const idBase = sanitizeSegment(metadata.id || manifest.id || requestedName, "mod").toLowerCase();
+      const id = `${idBase}-${archiveHash.slice(0, 8)}`;
+      const stagingPath = path.join(this.dataDirectories.mods, id);
+      assertPathInside(this.dataDirectories.mods, stagingPath, "Dossier du mod");
+      if (fs.existsSync(stagingPath)) throw new Error("Le dossier de staging cible existe déjà.");
+      fs.renameSync(tempRoot, stagingPath);
+
+      const record = {
+        id,
+        name: requestedName,
+        version: cleanText(metadata.version || manifest.version, "1.0.0", 40),
+        author: cleanText(metadata.author || manifest.author, "Auteur non renseigné", 120),
+        category: ALLOWED_CATEGORIES.has(metadata.category || manifest.category) ? (metadata.category || manifest.category) : inferCategory(requestedName),
+        compatibility: (Array.isArray(metadata.compatibility) ? metadata.compatibility : Array.isArray(manifest.compatibility) ? manifest.compatibility : []).filter((value) => typeof value === "string").slice(0, 20).map((value) => value.slice(0, 100)),
+        dependencies: (Array.isArray(manifest.dependencies) ? manifest.dependencies : []).filter((dependency) => dependency && typeof dependency.id === "string" && dependency.id.length <= 160).slice(0, 100).map((dependency) => ({ id: dependency.id, ...(typeof dependency.version === "string" ? { version: dependency.version.slice(0, 40) } : {}) })),
+        sourceUrl: cleanText(metadata.sourceUrl || manifest.sourceUrl, "", 1000),
+        sourceType: metadata.sourceType || "local-archive",
+        archiveName: path.basename(resolvedArchive),
+        archiveHash,
+        installedAt: new Date().toISOString(),
+        stagingPath,
+        components,
+        managed: true,
+      };
+
+      const previous = this.store.snapshot();
+      try {
+        this.store.update((draft) => {
+          draft.mods[id] = record;
+          const profile = draft.profiles.find((item) => item.id === draft.activeProfileId);
+          profile.modOrder.push(id);
+          profile.enabledMods.push(id);
+          profile.updatedAt = new Date().toISOString();
+        });
+        const next = this.store.snapshot();
+        const deployment = this.siderManager.deploy(next, this.activeProfile(next));
+        this.store.update((draft) => {
+          draft.deployment = {
+            lastDeployedAt: new Date().toISOString(),
+            lastSiderHash: deployment.hash,
+            profileId: draft.activeProfileId,
+          };
+        });
+      } catch (error) {
+        this.store.replace(previous);
+        const failedTarget = path.join(this.dataDirectories.trash, `failed-${id}-${Date.now()}`);
+        if (fs.existsSync(stagingPath)) fs.renameSync(stagingPath, failedTarget);
+        throw error;
+      }
+
+      this.store.addActivity("install", `Mod installé : ${record.name}`, { modId: id, archiveHash });
+      return record;
+    } catch (error) {
+      if (fs.existsSync(tempRoot)) fs.rmSync(tempRoot, { recursive: true, force: true });
+      throw error;
+    }
+  }
+
+  deployCurrentProfile() {
+    const state = this.store.snapshot();
+    const profile = this.activeProfile(state);
+    const deployment = this.siderManager.deploy(state, profile);
+    this.store.update((draft) => {
+      draft.deployment = {
+        lastDeployedAt: new Date().toISOString(),
+        lastSiderHash: deployment.hash,
+        profileId: profile.id,
+      };
+    });
+    return deployment;
+  }
+
+  toggle(modId, enabled) {
+    const state = this.store.snapshot();
+    if (!state.mods[modId]) throw new Error("Mod introuvable.");
+    const previous = state;
+    this.store.update((draft) => {
+      const profile = draft.profiles.find((item) => item.id === draft.activeProfileId);
+      const set = new Set(profile.enabledMods);
+      enabled ? set.add(modId) : set.delete(modId);
+      profile.enabledMods = [...set];
+      profile.updatedAt = new Date().toISOString();
+    });
+    try {
+      this.deployCurrentProfile();
+    } catch (error) {
+      this.store.replace(previous);
+      throw error;
+    }
+    this.store.addActivity("profile", `${enabled ? "Activation" : "Désactivation"} : ${state.mods[modId].name}`, { modId });
+    return this.list().find((mod) => mod.id === modId);
+  }
+
+  reorder(orderedIds) {
+    const state = this.store.snapshot();
+    const profile = this.activeProfile(state);
+    const expected = [...profile.modOrder].sort();
+    const received = [...new Set(orderedIds || [])].sort();
+    if (expected.length !== received.length || expected.some((id, index) => id !== received[index])) {
+      throw new Error("La liste de réorganisation doit contenir chaque mod exactement une fois.");
+    }
+    const previous = state;
+    this.store.update((draft) => {
+      const target = draft.profiles.find((item) => item.id === draft.activeProfileId);
+      target.modOrder = [...orderedIds];
+      target.updatedAt = new Date().toISOString();
+    });
+    try {
+      this.deployCurrentProfile();
+    } catch (error) {
+      this.store.replace(previous);
+      throw error;
+    }
+    this.store.addActivity("profile", "Priorités des mods mises à jour", { orderedIds });
+    return this.list();
+  }
+
+  uninstall(modId) {
+    const state = this.store.snapshot();
+    const mod = state.mods[modId];
+    if (!mod) throw new Error("Mod introuvable.");
+    const previous = state;
+    let retiredStaging = null;
+    if (fs.existsSync(mod.stagingPath)) {
+      assertPathInside(this.dataDirectories.mods, mod.stagingPath, "Staging du mod");
+      retiredStaging = path.join(this.dataDirectories.trash, `${sanitizeSegment(mod.id)}-${Date.now()}`);
+      assertPathInside(this.dataDirectories.trash, retiredStaging, "Corbeille");
+      fs.renameSync(mod.stagingPath, retiredStaging);
+    }
+
+    try {
+      this.store.update((draft) => {
+        delete draft.mods[modId];
+        for (const profile of draft.profiles) {
+          profile.modOrder = profile.modOrder.filter((id) => id !== modId);
+          profile.enabledMods = profile.enabledMods.filter((id) => id !== modId);
+          profile.updatedAt = new Date().toISOString();
+        }
+      });
+      this.deployCurrentProfile();
+    } catch (error) {
+      this.store.replace(previous);
+      if (retiredStaging && fs.existsSync(retiredStaging) && !fs.existsSync(mod.stagingPath)) {
+        fs.renameSync(retiredStaging, mod.stagingPath);
+      }
+      throw error;
+    }
+
+    const recoverablePaths = retiredStaging ? [retiredStaging] : [];
+    this.store.addActivity("uninstall", `Mod désinstallé : ${mod.name}`, { modId, recoverablePaths });
+    return { success: true, recoverablePaths };
+  }
+
+  conflicts() {
+    const state = this.store.snapshot();
+    const profile = this.activeProfile(state);
+    const enabled = new Set(profile.enabledMods);
+    const fileOwners = new Map();
+
+    for (const modId of profile.modOrder) {
+      if (!enabled.has(modId)) continue;
+      const mod = state.mods[modId];
+      for (const component of mod?.components || []) {
+        if (component.type !== "livecpk") continue;
+        for (const file of component.files || []) {
+          const owners = fileOwners.get(file) || [];
+          owners.push(modId);
+          fileOwners.set(file, owners);
+        }
+      }
+    }
+
+    const conflicts = [];
+    for (const [file, owners] of fileOwners.entries()) {
+      if (owners.length < 2) continue;
+      conflicts.push({
+        file,
+        winnerModId: owners[0],
+        loserModIds: owners.slice(1),
+        modIds: owners,
+      });
+      if (conflicts.length >= 10_000) break;
+    }
+
+    return {
+      total: conflicts.length,
+      truncated: conflicts.length >= 10_000,
+      conflicts,
+    };
+  }
+
+  dependencyIssues() {
+    const state = this.store.snapshot();
+    const profile = this.activeProfile(state);
+    const enabled = new Set(profile.enabledMods);
+    const issues = [];
+    for (const modId of profile.modOrder) {
+      if (!enabled.has(modId)) continue;
+      const mod = state.mods[modId];
+      for (const dependency of mod?.dependencies || []) {
+        if (!state.mods[dependency.id]) issues.push({ modId, dependency, reason: "missing" });
+        else if (!enabled.has(dependency.id)) issues.push({ modId, dependency, reason: "disabled" });
+      }
+    }
+    return issues;
+  }
+
+  profiles() {
+    const state = this.store.snapshot();
+    return state.profiles.map((profile) => ({
+      ...profile,
+      active: profile.id === state.activeProfileId,
+      enabledCount: profile.enabledMods.length,
+      modCount: profile.modOrder.length,
+    }));
+  }
+
+  createProfile({ name, description = "", cloneActive = true }) {
+    const safeName = cleanText(name, "", 80);
+    const safeDescription = cleanText(description, "", 500);
+    if (!safeName) throw new Error("Le profil doit avoir un nom.");
+    const state = this.store.snapshot();
+    const active = this.activeProfile(state);
+    const id = `${sanitizeSegment(safeName).toLowerCase()}-${crypto.randomBytes(3).toString("hex")}`;
+    const now = new Date().toISOString();
+    const profile = {
+      id,
+      name: safeName,
+      description: safeDescription,
+      createdAt: now,
+      updatedAt: now,
+      modOrder: cloneActive ? [...active.modOrder] : [],
+      enabledMods: cloneActive ? [...active.enabledMods] : [],
+    };
+    this.store.update((draft) => draft.profiles.push(profile));
+    this.store.addActivity("profile", `Profil créé : ${profile.name}`, { profileId: id });
+    return profile;
+  }
+
+  activateProfile(profileId) {
+    const state = this.store.snapshot();
+    if (!state.profiles.some((profile) => profile.id === profileId)) throw new Error("Profil introuvable.");
+    const previous = state;
+    this.store.update((draft) => { draft.activeProfileId = profileId; });
+    try {
+      this.deployCurrentProfile();
+    } catch (error) {
+      this.store.replace(previous);
+      throw error;
+    }
+    const profile = this.activeProfile(this.store.snapshot());
+    this.store.addActivity("profile", `Profil activé : ${profile.name}`, { profileId });
+    return profile;
+  }
+
+  deleteProfile(profileId) {
+    if (profileId === "default") throw new Error("Le profil principal ne peut pas être supprimé.");
+    const state = this.store.snapshot();
+    if (!state.profiles.some((profile) => profile.id === profileId)) throw new Error("Profil introuvable.");
+    const wasActive = state.activeProfileId === profileId;
+    try {
+      this.store.update((draft) => {
+        draft.profiles = draft.profiles.filter((profile) => profile.id !== profileId);
+        if (draft.activeProfileId === profileId) draft.activeProfileId = "default";
+      });
+      if (wasActive) this.deployCurrentProfile();
+    } catch (error) {
+      this.store.replace(state);
+      throw error;
+    }
+    this.store.addActivity("profile", "Profil supprimé", { profileId });
+    return { success: true };
+  }
+}
+
+export { hashFile, walkFiles };

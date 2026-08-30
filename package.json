@@ -1,0 +1,90 @@
+{
+  "name": "stryker-football-life",
+  "version": "3.0.0",
+  "description": "Gestionnaire local de mods pour SP Football Life et PES 2021",
+  "author": "Adam",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "main": "electron/main.mjs",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "client": "vite",
+    "server": "node server/index.js",
+    "build": "tsc && vite build",
+    "check": "tsc --noEmit",
+    "test": "node --test --test-concurrency=1 test/api-security.test.js test/game-detection.test.js test/mod-engine.test.js test/sider-manager.test.js",
+    "preview": "vite preview",
+    "predesktop": "npm run build",
+    "desktop": "electron .",
+    "package:win": "npm run build && electron-builder --win nsis"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "helmet": "^8.3.0",
+    "lucide-react": "^1.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "yauzl": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.2",
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
+  },
+  "build": {
+    "appId": "com.stryker.footballlife",
+    "productName": "STRYKER",
+    "artifactName": "STRYKER-Setup-${version}-${arch}.${ext}",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "server/**/*.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "server/browseGame.ps1",
+        "to": "scripts/browseGame.ps1"
+      },
+      {
+        "from": "server/browseArchive.ps1",
+        "to": "scripts/browseArchive.ps1"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/stryker.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "STRYKER"
+    }
+  }
+}

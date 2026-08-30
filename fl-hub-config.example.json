@@ -1,0 +1,10 @@
+{
+  "gamePath": "",
+  "siderPath": "",
+  "siderExecutablePath": "",
+  "gameExecutablePath": "",
+  "detectedVersion": "",
+  "autoStartSider": true,
+  "isDemoMode": true,
+  "isLinked": false
+}
