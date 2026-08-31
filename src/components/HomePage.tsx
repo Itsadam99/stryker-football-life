@@ -2,6 +2,7 @@ import React from "react";
 import { ArrowRight, Download, ExternalLink, Monitor, ShieldCheck } from "lucide-react";
 import type { CatalogMod } from "../types";
 import { useI18n } from "../i18n";
+import { STRYKER_DOWNLOAD_URL } from "../services/distribution";
 
 interface HomePageProps {
   mods: CatalogMod[];
@@ -38,10 +39,12 @@ export const HomePage: React.FC<HomePageProps> = ({
           <p className="mx-auto mt-8 max-w-3xl text-sm md:text-base leading-relaxed text-white/75">
             {t("home.description")}
           </p>
-          <div className="mx-auto mt-9 flex max-w-xl flex-col sm:flex-row gap-4">
-            <button onClick={onNavigateToAllMods} className="flex-1 rounded-full bg-white px-6 py-3.5 font-black uppercase text-[#711361] hover:scale-[1.02] transition">{t("home.viewMods")}</button>
-            <button onClick={onDownloadExe} className="flex-1 rounded-full bg-[#711361] px-6 py-3.5 font-black uppercase text-white flex items-center justify-center gap-2 hover:bg-[#861872] transition"><Monitor className="w-5 h-5" /> {t("home.openApp")}</button>
+          <div className="mx-auto mt-9 grid max-w-3xl gap-4 sm:grid-cols-3">
+            <button onClick={onNavigateToAllMods} className="rounded-full bg-white px-6 py-3.5 font-black uppercase text-[#711361] hover:scale-[1.02] transition">{t("home.viewMods")}</button>
+            <a href={STRYKER_DOWNLOAD_URL} className="flex items-center justify-center gap-2 rounded-full bg-[#711361] px-6 py-3.5 font-black uppercase text-white transition hover:bg-[#861872]"><Download className="h-5 w-5" /> {t("home.downloadApp")}</a>
+            <button onClick={onDownloadExe} className="flex items-center justify-center gap-2 rounded-full border border-white/25 bg-black/35 px-6 py-3.5 font-black uppercase text-white transition hover:bg-white/10"><Monitor className="h-5 w-5" /> {t("home.openApp")}</button>
           </div>
+          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">{t("home.windows")}</p>
           <p className="mt-5 text-[11px] text-white/40">{t("home.disclaimer")}</p>
         </div>
       </section>

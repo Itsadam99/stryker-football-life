@@ -262,14 +262,14 @@ export function DesktopApp() {
     const params = new URLSearchParams(window.location.search);
     const modId = params.get("installMod");
     const repository = params.get("repository");
-    if (!modId || !repository) return;
+    if (!modId) return;
     deepLinkHandled.current = true;
     setPage("catalog");
     const cleanUrl = new URL(window.location.href);
     cleanUrl.searchParams.delete("installMod");
     cleanUrl.searchParams.delete("repository");
     window.history.replaceState({}, "", cleanUrl);
-    void runAction(() => api.installRemoteCatalogMod(repository, modId), config.isLinked
+    void runAction(() => repository ? api.installRemoteCatalogMod(repository, modId) : api.installCatalogMod(modId), config.isLinked
       ? t("desktop.hubInstalled")
       : t("desktop.hubPrepared"));
   }, [config.isLinked, t]);

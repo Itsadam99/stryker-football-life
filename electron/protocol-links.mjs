@@ -8,7 +8,7 @@ export function parseProtocolLink(value) {
     if (url.hostname !== "install") return null;
     const modId = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
     const repository = url.searchParams.get("repository") || "";
-    if (!modId || !repository) return null;
+    if (!modId) return null;
     return { type: "install", modId, repository };
   } catch {
     return null;

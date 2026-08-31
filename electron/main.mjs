@@ -42,7 +42,7 @@ async function openInstallLink(request) {
   const target = new URL(allowedOrigin);
   target.searchParams.set("mode", "desktop");
   target.searchParams.set("installMod", request.modId);
-  target.searchParams.set("repository", request.repository);
+  if (request.repository) target.searchParams.set("repository", request.repository);
   await mainWindow.loadURL(target.href);
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();

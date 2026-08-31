@@ -1,6 +1,6 @@
 {
   "name": "stryker-football-life",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "description": "Gestionnaire local de mods pour SP Football Life et PES 2021",
   "author": "Adam",
   "license": "UNLICENSED",
@@ -12,6 +12,7 @@
     "client": "vite",
     "server": "node server/index.js",
     "build": "tsc && vite build",
+    "build:site": "tsc && node scripts/build-site.mjs",
     "check": "tsc --noEmit",
     "test": "node --test --test-concurrency=1 test/api-security.test.js test/game-detection.test.js test/mod-engine.test.js test/protocol-links.test.js test/repository.test.js test/sider-manager.test.js test/update-manager.test.js",
     "preview": "vite preview",
@@ -32,10 +33,11 @@
     "yauzl": "^3.4.0"
   },
   "devDependencies": {
+    "@openai/sites-vite-plugin": "^0.2.0",
     "@types/express": "^4.17.21",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.2",
     "electron": "^44.0.0",
@@ -43,7 +45,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
-    "vite": "^6.0.7"
+    "vite": "^8.0.0"
   },
   "build": {
     "appId": "com.stryker.footballlife",
@@ -56,7 +58,7 @@
         ]
       }
     ],
-    "artifactName": "STRYKER-Setup-${version}-${arch}.${ext}",
+    "artifactName": "STRYKER-Setup-${arch}.${ext}",
     "asar": true,
     "directories": {
       "output": "release"

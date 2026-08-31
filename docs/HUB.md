@@ -18,13 +18,15 @@ Les archives tierces `bundled-mods/*.zip` restent hors du dépôt Git public : e
 
 ## Installation depuis le site
 
-Le bouton **Installer avec STRYKER** utilise un lien de la forme :
+Pour un paquet livré avec l’application, le bouton **Installer avec STRYKER** utilise un lien de la forme :
 
 ```text
-stryker://install/<id-du-mod>?repository=https%3A%2F%2Fmods.example.org
+stryker://install/<id-du-mod>
 ```
 
-L’application n’accepte que les dépôts HTTPS. HTTP est toléré uniquement pour `localhost` pendant le développement. La fiche, le ZIP et son empreinte doivent provenir du même domaine.
+L’application ouvre son catalogue local et installe le paquet correspondant. Pour un futur dépôt distant, le paramètre `repository=https%3A%2F%2Fmods.example.org` peut être ajouté. L’application n’accepte alors que les dépôts HTTPS ; HTTP est toléré uniquement pour `localhost` pendant le développement. La fiche, le ZIP et son empreinte doivent provenir du même domaine.
+
+Si le protocole Windows ne répond pas après un court délai, le site explique que STRYKER doit être installé, propose le téléchargement de la dernière version et conserve le mod en attente pour permettre une nouvelle tentative.
 
 ## Hébergement public
 

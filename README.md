@@ -2,7 +2,7 @@
 
 STRYKER est un gestionnaire local de mods inspiré du fonctionnement de Vortex, conçu pour SP Football Life et eFootball PES 2021 sous Windows. Le projet sépare les archives installées du dossier du jeu, génère un bloc Sider identifiable et réversible, gère les profils et explique les conflits de priorité.
 
-L’interface du site et de l’application est disponible en français, anglais, portugais et espagnol. Le bouton « Ouvrir l’application » utilise le protocole Windows `stryker://open` afin de lancer ou remettre au premier plan l’application installée.
+L’interface du site et de l’application est disponible en français, anglais, portugais et espagnol. Le site propose le téléchargement direct de la dernière version Windows. Le bouton « Ouvrir l’application » utilise le protocole Windows `stryker://open` afin de lancer ou remettre au premier plan l’application installée ; si le protocole ne répond pas, le site affiche une aide et le lien d’installation.
 
 Le projet est indépendant. Il n’est affilié ni à Konami, ni à SmokePatch, ni à Nexus Mods. Les mods et leurs pages appartiennent à leurs auteurs respectifs.
 
@@ -21,7 +21,7 @@ Le projet est indépendant. Il n’est affilié ni à Konami, ni à SmokePatch, 
 - liaison par une fenêtre Windows native et lancement réel de Football Life, directement ou après démarrage de Sider ;
 - reconnaissance prioritaire du lanceur officiel `FL 20XX start.exe`, y compris pour une installation déjà liée ;
 - dépôt STRYKER intégré : réception des ZIP, contrôle technique, file de modération, publication et téléchargement ;
-- catalogue installable en un clic depuis l’application ou depuis un lien `stryker://` ouvert sur le site ;
+- catalogue installable en un clic depuis l’application ou depuis un lien `stryker://` ouvert sur le site, avec installation locale immédiate des paquets livrés avec STRYKER ;
 - paquet intégré **Graphic Menu EPL 2025/26** : deux racines LiveCPK, module UIColors et données Sider installés ensemble ;
 - API limitée à `127.0.0.1`, origine contrôlée et mutations protégées par une session éphémère ;
 - application Electron autonome, sans Node.js requis chez l’utilisateur final.
@@ -69,7 +69,7 @@ Pour produire l’installateur Windows x64 :
 npm run package:win
 ```
 
-L’artefact et son manifeste `latest.yml` sont créés dans `release/`. Pour une version publique, configurez l’adresse HTTPS du flux avant l’empaquetage :
+L’artefact stable `STRYKER-Setup-x64.exe` et son manifeste `latest.yml` sont créés dans `release/`. Pour une version publique, configurez l’adresse HTTPS du flux avant l’empaquetage :
 
 ```powershell
 $env:STRYKER_UPDATE_URL = "https://votre-domaine.example/updates/windows"

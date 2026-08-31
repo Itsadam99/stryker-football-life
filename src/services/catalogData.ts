@@ -1,8 +1,38 @@
 import type { CatalogMod } from "../types";
 
+export const BUNDLED_CATALOG_MODS: CatalogMod[] = [
+  {
+    id: "eferq-graphic-menu-epl-2526",
+    title: "Graphic Menu EPL 2025/26",
+    author: "EFER.Q",
+    version: "2025/26",
+    shortDesc: "Menu graphique Premier League 2025/26 pour PES 2021 et Football Life 2026, installable directement avec STRYKER.",
+    fullDesc: "Pack complet avec Menu EPL, UIColors, module Lua et données content. STRYKER vérifie son empreinte, installe ses deux racines LiveCPK, déploie le module Lua et sauvegarde les données Sider éventuellement remplacées.",
+    category: "menu",
+    compatibility: ["PES 2021", "Football Life 2026", "Sider 7.3.4"],
+    size: "127,1 Mo",
+    thumbnail: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+    downloadUrl: "",
+    screenshots: [],
+    installationType: "automatic",
+    rating: 0,
+    downloadsCount: 0,
+    tags: ["menu", "Premier League", "EPL", "UIColors", "EFER.Q"],
+    legalStatus: "verified_package",
+    verificationDate: "2026-08-31",
+    archiveHash: "6b9ebfe5cdbbdcb8f10711feaaba17c8e839c57e6abe6b728c54196404771a8a",
+    archiveSize: 133307293,
+    fileCount: 87,
+    status: "published",
+    publishedAt: "2026-08-31T16:30:00.000Z",
+    sourceUrl: "https://pes-files.com/pes-2021-new-graphic-menu-epl-2025-26/",
+    license: "Crédits : EFER.Q — redistribution autorisée par le mainteneur STRYKER.",
+  },
+];
+
 /**
- * Curated links only. STRYKER does not mirror third-party files and does not
- * invent download counts or ratings. Each entry sends the user to its author.
+ * Curated external links only. STRYKER does not mirror these third-party files
+ * and does not invent download counts or ratings.
  */
 export const VERIFIED_CATALOG_MODS: CatalogMod[] = [
   {

@@ -12,10 +12,14 @@ test("install links keep their mod and repository information", () => {
     parseProtocolLink("stryker://install/sample-mod?repository=https%3A%2F%2Fmods.example"),
     { type: "install", modId: "sample-mod", repository: "https://mods.example" },
   );
+  assert.deepEqual(
+    parseProtocolLink("stryker://install/eferq-graphic-menu-epl-2526"),
+    { type: "install", modId: "eferq-graphic-menu-epl-2526", repository: "" },
+  );
 });
 
 test("unknown or incomplete protocol links are ignored", () => {
   assert.equal(parseProtocolLink("https://example.com"), null);
   assert.equal(parseProtocolLink("stryker://unknown"), null);
-  assert.equal(parseProtocolLink("stryker://install/missing-repository"), null);
+  assert.equal(parseProtocolLink("stryker://install/"), null);
 });

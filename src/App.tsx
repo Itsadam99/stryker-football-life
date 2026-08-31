@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Download, ExternalLink, Star } from "lucide-react";
 import { AllModsPage } from "./components/AllModsPage";
 import { DesktopApp } from "./components/DesktopApp";
@@ -6,10 +6,12 @@ import { HomePage } from "./components/HomePage";
 import { Navbar } from "./components/Navbar";
 import { PublishModPage } from "./components/PublishModPage";
 import { StrykerLogo } from "./components/StrykerLogo";
+import { StrykerUnavailableModal } from "./components/StrykerUnavailableModal";
 import { VortexDownloadModal } from "./components/VortexDownloadModal";
 import { CatalogMod } from "./types";
 import { api } from "./services/api";
-import { localizeCatalogMod, VERIFIED_CATALOG_MODS } from "./services/catalogData";
+import { BUNDLED_CATALOG_MODS, localizeCatalogMod, VERIFIED_CATALOG_MODS } from "./services/catalogData";
+import { createStrykerInstallLink } from "./services/distribution";
 import { useI18n } from "./i18n";
 
 export function App() {
@@ -19,27 +21,58 @@ export function App() {
   const [selectedMod, setSelectedMod] = useState<CatalogMod | null>(null);
   const [sourceMod, setSourceMod] = useState<CatalogMod | null>(null);
   const [hostedMods, setHostedMods] = useState<CatalogMod[]>([]);
+  const [missingApp, setMissingApp] = useState<{ deepLink: string; modTitle?: string } | null>(null);
+  const cancelProtocolAttempt = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     api.getCatalog().then(setHostedMods).catch(() => setHostedMods([]));
   }, []);
 
-  const catalogMods = useMemo(
-    () => [...hostedMods, ...VERIFIED_CATALOG_MODS].map((mod) => localizeCatalogMod(mod, language)),
-    [hostedMods, language],
-  );
+  const catalogMods = useMemo(() => {
+    const uniqueMods = new Map<string, CatalogMod>();
+    [...BUNDLED_CATALOG_MODS, ...hostedMods, ...VERIFIED_CATALOG_MODS].forEach((mod) => uniqueMods.set(mod.id, mod));
+    return [...uniqueMods.values()].map((mod) => localizeCatalogMod(mod, language));
+  }, [hostedMods, language]);
 
-  if (isDesktopMode) return <DesktopApp />;
+  useEffect(() => () => cancelProtocolAttempt.current(), []);
 
-  const openDesktop = () => { window.location.href = "stryker://open"; };
+  const launchStryker = useCallback((deepLink: string, modTitle?: string) => {
+    cancelProtocolAttempt.current();
+    setMissingApp(null);
+    let finished = false;
+    const cleanup = () => {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(timer);
+      window.removeEventListener("blur", onOpened);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+    const onOpened = () => cleanup();
+    const onVisibilityChange = () => { if (document.hidden) cleanup(); };
+    const timer = window.setTimeout(() => {
+      cleanup();
+      setMissingApp({ deepLink, modTitle });
+    }, 2200);
+    cancelProtocolAttempt.current = cleanup;
+    window.addEventListener("blur", onOpened, { once: true });
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    try { window.location.href = deepLink; }
+    catch {
+      cleanup();
+      setMissingApp({ deepLink, modTitle });
+    }
+  }, []);
+
+  const openDesktop = () => launchStryker("stryker://open");
   const installWithStryker = (mod: CatalogMod) => {
     if (mod.installationType !== "automatic") {
       setSourceMod(mod);
       return;
     }
-    const repository = window.location.origin;
-    window.location.href = `stryker://install/${encodeURIComponent(mod.id)}?repository=${encodeURIComponent(repository)}`;
+    launchStryker(createStrykerInstallLink(mod.id), mod.title);
   };
+
+  if (isDesktopMode) return <DesktopApp />;
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col font-poppins selection:bg-[#711361] selection:text-white">
@@ -67,6 +100,12 @@ export function App() {
       </main>
 
       <VortexDownloadModal isOpen={Boolean(sourceMod)} onClose={() => setSourceMod(null)} mod={sourceMod} onDownloadExe={openDesktop} />
+      <StrykerUnavailableModal
+        isOpen={Boolean(missingApp)}
+        modTitle={missingApp?.modTitle}
+        onClose={() => setMissingApp(null)}
+        onRetry={() => missingApp && launchStryker(missingApp.deepLink, missingApp.modTitle)}
+      />
 
       {selectedMod && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setSelectedMod(null)}>

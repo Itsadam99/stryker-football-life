@@ -1,7 +1,8 @@
 import React from "react";
-import { Monitor } from "lucide-react";
+import { Download, Monitor } from "lucide-react";
 import { StrykerLogo } from "./StrykerLogo";
 import { LanguageSwitcher, useI18n } from "../i18n";
+import { STRYKER_DOWNLOAD_URL } from "../services/distribution";
 
 interface NavbarProps {
   currentPage: "home" | "all-mods" | "publish";
@@ -24,7 +25,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage, onO
         <button onClick={() => setCurrentPage("publish")} aria-current={currentPage === "publish" ? "page" : undefined} className={`rounded-full px-4 py-2 text-[10px] font-black uppercase ${currentPage === "publish" ? "bg-[#711361]" : "text-white/55 hover:text-white"}`}>{t("nav.publish")}</button>
       </nav>
 
-      <div className="flex items-center gap-2"><LanguageSwitcher compact /><button onClick={onOpenDesktop} className="flex items-center gap-1.5 rounded-full bg-white text-[#711361] px-3.5 py-2 text-[10px] font-black uppercase"><Monitor className="w-3.5 h-3.5" /><span className="hidden sm:inline">{t("home.openApp")}</span></button></div>
+      <div className="flex items-center gap-2">
+        <LanguageSwitcher compact />
+        <a href={STRYKER_DOWNLOAD_URL} aria-label={t("home.downloadApp")} className="flex items-center gap-1.5 rounded-full border border-white/15 px-3.5 py-2 text-[10px] font-black uppercase text-white hover:bg-white/5">
+          <Download className="h-3.5 w-3.5" /><span className="hidden xl:inline">{t("home.downloadApp")}</span>
+        </a>
+        <button onClick={onOpenDesktop} className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[10px] font-black uppercase text-[#711361]"><Monitor className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("home.openApp")}</span></button>
+      </div>
     </div>
   </header>;
 };
