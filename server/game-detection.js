@@ -2,28 +2,31 @@ import fs from "fs";
 import path from "path";
 
 const GAME_EXECUTABLES = [
+  { file: "FL 2026 start.exe", version: "SP Football Life 2026" },
   { file: "FL_2026 start.exe", version: "SP Football Life 2026" },
   { file: "FL_2026.exe", version: "SP Football Life 2026" },
+  { file: "FL 2025 start.exe", version: "SP Football Life 2025" },
   { file: "FL_2025 start.exe", version: "SP Football Life 2025" },
   { file: "FL_2025.exe", version: "SP Football Life 2025" },
+  { file: "FL 2024 start.exe", version: "SP Football Life 2024" },
   { file: "FL_2024 start.exe", version: "SP Football Life 2024" },
   { file: "FL_2024.exe", version: "SP Football Life 2024" },
   { file: "PES2021.exe", version: "eFootball PES 2021" },
 ];
 
 const SIDER_INI_CANDIDATES = [
-  "sider.ini",
+  path.join("SiderAddons", "sider.ini"),
   path.join("Sider", "sider.ini"),
   path.join("sider", "sider.ini"),
-  path.join("SiderAddons", "sider.ini"),
+  "sider.ini",
 ];
 
 const SIDER_EXE_CANDIDATES = [
-  "sider.exe",
-  "Sider.exe",
+  path.join("SiderAddons", "sider.exe"),
   path.join("Sider", "sider.exe"),
   path.join("sider", "sider.exe"),
-  path.join("SiderAddons", "sider.exe"),
+  "sider.exe",
+  "Sider.exe",
 ];
 
 function findCaseInsensitive(directory, relativeCandidate) {
@@ -38,6 +41,15 @@ function findCaseInsensitive(directory, relativeCandidate) {
   }
 
   return current;
+}
+
+export function findPreferredFootballLifeLauncher(directory) {
+  if (!directory || typeof directory !== "string") return null;
+  for (const candidate of GAME_EXECUTABLES.filter(({ file }) => / start\.exe$/i.test(file))) {
+    const fullPath = findCaseInsensitive(directory, candidate.file);
+    if (fullPath && fs.statSync(fullPath).isFile()) return fullPath;
+  }
+  return null;
 }
 
 function inspectDirectory(directory) {
@@ -94,7 +106,7 @@ export function detectAtPath(selectedPath) {
 
   if (!inspection) {
     throw new Error(
-      "Aucune installation valide détectée. STRYKER attend FL_2026 start.exe, FL_2026.exe, une version antérieure de Football Life ou PES2021.exe. Aucun fichier ne sera créé automatiquement."
+      "Aucune installation valide détectée. STRYKER attend FL 2026 start.exe, FL_2026.exe, une version antérieure de Football Life ou PES2021.exe. Aucun fichier ne sera créé automatiquement."
     );
   }
 
@@ -130,4 +142,3 @@ export function detectCommonInstallation() {
 }
 
 export { GAME_EXECUTABLES };
-

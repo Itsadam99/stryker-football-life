@@ -23,6 +23,7 @@ Ces contrôles réduisent le risque mais ne constituent pas un antivirus. Un fic
 - Chaque changement de `sider.ini` crée une sauvegarde horodatée.
 - Seul le bloc marqué STRYKER est régénéré ; les lignes manuelles externes sont préservées.
 - Le dossier Lua géré est préparé séparément puis échangé. En cas d’échec, l’ancien déploiement et `sider.ini` sont restaurés.
+- Les composants Sider ne peuvent cibler que `content`. Chaque fichier préexistant est sauvegardé avant remplacement et restauré lors d’une désactivation ou désinstallation.
 - Une désinstallation déplace le staging dans la corbeille STRYKER.
 
 ## Limites intentionnelles
@@ -30,4 +31,3 @@ Ces contrôles réduisent le risque mais ne constituent pas un antivirus. Un fic
 - Aucun identifiant utilisateur ni service de compte n’est stocké.
 - Aucun téléchargement silencieux, télémétrie, mise à jour forcée ou exécution automatique d’un installateur de mod.
 - Les signatures de mises à jour applicatives ne sont pas encore configurées ; l’interface l’indique explicitement.
-

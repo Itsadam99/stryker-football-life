@@ -5,9 +5,13 @@ import {
   GameConfig,
   GameProcessStatus,
   HealthReport,
+  HubSubmission,
+  HubSubmissionInput,
   ManagedMod,
   ModItem,
   Profile,
+  CatalogMod,
+  UpdateStatus,
 } from "../types";
 
 const BASE_URL = "/api";
@@ -80,9 +84,45 @@ export const api = {
   deployMods: () => request<{ success: boolean }>("/mods/deploy", { method: "POST" }),
   uninstallMod: (modId: string) => request<{ success: boolean; recoverablePaths: string[] }>(`/mods/${encodeURIComponent(modId)}`, { method: "DELETE" }),
   browseArchive: () => request<{ success: boolean; path?: string; cancelled?: boolean }>("/mods/browse-archive", { method: "POST" }),
-  installArchive: (archivePath: string, metadata: Record<string, unknown> = {}) => request<{ success: boolean; mod: ManagedMod; message: string }>("/mods/install-archive", {
+  installArchive: (archivePath: string, metadata: Record<string, unknown> = {}) => request<{ success: boolean; mod: ManagedMod; action: "installed" | "reinstalled"; message: string }>("/mods/install-archive", {
     method: "POST",
     body: JSON.stringify({ archivePath, metadata }),
+  }),
+  installUploadedArchive: (file: File) => request<{ success: boolean; mod: ManagedMod; action: "installed" | "reinstalled"; message: string }>("/mods/install-upload", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/zip",
+      "X-STRYKER-File-Name": encodeURIComponent(file.name),
+    },
+    body: file,
+  }),
+
+  getCatalog: async () => (await request<{ mods: CatalogMod[] }>("/catalog")).mods,
+  installCatalogMod: (modId: string) => request<{ success: boolean; mod: ManagedMod; action: "installed" | "reinstalled"; message: string }>(`/catalog/${encodeURIComponent(modId)}/install`, { method: "POST" }),
+  installRemoteCatalogMod: (repositoryUrl: string, modId: string) => request<{ success: boolean; mod: ManagedMod; message: string }>("/catalog/install-remote", {
+    method: "POST",
+    body: JSON.stringify({ repositoryUrl, modId }),
+  }),
+  createSubmission: (metadata: HubSubmissionInput) => request<{ success: boolean; submission: HubSubmission }>("/hub/submissions", {
+    method: "POST",
+    body: JSON.stringify(metadata),
+  }),
+  uploadSubmissionArchive: (submissionId: string, file: File) => request<{ success: boolean; submission: HubSubmission; message: string }>(`/hub/submissions/${encodeURIComponent(submissionId)}/archive`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/zip",
+      "X-STRYKER-File-Name": encodeURIComponent(file.name),
+    },
+    body: file,
+  }),
+  getSubmissions: async () => (await request<{ submissions: HubSubmission[] }>("/hub/submissions", {
+    headers: { "X-STRYKER-Token": await getSessionToken() },
+  })).submissions,
+  installSubmission: (submissionId: string) => request<{ success: boolean; mod: ManagedMod }>(`/hub/submissions/${encodeURIComponent(submissionId)}/install`, { method: "POST" }),
+  publishSubmission: (submissionId: string) => request<{ success: boolean; mod: CatalogMod }>(`/hub/submissions/${encodeURIComponent(submissionId)}/publish`, { method: "POST" }),
+  rejectSubmission: (submissionId: string, note: string) => request<{ success: boolean; submission: HubSubmission }>(`/hub/submissions/${encodeURIComponent(submissionId)}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ note }),
   }),
 
   getProfiles: async () => (await request<{ profiles: Profile[] }>("/profiles")).profiles,
@@ -102,6 +142,8 @@ export const api = {
   getLauncherStatus: () => request<GameProcessStatus>("/launcher/status"),
   launchGame: () => request<{ success: boolean; message: string } & GameProcessStatus>("/launcher/launch", { method: "POST" }),
   stopGame: () => request<{ success: boolean; message: string }>("/launcher/stop", { method: "POST" }),
-  getVersion: () => request<{ currentVersion: string; updateAvailable: boolean; updaterConfigured: boolean; message: string }>("/app/version"),
+  getVersion: () => request<UpdateStatus>("/app/version"),
+  checkForUpdate: () => request<UpdateStatus>("/app/update/check", { method: "POST" }),
+  downloadUpdate: () => request<UpdateStatus>("/app/update/download", { method: "POST" }),
+  installUpdate: () => request<{ success: boolean; message: string }>("/app/update/install", { method: "POST" }),
 };
-

@@ -24,6 +24,41 @@ function atomicWriteText(filePath, value) {
   }
 }
 
+function atomicCopyFile(source, destination) {
+  const directory = path.dirname(destination);
+  fs.mkdirSync(directory, { recursive: true });
+  const tempPath = path.join(directory, `.${path.basename(destination)}.${process.pid}.${Date.now()}.${crypto.randomBytes(3).toString("hex")}.tmp`);
+  fs.copyFileSync(source, tempPath);
+  try {
+    fs.renameSync(tempPath, destination);
+  } catch (error) {
+    if (!["EEXIST", "EPERM", "EACCES"].includes(error.code)) throw error;
+    fs.copyFileSync(tempPath, destination);
+    fs.unlinkSync(tempPath);
+  }
+}
+
+function listRegularFiles(root) {
+  const files = [];
+  const stack = [root];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isSymbolicLink()) throw new Error("Les liens symboliques ne sont pas acceptés dans les données Sider.");
+      if (entry.isDirectory()) stack.push(fullPath);
+      if (entry.isFile()) files.push(fullPath);
+    }
+  }
+  return files;
+}
+
+function normalizeSiderDataTarget(value) {
+  const normalized = String(value || "").replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/\/+$/, "");
+  if (normalized.toLowerCase() !== "content") throw new Error("La cible des données Sider doit être le dossier content.");
+  return normalized;
+}
+
 function inlineComment(value) {
   return String(value || "").replace(/[\r\n\u0000-\u001f\u007f]+/g, " ").slice(0, 240);
 }
@@ -249,6 +284,145 @@ export class SiderManager {
     };
   }
 
+  deploySiderDataComponents(state, profile, siderPath) {
+    const enabled = new Set(profile.enabledMods);
+    const siderRoot = path.dirname(siderPath);
+    const desired = new Map();
+
+    for (const modId of profile.modOrder) {
+      if (!enabled.has(modId)) continue;
+      const mod = state.mods[modId];
+      if (!mod) continue;
+      for (const component of mod.components || []) {
+        if (component.type !== "sider") continue;
+        const sourceRoot = path.resolve(mod.stagingPath, component.root);
+        assertPathInside(this.dataDirectories.mods, mod.stagingPath, "Staging du mod");
+        assertPathInside(mod.stagingPath, sourceRoot, "Données Sider");
+        if (!fs.existsSync(sourceRoot) || !fs.statSync(sourceRoot).isDirectory()) throw new Error("Données Sider introuvables dans le staging.");
+        const targetRoot = normalizeSiderDataTarget(component.target);
+        for (const source of listRegularFiles(sourceRoot)) {
+          const relativeSource = path.relative(sourceRoot, source).replace(/\\/g, "/");
+          const relativeTarget = `${targetRoot}/${relativeSource}`;
+          if (desired.has(relativeTarget.toLowerCase())) continue;
+          const destination = path.resolve(siderRoot, ...relativeTarget.split("/"));
+          assertPathInside(siderRoot, destination, "Destination des données Sider");
+          desired.set(relativeTarget.toLowerCase(), { relativeTarget, source, destination, modId });
+        }
+      }
+    }
+
+    const bucket = this.backupBucket(siderPath);
+    const statePath = path.join(bucket, "sider-content-state.json");
+    const originalsRoot = path.join(bucket, "sider-content-originals");
+    const previousText = fs.existsSync(statePath) ? fs.readFileSync(statePath, "utf-8") : "";
+    let previousState = { schemaVersion: 1, files: {} };
+    if (previousText) {
+      try {
+        const parsed = JSON.parse(previousText);
+        if (parsed && parsed.files && typeof parsed.files === "object") previousState = parsed;
+      } catch {
+        throw new Error("L’état des données Sider gérées est illisible. Restaurez-le avant de redéployer.");
+      }
+    }
+    const previousFiles = previousState.files || {};
+    const allKeys = new Set([...Object.keys(previousFiles), ...[...desired.keys()]]);
+    const rollbackRoot = fs.mkdtempSync(path.join(this.dataDirectories.temp, "sider-content-rollback-"));
+    const snapshots = new Map();
+    const createdOriginals = [];
+    const staleOriginals = [];
+
+    const resolveManagedDestination = (relativeTarget) => {
+      const normalized = String(relativeTarget).replace(/\\/g, "/");
+      if (!normalized.toLowerCase().startsWith("content/")) throw new Error("Chemin de données Sider gérées invalide.");
+      const destination = path.resolve(siderRoot, ...normalized.split("/"));
+      assertPathInside(siderRoot, destination, "Données Sider gérées");
+      return destination;
+    };
+    const resolveOriginalBackup = (relativeBackup) => {
+      const backup = path.resolve(bucket, ...String(relativeBackup).replace(/\\/g, "/").split("/"));
+      assertPathInside(originalsRoot, backup, "Sauvegarde des données Sider");
+      return backup;
+    };
+
+    try {
+      for (const key of allKeys) {
+        const relativeTarget = desired.get(key)?.relativeTarget || previousFiles[key]?.relativeTarget || key;
+        const destination = resolveManagedDestination(relativeTarget);
+        if (fs.existsSync(destination)) {
+          if (!fs.statSync(destination).isFile()) throw new Error(`La destination Sider n’est pas un fichier : ${key}`);
+          const snapshotPath = path.join(rollbackRoot, `${crypto.createHash("sha256").update(key).digest("hex")}.bak`);
+          fs.copyFileSync(destination, snapshotPath);
+          snapshots.set(key, snapshotPath);
+        } else {
+          snapshots.set(key, null);
+        }
+      }
+
+      const nextFiles = {};
+      for (const [key, item] of desired.entries()) {
+        const previous = previousFiles[key];
+        let originalBackup = previous?.originalBackup || null;
+        if (!previous && fs.existsSync(item.destination)) {
+          fs.mkdirSync(originalsRoot, { recursive: true });
+          const extension = path.extname(item.destination).slice(0, 20);
+          const backupPath = path.join(originalsRoot, `${crypto.createHash("sha256").update(key).digest("hex")}${extension}`);
+          atomicCopyFile(item.destination, backupPath);
+          originalBackup = path.relative(bucket, backupPath).replace(/\\/g, "/");
+          createdOriginals.push(backupPath);
+        }
+        atomicCopyFile(item.source, item.destination);
+        nextFiles[key] = { relativeTarget: item.relativeTarget, originalBackup, modId: item.modId };
+      }
+
+      for (const [key, previous] of Object.entries(previousFiles)) {
+        if (desired.has(key)) continue;
+        const destination = resolveManagedDestination(previous.relativeTarget || key);
+        if (previous.originalBackup) {
+          const backupPath = resolveOriginalBackup(previous.originalBackup);
+          if (!fs.existsSync(backupPath)) throw new Error(`Sauvegarde originale manquante pour ${key}.`);
+          atomicCopyFile(backupPath, destination);
+          staleOriginals.push(backupPath);
+        } else if (fs.existsSync(destination)) {
+          fs.unlinkSync(destination);
+        }
+      }
+
+      fs.mkdirSync(bucket, { recursive: true });
+      atomicWriteText(statePath, `${JSON.stringify({ schemaVersion: 1, siderPath: path.resolve(siderPath), files: nextFiles }, null, 2)}\n`);
+    } catch (error) {
+      for (const [key, snapshotPath] of snapshots.entries()) {
+        const relativeTarget = desired.get(key)?.relativeTarget || previousFiles[key]?.relativeTarget || key;
+        const destination = resolveManagedDestination(relativeTarget);
+        if (snapshotPath) atomicCopyFile(snapshotPath, destination);
+        else if (fs.existsSync(destination) && fs.statSync(destination).isFile()) fs.unlinkSync(destination);
+      }
+      if (previousText) atomicWriteText(statePath, previousText);
+      else if (fs.existsSync(statePath)) fs.unlinkSync(statePath);
+      for (const backupPath of createdOriginals) if (fs.existsSync(backupPath)) fs.unlinkSync(backupPath);
+      fs.rmSync(rollbackRoot, { recursive: true, force: true });
+      throw error;
+    }
+
+    return {
+      commit: () => {
+        for (const backupPath of staleOriginals) if (fs.existsSync(backupPath)) fs.rmSync(backupPath, { force: true });
+        fs.rmSync(rollbackRoot, { recursive: true, force: true });
+      },
+      rollback: () => {
+        for (const [key, snapshotPath] of snapshots.entries()) {
+          const relativeTarget = desired.get(key)?.relativeTarget || previousFiles[key]?.relativeTarget || key;
+          const destination = resolveManagedDestination(relativeTarget);
+          if (snapshotPath) atomicCopyFile(snapshotPath, destination);
+          else if (fs.existsSync(destination) && fs.statSync(destination).isFile()) fs.unlinkSync(destination);
+        }
+        if (previousText) atomicWriteText(statePath, previousText);
+        else if (fs.existsSync(statePath)) fs.unlinkSync(statePath);
+        for (const backupPath of createdOriginals) if (fs.existsSync(backupPath)) fs.rmSync(backupPath, { force: true });
+        fs.rmSync(rollbackRoot, { recursive: true, force: true });
+      },
+    };
+  }
+
   deploy(state, profile) {
     const siderPath = state.settings.siderPath;
     if (!siderPath || !fs.existsSync(siderPath)) throw new Error("sider.ini est introuvable : déploiement annulé.");
@@ -261,21 +435,40 @@ export class SiderManager {
     const endIndex = lines.findIndex((line, index) => index >= startIndex && line.trim() === MANAGED_END);
     const managedLines = this.buildManagedLines(state, profile);
 
-    let nextLines;
+    let unmanagedLines;
     if (startIndex !== -1 && endIndex !== -1) {
-      nextLines = [...lines.slice(0, startIndex), ...managedLines, ...lines.slice(endIndex + 1)];
+      unmanagedLines = [...lines.slice(0, startIndex), ...lines.slice(endIndex + 1)];
     } else if (startIndex !== -1 || endIndex !== -1) {
       throw new Error("Le bloc STRYKER de sider.ini est incomplet. Restaurez une sauvegarde avant de redéployer.");
     } else {
-      nextLines = [...lines, "", ...managedLines, ""];
+      unmanagedLines = [...lines];
     }
 
+    // Sider checks LiveCPK roots from top to bottom and stops at the first
+    // matching file. Keep the managed block above the installation's base
+    // root so enabled STRYKER mods can actually override Football Life files.
+    const firstActiveRoot = unmanagedLines.findIndex((line) => /^\s*cpk\.root\s*=/i.test(line));
+    const insertionIndex = firstActiveRoot >= 0 ? firstActiveRoot : unmanagedLines.length;
+    const separatorBefore = insertionIndex > 0 && unmanagedLines[insertionIndex - 1].trim() ? [""] : [];
+    const separatorAfter = insertionIndex < unmanagedLines.length && unmanagedLines[insertionIndex]?.trim() ? [""] : [];
+    const nextLines = [
+      ...unmanagedLines.slice(0, insertionIndex),
+      ...separatorBefore,
+      ...managedLines,
+      ...separatorAfter,
+      ...unmanagedLines.slice(insertionIndex),
+    ];
+
     let luaTransaction = null;
+    let siderDataTransaction = null;
     try {
       luaTransaction = this.deployLuaComponents(state, profile, siderPath);
+      siderDataTransaction = this.deploySiderDataComponents(state, profile, siderPath);
       atomicWriteText(siderPath, nextLines.join(newline));
       luaTransaction.commit();
+      siderDataTransaction.commit();
     } catch (error) {
+      siderDataTransaction?.rollback();
       luaTransaction?.rollback();
       atomicWriteText(siderPath, fs.readFileSync(backupPath, "utf-8"));
       throw error;

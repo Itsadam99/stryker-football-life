@@ -14,14 +14,16 @@ export interface ModItem {
 }
 
 export interface ManagedComponent {
-  type: "livecpk" | "lua";
+  type: "livecpk" | "lua" | "sider";
   root: string;
+  target?: "content";
   files?: string[];
   entrypoints?: string[];
 }
 
 export interface ManagedMod {
   id: string;
+  packageId?: string;
   name: string;
   version: string;
   author: string;
@@ -33,6 +35,8 @@ export interface ManagedMod {
   archiveName: string;
   archiveHash: string;
   installedAt: string;
+  lastInstalledAt?: string;
+  installCount?: number;
   stagingPath: string;
   components: ManagedComponent[];
   managed: true;
@@ -111,10 +115,41 @@ export interface CatalogMod {
   downloadsCount: number;
   thumbnail: string;
   screenshots: string[];
-  legalStatus: "verified_source" | "community_external" | "unverified";
+  legalStatus: "verified_source" | "verified_package" | "author_submission" | "community_external" | "unverified";
   verificationDate?: string;
-  installationType?: "livecpk" | "lua" | "mixed" | "manual";
+  installationType?: "livecpk" | "lua" | "mixed" | "automatic" | "manual";
   tags: string[];
+  archiveHash?: string;
+  archiveSize?: number;
+  fileCount?: number;
+  status?: "awaiting_archive" | "pending_review" | "published" | "rejected";
+  submittedAt?: string;
+  publishedAt?: string | null;
+  license?: string;
+  sourceUrl?: string;
+}
+
+export interface HubSubmission extends CatalogMod {
+  status: "awaiting_archive" | "pending_review" | "published" | "rejected";
+  submittedAt: string;
+  submitterEmail?: string;
+  reviewNote?: string;
+}
+
+export interface HubSubmissionInput {
+  title: string;
+  author: string;
+  version: string;
+  shortDesc: string;
+  fullDesc?: string;
+  category: ModCategory;
+  compatibility: string[];
+  tags: string[];
+  thumbnail?: string;
+  sourceUrl?: string;
+  license?: string;
+  submitterEmail?: string;
+  distributionPermission: boolean;
 }
 
 export interface GameConfig {
@@ -140,3 +175,12 @@ export interface GameProcessStatus {
   isDemo?: boolean;
 }
 
+export interface UpdateStatus {
+  currentVersion: string;
+  availableVersion: string | null;
+  state: "disabled" | "idle" | "checking" | "available" | "downloading" | "ready" | "upToDate" | "error";
+  progress: number;
+  updateAvailable: boolean;
+  updaterConfigured: boolean;
+  message: string;
+}

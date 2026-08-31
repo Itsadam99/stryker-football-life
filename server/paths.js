@@ -28,6 +28,9 @@ export function ensureDataDirectories(dataRoot) {
     backups: path.join(dataRoot, "backups"),
     trash: path.join(dataRoot, "trash"),
     logs: path.join(dataRoot, "logs"),
+    hub: path.join(dataRoot, "hub"),
+    hubPackages: path.join(dataRoot, "hub", "packages"),
+    hubIncoming: path.join(dataRoot, "hub", "incoming"),
   };
 
   for (const directory of Object.values(directories)) {
@@ -64,4 +67,3 @@ export function assertPathInside(parentPath, candidatePath, label = "Chemin") {
 export function toWindowsPath(value) {
   return path.resolve(value).replace(/\//g, "\\");
 }
-

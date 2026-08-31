@@ -2,22 +2,30 @@
 
 STRYKER est un gestionnaire local de mods inspiré du fonctionnement de Vortex, conçu pour SP Football Life et eFootball PES 2021 sous Windows. Le projet sépare les archives installées du dossier du jeu, génère un bloc Sider identifiable et réversible, gère les profils et explique les conflits de priorité.
 
+L’interface du site et de l’application est disponible en français, anglais, portugais et espagnol. Le bouton « Ouvrir l’application » utilise le protocole Windows `stryker://open` afin de lancer ou remettre au premier plan l’application installée.
+
 Le projet est indépendant. Il n’est affilié ni à Konami, ni à SmokePatch, ni à Nexus Mods. Les mods et leurs pages appartiennent à leurs auteurs respectifs.
 
 ## Ce qui fonctionne réellement
 
 - détection stricte d’une installation existante de Football Life/PES 2021 et de `sider.ini` ;
+- priorité donnée au véritable Sider de Football Life dans `SiderAddons`, avec migration et redéploiement automatiques des anciennes liaisons incorrectes ;
 - staging privé des mods dans `%LOCALAPPDATA%\STRYKER\mods` ;
-- import de ZIP avec contrôle des chemins, limites de taille et refus du code exécutable ;
+- import de ZIP par sélection ou glisser-déposer, avec contrôle des chemins, limite de 20 Go et refus du code exécutable ;
 - reconnaissance des structures LiveCPK courantes et des manifestes `stryker.mod.json` ;
 - déploiement transactionnel des lignes `cpk.root` et des modules Lua ;
 - sauvegarde de `sider.ini` avant chaque changement, avec restauration depuis l’interface ;
-- activation, ordre de priorité, désinstallation récupérable et profils clonables ;
+- installation et réinstallation sans doublon, état visible, activation/désactivation immédiate sans lancer le jeu, ordre de priorité, désinstallation récupérable et profils clonables ;
 - détection des collisions de fichiers LiveCPK et des dépendances déclarées ;
-- lancement réel du jeu ou de Sider, avec un mode démonstration explicitement signalé ;
-- catalogue éditorial qui redirige vers la page des auteurs sans héberger ni simuler un téléchargement ;
+- détection des conflits entre mods sans signaler comme conflit les deux composants d’un même paquet ;
+- liaison par une fenêtre Windows native et lancement réel de Football Life, directement ou après démarrage de Sider ;
+- reconnaissance prioritaire du lanceur officiel `FL 20XX start.exe`, y compris pour une installation déjà liée ;
+- dépôt STRYKER intégré : réception des ZIP, contrôle technique, file de modération, publication et téléchargement ;
+- catalogue installable en un clic depuis l’application ou depuis un lien `stryker://` ouvert sur le site ;
+- paquet intégré **Graphic Menu EPL 2025/26** : deux racines LiveCPK, module UIColors et données Sider installés ensemble ;
 - API limitée à `127.0.0.1`, origine contrôlée et mutations protégées par une session éphémère ;
 - application Electron autonome, sans Node.js requis chez l’utilisateur final.
+- mises à jour Windows vérifiées au démarrage, téléchargeables dans l’application et installables au redémarrage depuis un flux HTTPS publié par STRYKER ;
 
 STRYKER ne prétend pas automatiser les installateurs `.exe`, les DLL, les archives RAR/7z ou les mods dont la structure est ambiguë. Ceux-ci restent manuels par sécurité.
 
@@ -25,8 +33,8 @@ STRYKER ne prétend pas automatiser les installateurs `.exe`, les DLL, les archi
 
 1. Ouvrir STRYKER et sélectionner le dossier qui contient l’exécutable de Football Life ou `PES2021.exe`.
 2. Vérifier l’état de l’installation sur le tableau de bord.
-3. Télécharger un mod depuis la page de son auteur.
-4. Importer son ZIP depuis **Mods → Installer une archive ZIP**.
+3. Installer un mod hébergé depuis **Découvrir → Installer**, ou déposer/importer un ZIP local depuis **Mods**. Un mod non répertorié est vérifié, placé dans le staging, puis déployé automatiquement si le jeu est lié.
+4. Pour publier un mod, ouvrir **Publier un mod** sur le site, remplir la fiche et envoyer l’archive en modération.
 5. Ajuster l’ordre : le mod placé le plus haut est prioritaire dans le bloc STRYKER.
 6. Examiner la page **Conflits**, puis lancer le jeu.
 
@@ -61,7 +69,14 @@ Pour produire l’installateur Windows x64 :
 npm run package:win
 ```
 
-L’artefact est créé dans `release/`. Aucun système de mise à jour automatique n’est annoncé tant qu’un manifeste distant signé n’est pas configuré.
+L’artefact et son manifeste `latest.yml` sont créés dans `release/`. Pour une version publique, configurez l’adresse HTTPS du flux avant l’empaquetage :
+
+```powershell
+$env:STRYKER_UPDATE_URL = "https://votre-domaine.example/updates/windows"
+npm run package:win
+```
+
+Publiez ensuite au même emplacement `latest.yml`, l’installateur `.exe` et son fichier `.blockmap`. Les applications déjà installées vérifient ce flux au démarrage, proposent le téléchargement, puis l’installation avec redémarrage. Le détail opérationnel se trouve dans [docs/UPDATES.md](docs/UPDATES.md).
 
 L’installateur de développement actuel n’est pas signé par un certificat Authenticode public. Windows SmartScreen peut donc afficher un avertissement. Une distribution publique devra être signée avec le certificat de l’éditeur ; une signature auto-signée n’apporterait pas de confiance réelle et n’est volontairement pas utilisée.
 
@@ -77,16 +92,19 @@ Les tests utilisent uniquement des dossiers temporaires : ils ne modifient pas u
 
 ## Manifeste de mod
 
-Un ZIP simple contenant `livecpk/<nom>/common/...` est reconnu automatiquement. Pour un mod mixte ou plusieurs modules Lua, ajoutez un `stryker.mod.json`. La documentation et le schéma se trouvent dans [docs/MANIFEST.md](docs/MANIFEST.md) et [docs/stryker.mod.schema.json](docs/stryker.mod.schema.json).
+Un ZIP simple contenant `livecpk/<nom>/common/...` est reconnu automatiquement. Pour un mod mixte, plusieurs modules Lua ou des données attendues dans `content` par Sider, ajoutez un `stryker.mod.json`. La documentation et le schéma se trouvent dans [docs/MANIFEST.md](docs/MANIFEST.md) et [docs/stryker.mod.schema.json](docs/stryker.mod.schema.json).
 
 ## Données et récupération
 
-Les données locales résident sous `%LOCALAPPDATA%\STRYKER` : état, staging, sauvegardes, activité et corbeille récupérable. Une désinstallation de mod depuis STRYKER retire son déploiement mais déplace son staging dans cette corbeille au lieu de l’effacer immédiatement.
+Les données locales résident sous `%LOCALAPPDATA%\STRYKER` : état, staging, dépôt de ZIP, sauvegardes, activité et corbeille récupérable. Une désinstallation de mod depuis STRYKER retire son déploiement mais déplace son staging dans cette corbeille au lieu de l’effacer immédiatement.
 
 Les principes de confiance et les frontières du système sont détaillés dans [docs/SECURITY.md](docs/SECURITY.md).
+
+L’architecture du catalogue, le parcours auteur et les exigences d’un hébergement public sont détaillés dans [docs/HUB.md](docs/HUB.md).
 
 ## Sources de référence
 
 - [SP Football Life](https://www.pessmokepatch.com/2025/10/spfl26.html)
 - [Documentation Sider 7](https://mapote.com/doc/sider/sider7/readme.html)
 - [Documentation des profils Vortex](https://wiki.nexusmods.com/index.php/Setting_up_profiles_in_Vortex)
+- [Graphic Menu EPL 2025/26 — fiche source](https://pes-files.com/pes-2021-new-graphic-menu-epl-2025-26/)

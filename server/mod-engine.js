@@ -90,7 +90,7 @@ function findManifest(extractRoot) {
 
 function validateManifestComponents(manifestInfo, extractRoot) {
   return manifestInfo.manifest.components.map((component) => {
-    if (!component || !["livecpk", "lua"].includes(component.type)) {
+    if (!component || !["livecpk", "lua", "sider"].includes(component.type)) {
       throw new Error("Le manifeste contient un type de composant non pris en charge.");
     }
     if (!component.root || typeof component.root !== "string") {
@@ -118,6 +118,14 @@ function validateManifestComponents(manifestInfo, extractRoot) {
         }
         return path.relative(absoluteRoot, absoluteEntry).replace(/\\/g, "/");
       });
+    }
+    if (component.type === "sider") {
+      const target = String(component.target || "").replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/\/+$/, "");
+      if (target.toLowerCase() !== "content") {
+        throw new Error("Un composant Sider ne peut cibler que le dossier content.");
+      }
+      normalized.target = target;
+      normalized.files = relativeFiles(absoluteRoot);
     }
     return normalized;
   });
@@ -224,8 +232,6 @@ export class ModEngine {
     if (fs.statSync(resolvedArchive).size > MAX_ARCHIVE_BYTES) throw new Error("Archive supérieure à la limite de sécurité de 20 Go.");
 
     const archiveHash = hashFile(resolvedArchive);
-    const existing = Object.values(this.store.snapshot().mods).find((mod) => mod.archiveHash === archiveHash);
-    if (existing) throw new Error(`Cette archive est déjà installée sous le nom « ${existing.name} ».`);
 
     const tempRoot = path.join(this.dataDirectories.temp, `install-${crypto.randomUUID()}`);
     fs.mkdirSync(tempRoot, { recursive: true });
@@ -252,14 +258,38 @@ export class ModEngine {
       const manifest = manifestInfo?.manifest || {};
       const requestedName = cleanText(metadata.name || manifest.name, path.basename(resolvedArchive, path.extname(resolvedArchive)), 120);
       const idBase = sanitizeSegment(metadata.id || manifest.id || requestedName, "mod").toLowerCase();
-      const id = `${idBase}-${archiveHash.slice(0, 8)}`;
-      const stagingPath = path.join(this.dataDirectories.mods, id);
+      const packageIdWasDeclared = Boolean(metadata.id || manifest.id);
+      const beforeInstall = this.store.snapshot();
+      const existing = Object.values(beforeInstall.mods).find((mod) => (
+        mod.archiveHash === archiveHash
+        || (packageIdWasDeclared && (
+          mod.packageId === idBase
+          || mod.id === idBase
+          || mod.id.startsWith(`${idBase}-`)
+        ))
+      ));
+      const id = existing?.id || `${idBase}-${archiveHash.slice(0, 8)}`;
+      const stagingPath = existing?.stagingPath || path.join(this.dataDirectories.mods, id);
       assertPathInside(this.dataDirectories.mods, stagingPath, "Dossier du mod");
-      if (fs.existsSync(stagingPath)) throw new Error("Le dossier de staging cible existe déjà.");
-      fs.renameSync(tempRoot, stagingPath);
+      let retiredStaging = null;
+      if (fs.existsSync(stagingPath)) {
+        retiredStaging = path.join(this.dataDirectories.trash, `replaced-${sanitizeSegment(id)}-${Date.now()}`);
+        assertPathInside(this.dataDirectories.trash, retiredStaging, "Ancienne version du mod");
+        fs.renameSync(stagingPath, retiredStaging);
+      }
+      try {
+        fs.renameSync(tempRoot, stagingPath);
+      } catch (error) {
+        if (retiredStaging && fs.existsSync(retiredStaging) && !fs.existsSync(stagingPath)) {
+          fs.renameSync(retiredStaging, stagingPath);
+        }
+        throw error;
+      }
 
+      const installedNow = new Date().toISOString();
       const record = {
         id,
+        packageId: idBase,
         name: requestedName,
         version: cleanText(metadata.version || manifest.version, "1.0.0", 40),
         author: cleanText(metadata.author || manifest.author, "Auteur non renseigné", 120),
@@ -270,19 +300,20 @@ export class ModEngine {
         sourceType: metadata.sourceType || "local-archive",
         archiveName: path.basename(resolvedArchive),
         archiveHash,
-        installedAt: new Date().toISOString(),
+        installedAt: existing?.installedAt || installedNow,
+        lastInstalledAt: installedNow,
+        installCount: Number(existing ? (existing.installCount || 1) : 0) + 1,
         stagingPath,
         components,
         managed: true,
       };
 
-      const previous = this.store.snapshot();
       try {
         this.store.update((draft) => {
           draft.mods[id] = record;
           const profile = draft.profiles.find((item) => item.id === draft.activeProfileId);
-          profile.modOrder.push(id);
-          profile.enabledMods.push(id);
+          if (!profile.modOrder.includes(id)) profile.modOrder.push(id);
+          if (!existing && !profile.enabledMods.includes(id)) profile.enabledMods.push(id);
           profile.updatedAt = new Date().toISOString();
         });
         const next = this.store.snapshot();
@@ -295,13 +326,17 @@ export class ModEngine {
           };
         });
       } catch (error) {
-        this.store.replace(previous);
+        this.store.replace(beforeInstall);
         const failedTarget = path.join(this.dataDirectories.trash, `failed-${id}-${Date.now()}`);
         if (fs.existsSync(stagingPath)) fs.renameSync(stagingPath, failedTarget);
+        if (retiredStaging && fs.existsSync(retiredStaging) && !fs.existsSync(stagingPath)) {
+          fs.renameSync(retiredStaging, stagingPath);
+        }
         throw error;
       }
 
-      this.store.addActivity("install", `Mod installé : ${record.name}`, { modId: id, archiveHash });
+      const action = existing ? "reinstalled" : "installed";
+      this.store.addActivity("install", `Mod ${existing ? "réinstallé" : "installé"} : ${record.name}`, { modId: id, archiveHash, action });
       return record;
     } catch (error) {
       if (fs.existsSync(tempRoot)) fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -417,7 +452,7 @@ export class ModEngine {
         if (component.type !== "livecpk") continue;
         for (const file of component.files || []) {
           const owners = fileOwners.get(file) || [];
-          owners.push(modId);
+          if (!owners.includes(modId)) owners.push(modId);
           fileOwners.set(file, owners);
         }
       }

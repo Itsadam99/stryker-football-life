@@ -38,10 +38,10 @@ export function createDefaultState({ mockDir, dataDirectories }) {
       siderPath: path.join(mockDir, "sider.ini"),
       siderExecutablePath: "",
       gameExecutablePath: "",
-      detectedVersion: "Environnement de démonstration sécurisé",
+      detectedVersion: "Aucune installation liée",
       autoStartSider: true,
       launchMode: "game",
-      isDemoMode: true,
+      isDemoMode: false,
       isLinked: false,
       stagingPath: dataDirectories.mods,
     },
@@ -72,6 +72,16 @@ function normalizeState(state, defaults) {
 
   if (!normalized.profiles.some((profile) => profile.id === normalized.activeProfileId)) {
     normalized.activeProfileId = normalized.profiles[0].id;
+  }
+
+  // Version 3.1 removes the old simulated game session while preserving its
+  // private sider.ini as a staging target for mods installed before linking.
+  if (!normalized.settings.isLinked) {
+    normalized.settings.isDemoMode = false;
+    normalized.settings.gamePath = "";
+    normalized.settings.gameExecutablePath = "";
+    normalized.settings.siderExecutablePath = "";
+    normalized.settings.detectedVersion = "Aucune installation liée";
   }
 
   return normalized;

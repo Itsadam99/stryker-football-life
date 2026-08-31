@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .field {
+    @apply w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition focus:border-[#a8228e];
+  }
+}
+
 @layer base {
   body {
     background-color: #000000;

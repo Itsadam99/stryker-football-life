@@ -6,6 +6,7 @@ coverage/
 data/
 mock-fl/
 artifacts/
+bundled-mods/*.zip
 
 # Local runtime state and personal data
 fl-hub-config.json

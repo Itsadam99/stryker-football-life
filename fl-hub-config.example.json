@@ -5,6 +5,6 @@
   "gameExecutablePath": "",
   "detectedVersion": "",
   "autoStartSider": true,
-  "isDemoMode": true,
+  "isDemoMode": false,
   "isLinked": false
 }

@@ -1,6 +1,6 @@
 {
   "name": "stryker-football-life",
-  "version": "3.0.0",
+  "version": "3.4.0",
   "description": "Gestionnaire local de mods pour SP Football Life et PES 2021",
   "author": "Adam",
   "license": "UNLICENSED",
@@ -13,16 +13,17 @@
     "server": "node server/index.js",
     "build": "tsc && vite build",
     "check": "tsc --noEmit",
-    "test": "node --test --test-concurrency=1 test/api-security.test.js test/game-detection.test.js test/mod-engine.test.js test/sider-manager.test.js",
+    "test": "node --test --test-concurrency=1 test/api-security.test.js test/game-detection.test.js test/mod-engine.test.js test/protocol-links.test.js test/repository.test.js test/sider-manager.test.js test/update-manager.test.js",
     "preview": "vite preview",
     "predesktop": "npm run build",
     "desktop": "electron .",
-    "package:win": "npm run build && electron-builder --win nsis"
+    "package:win": "npm run build && electron-builder --config electron-builder.config.cjs --win nsis --publish never"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "express": "^4.21.2",
     "helmet": "^8.3.0",
     "lucide-react": "^1.16.0",
@@ -47,6 +48,14 @@
   "build": {
     "appId": "com.stryker.footballlife",
     "productName": "STRYKER",
+    "protocols": [
+      {
+        "name": "STRYKER Mod Installer",
+        "schemes": [
+          "stryker"
+        ]
+      }
+    ],
     "artifactName": "STRYKER-Setup-${version}-${arch}.${ext}",
     "asar": true,
     "directories": {
@@ -54,6 +63,7 @@
     },
     "files": [
       "dist/**/*",
+      "bundled-mods/**/*",
       "electron/**/*",
       "server/**/*.js",
       "package.json"
@@ -66,6 +76,10 @@
       {
         "from": "server/browseArchive.ps1",
         "to": "scripts/browseArchive.ps1"
+      },
+      {
+        "from": "server/launchExecutable.ps1",
+        "to": "scripts/launchExecutable.ps1"
       }
     ],
     "win": {
