@@ -17,7 +17,7 @@ export const VortexDownloadModal: React.FC<VortexDownloadModalProps> = ({ mod, i
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4" onClick={onClose}>
-      <section role="dialog" aria-modal="true" aria-labelledby="source-modal-title" className="bg-[#1a0717] border border-[#711361] rounded-3xl max-w-lg w-full p-7 shadow-2xl relative" onClick={(event) => event.stopPropagation()}>
+      <section role="dialog" aria-modal="true" aria-labelledby="source-modal-title" className="relative w-full max-w-lg rounded-[2rem] border border-white/12 bg-[#0d090c] p-7 shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <button onClick={onClose} aria-label={t("common.close")} className="absolute top-5 right-5 text-white/50 hover:text-white p-1"><X className="w-5 h-5" /></button>
         <div className="flex justify-center mb-4"><StrykerLogo size={48} /></div>
         <h2 id="source-modal-title" className="text-xl font-black text-center uppercase">{t("modal.title")}</h2>
@@ -38,8 +38,8 @@ export const VortexDownloadModal: React.FC<VortexDownloadModalProps> = ({ mod, i
         </ol>
 
         <div className="mt-7 grid sm:grid-cols-2 gap-3">
-          <a href={mod.downloadUrl} target="_blank" rel="noreferrer" className="rounded-full bg-white text-[#711361] py-3 px-4 text-xs font-black uppercase flex items-center justify-center gap-2">{t("modal.authorSource")} <ExternalLink className="w-4 h-4" /></a>
-          <button onClick={() => { onClose(); onDownloadExe(); }} className="rounded-full bg-[#711361] py-3 px-4 text-xs font-black uppercase flex items-center justify-center gap-2"><Monitor className="w-4 h-4" /> {t("modal.openDesktop")}</button>
+          <a href={mod.sourceUrl || mod.downloadUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-black">{t("modal.authorSource")} <ExternalLink className="w-4 h-4" /></a>
+          <button onClick={() => { onClose(); onDownloadExe(); }} className="flex items-center justify-center gap-2 rounded-full bg-[#7f1d70] px-4 py-3 text-[10px] font-black uppercase tracking-[0.1em]"><Monitor className="w-4 h-4" /> {t("modal.openDesktop")}</button>
         </div>
       </section>
     </div>

@@ -27,7 +27,7 @@ export const StrykerUnavailableModal: React.FC<StrykerUnavailableModalProps> = (
         aria-modal="true"
         aria-labelledby="stryker-required-title"
         aria-describedby="stryker-required-description"
-        className="relative w-full max-w-lg rounded-3xl border border-[#a8228e]/70 bg-[#1a0717] p-7 shadow-2xl"
+        className="relative w-full max-w-lg rounded-[2rem] border border-white/12 bg-[#0d090c] p-7 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <button onClick={onClose} aria-label={t("common.close")} className="absolute right-5 top-5 p-1 text-white/50 hover:text-white">
@@ -46,10 +46,10 @@ export const StrykerUnavailableModal: React.FC<StrykerUnavailableModalProps> = (
         </div>
 
         <div className="mt-7 grid gap-3 sm:grid-cols-2">
-          <a href={STRYKER_DOWNLOAD_URL} className="flex items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-xs font-black uppercase text-[#711361]">
+          <a href={STRYKER_DOWNLOAD_URL} className="flex items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-black">
             <Download className="h-4 w-4" /> {t("appFallback.download")}
           </a>
-          <button onClick={onRetry} className="flex items-center justify-center gap-2 rounded-full bg-[#711361] px-4 py-3 text-xs font-black uppercase text-white">
+          <button onClick={onRetry} className="flex items-center justify-center gap-2 rounded-full bg-[#7f1d70] px-4 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-white">
             <RefreshCw className="h-4 w-4" /> {t("appFallback.retry")}
           </button>
         </div>
@@ -57,4 +57,3 @@ export const StrykerUnavailableModal: React.FC<StrykerUnavailableModalProps> = (
     </div>
   );
 };
-

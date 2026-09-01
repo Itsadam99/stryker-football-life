@@ -33,5 +33,43 @@
     "verificationDate": "2026-08-31",
     "publishedAt": "2026-08-31T16:30:00.000Z",
     "license": "Crédits : EFER.Q — redistribution autorisée par le mainteneur STRYKER."
+  },
+  {
+    "id": "stryker-dlss5-controller",
+    "title": "STRYKER DLSS 5 Universal RTX Controller",
+    "author": "STRYKER",
+    "version": "1.2.0",
+    "shortDesc": "Contrôleur DLSS universel RTX 20 à 50 avec panneau F10 et installation vérifiée du patch legacy.",
+    "fullDesc": "Module Lua original et redistribuable. F10 ouvre directement le panneau Neural Rendering avec sept niveaux de qualité et exposition automatique. STRYKER détecte la génération du GPU : RTX 50 conserve la DLL NVIDIA native ; RTX 20/30/40 peut installer séparément la DLL épinglée après vérification exacte de son SHA-256 et sauvegarde de l’original. Aucun binaire NVIDIA n’est inclus dans ce ZIP.",
+    "category": "other",
+    "compatibility": [
+      "Football Life 2026",
+      "PES 2021",
+      "Sider 7",
+      "RenoDX DLSS SF 0.1",
+      "GeForce RTX 20 / 30 / 40 / 50"
+    ],
+    "size": "5,0 Ko",
+    "thumbnail": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80",
+    "screenshots": [],
+    "sourceUrl": "https://github.com/RankFTW/RHI",
+    "archiveFile": "stryker-dlss5-controller.zip",
+    "archiveName": "STRYKER-DLSS5-Universal-RTX-Controller-1.2.0.zip",
+    "archiveHash": "85f5ef90e0ed3862b6b22f7764b39c5c7db3971e0f5ebb69f5cab3a12dcb6cb8",
+    "archiveSize": 5071,
+    "fileCount": 4,
+    "rating": 0,
+    "downloadsCount": 0,
+    "tags": [
+      "DLSS 5",
+      "RenoDX",
+      "Sider",
+      "RTX 20/30/40/50",
+      "contrôleur",
+      "overlay"
+    ],
+    "verificationDate": "2026-09-01",
+    "publishedAt": "2026-09-01T10:30:00.000Z",
+    "license": "MIT — code Lua STRYKER uniquement ; aucune DLL tierce incluse."
   }
 ]

@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity, AlertTriangle, ArchiveRestore, ArrowDown, ArrowUp, CheckCircle2,
   CircleGauge, Download, ExternalLink, FolderSearch, HeartPulse, Layers3,
-  Library, PackageOpen, Play, Plus, RefreshCw, Settings, ShieldCheck, Square,
+  Library, PackageOpen, Play, Plus, RefreshCw, Settings, ShieldCheck, Sparkles, Square,
   Trash2, UploadCloud, UserRoundCog, Wrench, XCircle,
 } from "lucide-react";
 import { api } from "../services/api";
 import { localizeCatalogMod, VERIFIED_CATALOG_MODS } from "../services/catalogData";
 import {
-  ActivityItem, BackupItem, ConflictReport, GameConfig, GameProcessStatus,
+  ActivityItem, BackupItem, ConflictReport, DlssSettings, GameConfig, GameProcessStatus,
   CatalogMod, HealthCheck, HealthReport, HubSubmission, ManagedMod, ModItem, Profile, UpdateStatus,
 } from "../types";
 import { StrykerLogo } from "./StrykerLogo";
@@ -35,6 +35,34 @@ const EMPTY_STATUS: GameProcessStatus = {
   pid: null,
   startTime: null,
   playDurationSeconds: 0,
+};
+
+const EMPTY_DLSS: DlssSettings = {
+  linked: false,
+  installed: false,
+  configurable: false,
+  enabled: false,
+  qualityMode: 0,
+  qualityId: "default",
+  autoExposure: false,
+  missingFiles: [],
+  configPath: "",
+  backupPath: "",
+  compatibility: {
+    gpuName: "",
+    gpuGeneration: "unknown",
+    supported: false,
+    needsLegacyPatch: false,
+    patchInstalled: false,
+    runtimeState: "missing",
+    runtimeHash: "",
+    runtimePath: "",
+    pinnedVersion: "",
+    pinnedHash: "",
+    pinnedSourceUrl: "",
+    backupPath: "",
+    canRestore: false,
+  },
 };
 
 const EMPTY_UPDATE: UpdateStatus = {
@@ -73,6 +101,7 @@ export function DesktopApp() {
   const [page, setPage] = useState<DesktopPage>("dashboard");
   const [config, setConfig] = useState<GameConfig>(EMPTY_CONFIG);
   const [status, setStatus] = useState<GameProcessStatus>(EMPTY_STATUS);
+  const [dlss, setDlss] = useState<DlssSettings>(EMPTY_DLSS);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>(EMPTY_UPDATE);
   const [mods, setMods] = useState<ManagedMod[]>([]);
   const [manualMods, setManualMods] = useState<ModItem[]>([]);
@@ -119,7 +148,9 @@ export function DesktopApp() {
     return query ? mods.filter((mod) => [mod.name, mod.author, mod.category].some((value) => value.toLowerCase().includes(query))) : mods;
   }, [mods, search]);
   const externalCatalogMods = useMemo(
-    () => VERIFIED_CATALOG_MODS.map((mod) => localizeCatalogMod(mod, language)),
+    () => VERIFIED_CATALOG_MODS
+      .filter((mod) => mod.status !== "pending_review" && Boolean(mod.sourceUrl || mod.downloadUrl))
+      .map((mod) => localizeCatalogMod(mod, language)),
     [language],
   );
 
@@ -129,8 +160,9 @@ export function DesktopApp() {
   };
 
   const refreshAll = async () => {
-    const [nextConfig, nextMods, sider, nextProfiles, nextHealth, nextConflicts, nextBackups, nextActivity, nextStatus, nextVersion, nextCatalog, nextSubmissions] = await Promise.all([
+    const [nextConfig, nextDlss, nextMods, sider, nextProfiles, nextHealth, nextConflicts, nextBackups, nextActivity, nextStatus, nextVersion, nextCatalog, nextSubmissions] = await Promise.all([
       api.getConfig(),
+      api.getDlssSettings(),
       api.getManagedMods(),
       api.getSiderMods(),
       api.getProfiles(),
@@ -144,6 +176,7 @@ export function DesktopApp() {
       api.getSubmissions(),
     ]);
     setConfig(nextConfig);
+    setDlss(nextDlss);
     setMods(nextMods);
     setManualMods((sider.mods || []).filter((mod) => !mod.managed));
     setProfiles(nextProfiles);
@@ -198,6 +231,12 @@ export function DesktopApp() {
     if (selection.cancelled || !selection.path) return false;
     await api.installArchive(selection.path);
   }, config.isLinked ? t("desktop.archiveDeployed") : t("desktop.archivePrepared"));
+
+  const installLegacyDlss = () => runAction(async () => {
+    const selection = await api.browseLegacyDlssFile();
+    if (selection.cancelled || !selection.path) return false;
+    await api.installLegacyDlssPatch(selection.path);
+  }, t("desktop.dlssLegacyInstalled"));
 
   const installDroppedArchive = (file: File) => {
     if (busy) return;
@@ -516,7 +555,7 @@ export function DesktopApp() {
                 {externalCatalogMods.map((mod) => (
                   <article key={mod.id} className="rounded-xl overflow-hidden border border-white/10 bg-[#151015] flex flex-col">
                     <div className="h-36 bg-black relative"><img src={mod.thumbnail || "/stryker-logo.png"} onError={(event) => { event.currentTarget.src = "/stryker-logo.png"; }} alt="" className="w-full h-full object-cover opacity-75" /><span className={`absolute top-3 left-3 rounded-full px-2 py-1 text-[9px] font-black uppercase ${mod.legalStatus === "verified_source" ? "bg-emerald-600" : "bg-amber-500 text-black"}`}>{mod.legalStatus === "verified_source" ? t("desktop.verifiedSource") : t("desktop.communityLink")}</span></div>
-                    <div className="p-4 flex-1 flex flex-col"><p className="text-[10px] uppercase text-[#d870c5] font-bold">{mod.author}</p><h2 className="font-bold text-sm mt-1">{mod.title}</h2><p className="text-[11px] text-white/45 mt-2 line-clamp-3 flex-1">{mod.shortDesc}</p><div className="flex gap-2 mt-4"><a href={mod.downloadUrl} target="_blank" rel="noreferrer" className="flex-1 rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold text-center flex items-center justify-center gap-1.5 hover:bg-white/5">{t("desktop.authorSource")} <ExternalLink className="w-3 h-3" /></a></div></div>
+                    <div className="p-4 flex-1 flex flex-col"><p className="text-[10px] uppercase text-[#d870c5] font-bold">{mod.author}</p><h2 className="font-bold text-sm mt-1">{mod.title}</h2><p className="text-[11px] text-white/45 mt-2 line-clamp-3 flex-1">{mod.shortDesc}</p><div className="flex gap-2 mt-4"><a href={mod.sourceUrl || mod.downloadUrl} target="_blank" rel="noreferrer" className="flex-1 rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold text-center flex items-center justify-center gap-1.5 hover:bg-white/5">{t("desktop.authorSource")} <ExternalLink className="w-3 h-3" /></a></div></div>
                   </article>
                 ))}
               </div>
@@ -571,6 +610,90 @@ export function DesktopApp() {
                 <select id="launch-mode" value={config.launchMode} onChange={(event) => setConfig({ ...config, launchMode: event.target.value as "game" | "sider", autoStartSider: true })} className="w-full rounded-lg bg-black/35 border border-white/10 px-3 py-2.5 text-xs"><option value="game">{t("desktop.officialLauncher")}</option>{!/ start\.exe$/i.test(config.gameExecutablePath) && <option value="sider">{t("desktop.siderOneClick")}</option>}</select>
                 <p className="mt-3 text-[11px] leading-relaxed text-white/40">{t("desktop.launchHelp")}</p>
                 <button onClick={() => runAction(() => api.saveConfig({ autoStartSider: config.autoStartSider, launchMode: config.launchMode }), t("desktop.launchSaved"))} className="mt-4 rounded-lg bg-white text-[#711361] px-4 py-2 text-xs font-black">{t("desktop.save")}</button>
+              </Panel>
+              <Panel title={t("desktop.dlssTitle")} icon={Sparkles}>
+                <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-black/25 p-4">
+                  <div>
+                    <p className="text-xs font-bold">{t("desktop.dlssNeuralRendering")}</p>
+                    <p className={`mt-1 text-[11px] ${dlss.installed ? "text-emerald-300" : "text-amber-300"}`}>{dlss.installed ? t("desktop.dlssDetected") : t("desktop.dlssIncomplete")}</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy || status.isRunning || !dlss.configurable}
+                    aria-pressed={dlss.enabled}
+                    onClick={() => runAction(
+                      () => api.saveDlssSettings({ enabled: !dlss.enabled, qualityMode: dlss.qualityMode, autoExposure: dlss.autoExposure }),
+                      !dlss.enabled ? t("desktop.dlssEnabled") : t("desktop.dlssDisabled"),
+                    )}
+                    className={`min-w-24 rounded-full px-4 py-2 text-xs font-black disabled:opacity-35 ${dlss.enabled ? "bg-emerald-400 text-emerald-950" : "bg-white/10 text-white/60"}`}
+                  >
+                    {dlss.enabled ? t("desktop.activeStatus") : t("desktop.disabled")}
+                  </button>
+                </div>
+                <label className="mt-4 block text-xs font-semibold" htmlFor="dlss-quality">{t("desktop.dlssQuality")}</label>
+                <select
+                  id="dlss-quality"
+                  value={dlss.qualityMode}
+                  disabled={!dlss.configurable || status.isRunning}
+                  onChange={(event) => setDlss({ ...dlss, qualityMode: Number(event.target.value) })}
+                  className="mt-2 w-full rounded-lg bg-black/35 border border-white/10 px-3 py-2.5 text-xs disabled:opacity-35"
+                >
+                  <option value={0}>{t("desktop.dlssDefault")}</option>
+                  <option value={1}>{t("desktop.dlssPerformance")}</option>
+                  <option value={2}>{t("desktop.dlssBalanced")}</option>
+                  <option value={3}>{t("desktop.dlssQualityMode")}</option>
+                  <option value={4}>{t("desktop.dlssUltraPerformance")}</option>
+                  <option value={5}>{t("desktop.dlssUltraQuality")}</option>
+                  <option value={6}>DLAA</option>
+                </select>
+                <label className="mt-4 flex items-center gap-3 text-xs text-white/65">
+                  <input type="checkbox" checked={dlss.autoExposure} disabled={!dlss.configurable || status.isRunning} onChange={(event) => setDlss({ ...dlss, autoExposure: event.target.checked })} className="accent-[#711361]" />
+                  {t("desktop.dlssAutoExposure")}
+                </label>
+                {dlss.missingFiles.length > 0 && <p className="mt-3 break-words text-[10px] leading-relaxed text-amber-200/70">{t("desktop.dlssMissing")} {dlss.missingFiles.join(", ")}</p>}
+                <p className="mt-3 text-[11px] leading-relaxed text-white/40">{status.isRunning ? t("desktop.dlssCloseGame") : t("desktop.dlssRestart")}</p>
+                <button
+                  onClick={() => runAction(
+                    () => api.saveDlssSettings({ enabled: dlss.enabled, qualityMode: dlss.qualityMode, autoExposure: dlss.autoExposure }),
+                    t("desktop.dlssSaved"),
+                  )}
+                  disabled={busy || status.isRunning || !dlss.configurable}
+                  className="mt-4 rounded-lg bg-white text-[#711361] px-4 py-2 text-xs font-black disabled:opacity-35"
+                >
+                  {t("desktop.save")}
+                </button>
+                <div className="mt-5 rounded-xl border border-white/10 bg-black/25 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold">{t("desktop.dlssCompatibility")}</p>
+                      <p className="mt-1 text-[11px] text-white/55">{dlss.compatibility.gpuName || t("desktop.dlssGpuUnknown")}</p>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-[9px] font-black uppercase ${
+                      dlss.compatibility.gpuGeneration === "rtx50" || dlss.compatibility.patchInstalled
+                        ? "bg-emerald-400 text-emerald-950"
+                        : dlss.compatibility.needsLegacyPatch ? "bg-amber-400 text-amber-950" : "bg-white/10 text-white/55"
+                    }`}>
+                      {dlss.compatibility.gpuGeneration === "rtx50"
+                        ? t("desktop.dlssNativeBranch")
+                        : dlss.compatibility.patchInstalled ? t("desktop.dlssLegacyReady")
+                          : dlss.compatibility.needsLegacyPatch ? t("desktop.dlssLegacyRequired") : t("desktop.dlssUnsupported")}
+                    </span>
+                  </div>
+                  {dlss.compatibility.needsLegacyPatch && (
+                    <>
+                      <p className="mt-3 text-[11px] leading-relaxed text-white/45">{t("desktop.dlssLegacyHelp")}</p>
+                      <p className="mt-2 break-all font-mono text-[9px] text-white/30">DLSSNR {dlss.compatibility.pinnedVersion} · SHA-256 {dlss.compatibility.pinnedHash}</p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button onClick={installLegacyDlss} disabled={busy || status.isRunning} className="rounded-lg bg-[#711361] px-4 py-2 text-xs font-bold disabled:opacity-35">
+                          {dlss.compatibility.patchInstalled ? t("desktop.dlssLegacyVerifyAgain") : t("desktop.dlssLegacyInstall")}
+                        </button>
+                        {dlss.compatibility.canRestore && <button onClick={() => runAction(() => api.restoreLegacyDlssPatch(), t("desktop.dlssLegacyRestored"))} disabled={busy || status.isRunning} className="rounded-lg border border-white/10 px-4 py-2 text-xs text-white/65 disabled:opacity-35">{t("desktop.dlssLegacyRestore")}</button>}
+                        {dlss.compatibility.pinnedSourceUrl && <a href={dlss.compatibility.pinnedSourceUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 px-4 py-2 text-xs text-white/65">{t("desktop.dlssOpenPin")}</a>}
+                      </div>
+                    </>
+                  )}
+                  {dlss.compatibility.gpuGeneration === "rtx50" && <p className="mt-3 text-[11px] leading-relaxed text-emerald-200/60">{t("desktop.dlssRtx50NoPatch")}</p>}
+                </div>
               </Panel>
               <Panel title={t("desktop.updateTitle")} icon={RefreshCw}>
                 <div className="flex items-start gap-3"><span className={`mt-1 h-2.5 w-2.5 rounded-full ${updateStatus.state === "error" ? "bg-rose-400" : updateStatus.state === "disabled" ? "bg-white/25" : updateStatus.state === "ready" || updateStatus.state === "available" ? "bg-sky-400" : "bg-emerald-400"}`} /><div><p className="text-xs font-bold">STRYKER v{updateStatus.currentVersion}</p><p className="mt-1 text-[11px] text-white/45">{updateStateLabel}{updateStatus.availableVersion ? ` · v${updateStatus.availableVersion}` : ""}</p>{updateStatus.state === "downloading" && <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-sky-400" style={{ width: `${updateStatus.progress}%` }} /></div>}</div></div>

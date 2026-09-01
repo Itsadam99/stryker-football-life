@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, ExternalLink, Star } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { AllModsPage } from "./components/AllModsPage";
 import { DesktopApp } from "./components/DesktopApp";
 import { HomePage } from "./components/HomePage";
+import { ModDetailPage } from "./components/ModDetailPage";
 import { Navbar } from "./components/Navbar";
 import { PublishModPage } from "./components/PublishModPage";
 import { StrykerLogo } from "./components/StrykerLogo";
@@ -12,7 +13,7 @@ import { CatalogMod } from "./types";
 import { api } from "./services/api";
 import { BUNDLED_CATALOG_MODS, localizeCatalogMod, VERIFIED_CATALOG_MODS } from "./services/catalogData";
 import { createStrykerInstallLink } from "./services/distribution";
-import { useI18n } from "./i18n";
+import { LanguageSwitcher, useI18n } from "./i18n";
 
 export function App() {
   const { language, t } = useI18n();
@@ -69,21 +70,51 @@ export function App() {
       setSourceMod(mod);
       return;
     }
-    launchStryker(createStrykerInstallLink(mod.id), mod.title);
+    launchStryker(createStrykerInstallLink(mod.id, mod.repositoryUrl), mod.title);
   };
+
+  const navigateTo = (page: "home" | "all-mods" | "publish") => {
+    setSelectedMod(null);
+    setCurrentPage(page);
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const selectMod = (mod: CatalogMod) => {
+    setSelectedMod(mod);
+    window.history.replaceState(null, "", `#mod/${encodeURIComponent(mod.id)}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const closeMod = () => {
+    setSelectedMod(null);
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    if (selectedMod || catalogMods.length === 0) return;
+    const match = window.location.hash.match(/^#mod\/(.+)$/);
+    if (!match) return;
+    const id = decodeURIComponent(match[1]);
+    const mod = catalogMods.find((item) => item.id === id);
+    if (mod) setSelectedMod(mod);
+  }, [catalogMods, selectedMod]);
 
   if (isDesktopMode) return <DesktopApp />;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col font-poppins selection:bg-[#711361] selection:text-white">
-      <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} onOpenDesktop={openDesktop} />
+    <div className="min-h-screen bg-[#050405] text-white flex flex-col font-poppins selection:bg-[#711361] selection:text-white">
+      <Navbar currentPage={currentPage} setCurrentPage={navigateTo} onOpenDesktop={openDesktop} />
 
-      <main className="flex-1">
-        {currentPage === "home" ? (
+      <div className="flex-1">
+        {selectedMod ? (
+          <ModDetailPage mod={selectedMod} onBack={closeMod} onInstall={installWithStryker} onOpenSource={setSourceMod} />
+        ) : currentPage === "home" ? (
           <HomePage
             mods={catalogMods}
-            onNavigateToAllMods={() => setCurrentPage("all-mods")}
-            onSelectMod={setSelectedMod}
+            onNavigateToAllMods={() => navigateTo("all-mods")}
+            onSelectMod={selectMod}
             onOpenDownloadModal={setSourceMod}
             onInstall={installWithStryker}
             onDownloadExe={openDesktop}
@@ -91,13 +122,13 @@ export function App() {
         ) : currentPage === "all-mods" ? (
           <AllModsPage
             mods={catalogMods}
-            onBackToHome={() => setCurrentPage("home")}
-            onSelectMod={setSelectedMod}
+            onBackToHome={() => navigateTo("home")}
+            onSelectMod={selectMod}
             onOpenDownloadModal={setSourceMod}
             onInstall={installWithStryker}
           />
-        ) : <PublishModPage onBackToHome={() => setCurrentPage("home")} />}
-      </main>
+        ) : <PublishModPage onBackToHome={() => navigateTo("home")} />}
+      </div>
 
       <VortexDownloadModal isOpen={Boolean(sourceMod)} onClose={() => setSourceMod(null)} mod={sourceMod} onDownloadExe={openDesktop} />
       <StrykerUnavailableModal
@@ -107,36 +138,22 @@ export function App() {
         onRetry={() => missingApp && launchStryker(missingApp.deepLink, missingApp.modTitle)}
       />
 
-      {selectedMod && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setSelectedMod(null)}>
-          <section role="dialog" aria-modal="true" aria-labelledby="mod-detail-title" className="bg-[#1a0717] border border-[#711361] rounded-3xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(event) => event.stopPropagation()}>
-            <div className="relative h-56 rounded-2xl overflow-hidden mb-6 bg-black">
-              <img src={selectedMod.thumbnail || "/stryker-logo.png"} onError={(event) => { event.currentTarget.src = "/stryker-logo.png"; }} alt="" className="w-full h-full object-cover opacity-80" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1a0717] via-transparent to-transparent" />
-              <button onClick={() => setSelectedMod(null)} aria-label={t("common.close")} className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/80 border border-white/20">✕</button>
+      <footer className="border-t border-white/10 bg-[#080607] px-5 py-10 sm:px-8 lg:px-12 lg:py-14">
+        <div className="mx-auto max-w-[1380px]">
+          <div className="flex flex-col gap-9 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="flex items-center gap-3"><StrykerLogo size={36} /><span className="text-xl font-black tracking-[-0.05em]">STRYKER</span></div>
+              <p className="mt-5 max-w-lg text-xs leading-6 text-white/45">{t("footer.community")}</p>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-              <div><h2 id="mod-detail-title" className="text-2xl font-black uppercase">{selectedMod.title}</h2><p className="text-xs text-white/50 mt-1">{selectedMod.author} · {selectedMod.version} · {selectedMod.size || t("detail.sizeSource")}</p></div>
-              {selectedMod.rating > 0 && <span className="flex items-center gap-1.5 rounded-full bg-yellow-500/15 border border-yellow-500/30 px-3 py-1.5 text-yellow-300 text-xs font-bold"><Star className="w-3.5 h-3.5 fill-current" />{selectedMod.rating.toFixed(1)}</span>}
+            <div className="flex flex-wrap items-center gap-3">
+              <LanguageSwitcher />
+              <a href="https://github.com/Itsadam99/stryker-football-life" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.14em] text-white/70 transition hover:border-white/40 hover:text-white">GitHub <ArrowUpRight className="h-3.5 w-3.5" /></a>
             </div>
-            <p className="mt-5 text-sm text-white/75 leading-relaxed">{selectedMod.fullDesc}</p>
-            <div className="mt-5 rounded-xl bg-black/35 border border-white/10 p-4 text-xs text-white/55">
-              <p><strong className="text-white/80">{t("detail.compatibility")}</strong> {selectedMod.compatibility.join(", ")}</p>
-              <p className="mt-2"><strong className="text-white/80">{t("detail.verification")}</strong> {selectedMod.installationType === "automatic" ? `${t("detail.archiveChecked")}${selectedMod.verificationDate ? ` · ${selectedMod.verificationDate}` : ""}${selectedMod.archiveHash ? ` · SHA-256 ${selectedMod.archiveHash.slice(0, 12)}…` : ""}` : selectedMod.legalStatus === "verified_source" ? `${t("detail.sourceChecked")}${selectedMod.verificationDate ? ` · ${selectedMod.verificationDate}` : ""}` : t("detail.communityWarning")}</p>
-            </div>
-            <div className="mt-7 flex flex-col sm:flex-row justify-between gap-3 border-t border-white/10 pt-5">
-              <a href={selectedMod.sourceUrl || selectedMod.downloadUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-[#d870c5] flex items-center gap-2">{selectedMod.sourceUrl ? t("detail.modPage") : selectedMod.installationType === "automatic" ? t("detail.downloadZip") : t("detail.modSource")} <ExternalLink className="w-4 h-4" /></a>
-              <button onClick={() => { setSelectedMod(null); installWithStryker(selectedMod); }} className="rounded-full bg-[#711361] px-6 py-2.5 text-xs font-black uppercase flex items-center justify-center gap-2"><Download className="w-4 h-4" /> {selectedMod.installationType === "automatic" ? t("detail.installStryker") : t("detail.procedure")}</button>
-            </div>
-          </section>
-        </div>
-      )}
-
-      <footer className="border-t border-[#711361]/25 bg-[#140c13] py-10 px-6 text-center text-xs text-white/55">
-        <div className="max-w-6xl mx-auto space-y-4">
-          <div className="flex items-center justify-center gap-3"><StrykerLogo size={32} /><span className="font-black text-white">STRYKER</span></div>
-          <p>{t("footer.community")}</p>
-          <p className="text-[10px] text-white/35">{t("footer.independent")}</p>
+          </div>
+          <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-[9px] uppercase tracking-[0.12em] text-white/30 sm:flex-row sm:items-center sm:justify-between">
+            <p>© {new Date().getFullYear()} STRYKER</p>
+            <p>{t("footer.independent")}</p>
+          </div>
         </div>
       </footer>
     </div>

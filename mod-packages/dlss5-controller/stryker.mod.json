@@ -1,0 +1,39 @@
+{
+  "id": "stryker-dlss5-controller",
+  "name": "STRYKER DLSS 5 Universal RTX Controller",
+  "version": "1.2.0",
+  "author": "STRYKER",
+  "category": "other",
+  "compatibility": [
+    "Football Life 2026",
+    "PES 2021",
+    "Sider 7",
+    "RenoDX DLSS SF 0.1",
+    "GeForce RTX 20 / 30 / 40 / 50"
+  ],
+  "sourceUrl": "https://github.com/RankFTW/RHI",
+  "externalDependencies": [
+    {
+      "id": "dlssnr-legacy-rtx-310.8.0",
+      "fileName": "nvngx_dlssnr.dll",
+      "version": "310.8.0.0",
+      "sha256": "e67dee209320cdafe0e93e45675d7aa34323a53acc57a72b2e40a181581c989a",
+      "requiredFor": ["RTX 20", "RTX 30", "RTX 40"],
+      "sourceUrl": "https://discord.com/channels/1408098019194310818/1543976771920330884",
+      "bundled": false
+    }
+  ],
+  "siderOverlay": {
+    "toggleVkey": "0x79",
+    "primary": true
+  },
+  "components": [
+    {
+      "type": "lua",
+      "root": "modules",
+      "entrypoints": [
+        "dlss5-controller.lua"
+      ]
+    }
+  ]
+}

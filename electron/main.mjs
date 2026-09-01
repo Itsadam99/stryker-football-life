@@ -101,6 +101,18 @@ async function createWindow() {
           : await dialog.showOpenDialog(options);
         return result.canceled ? null : result.filePaths[0] || null;
       },
+      pickDlssNrFile: async () => {
+        const options = {
+          title: "Sélectionner la DLL DLSSNR épinglée",
+          buttonLabel: "Vérifier cette DLL",
+          properties: ["openFile"],
+          filters: [{ name: "NVIDIA DLSS Neural Rendering", extensions: ["dll"] }],
+        };
+        const result = mainWindow
+          ? await dialog.showOpenDialog(mainWindow, options)
+          : await dialog.showOpenDialog(options);
+        return result.canceled ? null : result.filePaths[0] || null;
+      },
     },
   });
   allowedOrigin = `http://${localServer.host}:${localServer.port}`;

@@ -1,8 +1,9 @@
-import React from "react";
-import { ArrowRight, Download, ExternalLink, Monitor, ShieldCheck } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown, ArrowRight, Check, Download, ExternalLink, Monitor, Plus } from "lucide-react";
 import type { CatalogMod } from "../types";
 import { useI18n } from "../i18n";
 import { STRYKER_DOWNLOAD_URL } from "../services/distribution";
+import { SITE_COPY } from "../services/siteCopy";
 
 interface HomePageProps {
   mods: CatalogMod[];
@@ -13,6 +14,19 @@ interface HomePageProps {
   onDownloadExe: () => void;
 }
 
+const FEATURED_IDS = [
+  "mega-facepack-v2-fl26-sider",
+  "stryker-dlss5-controller",
+  "eferq-graphic-menu-epl-2526",
+];
+
+function statusLabel(mod: CatalogMod, labels: { hosted: string; verified: string; community: string }) {
+  if (mod.status === "pending_review") return "Preview";
+  if (mod.installationType === "automatic") return labels.hosted;
+  if (mod.legalStatus === "verified_source") return labels.verified;
+  return labels.community;
+}
+
 export const HomePage: React.FC<HomePageProps> = ({
   mods,
   onNavigateToAllMods,
@@ -21,57 +35,218 @@ export const HomePage: React.FC<HomePageProps> = ({
   onInstall,
   onDownloadExe,
 }) => {
-  const { t } = useI18n();
-  const featured = mods.slice(0, 6);
+  const { language, t } = useI18n();
+  const copy = SITE_COPY[language];
+  const showcaseRef = useRef<HTMLElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
+  const [railX, setRailX] = useState(0);
+
+  const featured = useMemo(() => {
+    const chosen = FEATURED_IDS.map((id) => mods.find((mod) => mod.id === id)).filter(Boolean) as CatalogMod[];
+    return chosen.length === FEATURED_IDS.length ? chosen : mods.slice(0, 3);
+  }, [mods]);
+
+  useEffect(() => {
+    const elements = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          (entry.target as HTMLElement).dataset.visible = "true";
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.14 });
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [featured.length]);
+
+  useEffect(() => {
+    let frame = 0;
+    const updateRail = () => {
+      frame = 0;
+      const section = showcaseRef.current;
+      const rail = railRef.current;
+      if (!section || !rail || window.innerWidth < 900) {
+        setRailX(0);
+        return;
+      }
+      const rect = section.getBoundingClientRect();
+      const travel = Math.max(1, section.offsetHeight - window.innerHeight);
+      const progress = Math.max(0, Math.min(1, -rect.top / travel));
+      const maxOffset = Math.max(0, rail.scrollWidth - window.innerWidth + 56);
+      setRailX(-progress * maxOffset);
+    };
+    const requestUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateRail);
+    };
+    updateRail();
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", requestUpdate);
+      window.removeEventListener("resize", requestUpdate);
+    };
+  }, [featured.length]);
+
+  const triggerModAction = (mod: CatalogMod) => {
+    if (mod.status === "pending_review") return onSelectMod(mod);
+    if (mod.installationType === "automatic") return onInstall(mod);
+    onOpenDownloadModal(mod);
+  };
 
   return (
-    <main>
-      <section className="relative min-h-[650px] flex items-center justify-center overflow-hidden px-6">
-        <div className="absolute inset-0 bg-cover bg-center opacity-35 scale-105" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=2000&q=85')" }} />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/75 to-[#37002E]" />
-        <div className="relative z-10 max-w-5xl text-center py-20">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#711361] bg-black/60 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#e69bd8]">
-            <ShieldCheck className="w-4 h-4" /> {t("home.badge")}
+    <main className="bg-[#050405]">
+      <section className="relative min-h-[100svh] overflow-hidden bg-[#050405] p-2 sm:p-3">
+        <div className="stryker-hero relative flex min-h-[calc(100svh-16px)] overflow-hidden rounded-[1.65rem] border border-white/10 sm:min-h-[calc(100svh-24px)] sm:rounded-[2.2rem]">
+          <div className="absolute inset-0 stryker-hero-mesh" />
+          <div className="absolute inset-0 stryker-noise opacity-35" />
+          <div className="absolute -left-[12%] top-[18%] h-[55vw] w-[55vw] rounded-full bg-[#90127b]/35 blur-[110px]" />
+          <div className="absolute -right-[9%] bottom-[-32%] h-[52vw] w-[52vw] rounded-full bg-[#4c083f]/70 blur-[120px]" />
+
+          <div className="absolute left-5 top-28 z-10 rotate-[-7deg] rounded-full border border-white/20 bg-black/35 px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-white/75 backdrop-blur sm:left-10 sm:top-32">
+            {t("home.badge")}
           </div>
-          <h1 className="mt-7 text-5xl md:text-8xl lg:text-[105px] font-black uppercase leading-[0.85] tracking-tight">
-            {t("home.title1")}<br /><span className="text-[#b82ca0]">{t("home.title2")}</span>
-          </h1>
-          <p className="mx-auto mt-8 max-w-3xl text-sm md:text-base leading-relaxed text-white/75">
-            {t("home.description")}
-          </p>
-          <div className="mx-auto mt-9 grid max-w-3xl gap-4 sm:grid-cols-3">
-            <button onClick={onNavigateToAllMods} className="rounded-full bg-white px-6 py-3.5 font-black uppercase text-[#711361] hover:scale-[1.02] transition">{t("home.viewMods")}</button>
-            <a href={STRYKER_DOWNLOAD_URL} className="flex items-center justify-center gap-2 rounded-full bg-[#711361] px-6 py-3.5 font-black uppercase text-white transition hover:bg-[#861872]"><Download className="h-5 w-5" /> {t("home.downloadApp")}</a>
-            <button onClick={onDownloadExe} className="flex items-center justify-center gap-2 rounded-full border border-white/25 bg-black/35 px-6 py-3.5 font-black uppercase text-white transition hover:bg-white/10"><Monitor className="h-5 w-5" /> {t("home.openApp")}</button>
+
+          <div className="relative z-[2] m-auto w-full px-4 pb-32 pt-40 text-center sm:px-8 sm:pb-36">
+            <p className="mb-4 text-[10px] font-black uppercase tracking-[0.42em] text-[#e6a6d9] sm:mb-6 sm:text-xs">{copy.heroKicker}</p>
+            <h1 aria-label="STRYKER" className="stryker-wordmark mx-auto text-[20.5vw] font-black uppercase leading-[0.67] tracking-[-0.105em] text-white sm:text-[18vw] xl:text-[15.3rem]">
+              STRYKER
+            </h1>
+            <p className="mx-auto mt-9 max-w-2xl text-sm font-medium leading-relaxed text-white/66 sm:mt-12 sm:text-base">
+              {t("home.description")}
+            </p>
+            <div className="mx-auto mt-7 flex max-w-3xl flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+              <button onClick={onNavigateToAllMods} className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-black transition hover:bg-[#edc7e7]">{t("home.viewMods")} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></button>
+              <a href={STRYKER_DOWNLOAD_URL} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#7f1d70] px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-white transition hover:bg-[#9c278a]"><Download className="h-4 w-4" /> {t("home.downloadApp")}</a>
+              <button onClick={onDownloadExe} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-black/20 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-white backdrop-blur transition hover:border-white/45 hover:bg-white/10"><Monitor className="h-4 w-4" /> {t("home.openApp")}</button>
+            </div>
           </div>
-          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">{t("home.windows")}</p>
-          <p className="mt-5 text-[11px] text-white/40">{t("home.disclaimer")}</p>
+
+          <div className="absolute inset-x-5 bottom-5 z-10 flex items-end justify-between gap-5 sm:inset-x-10 sm:bottom-8">
+            <p className="max-w-[16rem] text-left text-[9px] font-black uppercase leading-relaxed tracking-[0.18em] text-white/55 sm:text-[10px]">
+              Find. Install. Play.<br />{t("home.windows")}
+            </p>
+            <a href="#featured-drops" aria-label={t("home.catalogTitle")} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/20 text-white/70 backdrop-blur transition hover:border-white/60 hover:text-white">
+              <ArrowDown className="h-4 w-4 animate-bounce" />
+            </a>
+          </div>
         </div>
       </section>
 
-      <section className="bg-[#37002E] px-6 md:px-12 py-20">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 border-b border-white/10 pb-6">
-            <div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d870c5]">{t("home.catalogEyebrow")}</p><h2 className="mt-2 text-3xl md:text-5xl font-black uppercase">{t("home.catalogTitle")}</h2></div>
-            <p className="max-w-lg text-xs leading-relaxed text-white/55">{t("home.catalogDescription")}</p>
+      <section id="featured-drops" className="px-5 pb-20 pt-28 sm:px-8 lg:px-12 lg:pb-32 lg:pt-40">
+        <div className="mx-auto max-w-[1380px]" data-reveal>
+          <p className="editorial-kicker">{copy.dropsEyebrow}</p>
+          <div className="mt-5 grid gap-7 border-t border-white/12 pt-7 lg:grid-cols-[1.25fr_.75fr] lg:items-end">
+            <h2 className="max-w-5xl text-[clamp(2.8rem,7vw,7.5rem)] font-black uppercase leading-[0.83] tracking-[-0.075em]">{copy.dropsTitle}</h2>
+            <p className="max-w-xl text-sm leading-7 text-white/50 lg:justify-self-end">{copy.dropsDescription}</p>
           </div>
+        </div>
+      </section>
 
-          <div className="mt-9 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {featured.map((mod) => (
-              <article key={mod.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#260C22] flex flex-col">
-                <button type="button" onClick={() => onSelectMod(mod)} className="text-left group">
-                  <div className="relative h-44 bg-black overflow-hidden">
-                    <img src={mod.thumbnail} onError={(event) => { event.currentTarget.src = "/stryker-logo.png"; }} alt="" className="w-full h-full object-cover opacity-75 group-hover:scale-105 transition duration-500" />
-                    <span className={`absolute top-3 left-3 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${mod.installationType === "automatic" ? "bg-[#711361] text-white" : mod.legalStatus === "verified_source" ? "bg-emerald-600 text-white" : "bg-amber-400 text-black"}`}>{mod.installationType === "automatic" ? t("home.hosted") : mod.legalStatus === "verified_source" ? t("home.verified") : t("home.community")}</span>
+      <section ref={showcaseRef} className="mod-showcase relative lg:h-[310vh]">
+        <div className="lg:sticky lg:top-0 lg:flex lg:h-screen lg:items-center lg:overflow-hidden">
+          <div ref={railRef} className="mod-showcase-rail flex flex-col gap-5 px-5 pb-28 sm:px-8 lg:flex-row lg:gap-7 lg:px-12 lg:pb-0" style={{ transform: `translate3d(${railX}px, 0, 0)` }}>
+            {featured.map((mod, index) => (
+              <article key={mod.id} className="group relative min-h-[34rem] overflow-hidden rounded-[1.8rem] border border-white/10 bg-[#160c14] lg:h-[72vh] lg:min-h-[580px] lg:w-[78vw] lg:max-w-[1120px] lg:flex-none lg:rounded-[2.4rem]">
+                <img src={mod.thumbnail || "/stryker-logo.png"} onError={(event) => { event.currentTarget.src = "/stryker-logo.png"; }} alt="" className="absolute inset-0 h-full w-full object-cover transition duration-1000 group-hover:scale-[1.035]" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/92 via-black/50 to-black/5" />
+                <div className="absolute inset-0 stryker-noise opacity-20" />
+                <div className="relative z-10 flex h-full min-h-[34rem] flex-col justify-between p-6 sm:p-10 lg:min-h-[580px] lg:p-14">
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="rounded-full border border-white/20 bg-black/35 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] backdrop-blur">{statusLabel(mod, { hosted: t("home.hosted"), verified: t("home.verified"), community: t("home.community") })}</span>
+                    <span className="text-5xl font-black tracking-[-0.08em] text-white/20 sm:text-7xl">0{index + 1}</span>
                   </div>
-                  <div className="p-5"><p className="text-[10px] uppercase tracking-wider text-[#d870c5] font-bold">{mod.author} · {mod.version}</p><h3 className="mt-2 font-black uppercase text-sm">{mod.title}</h3><p className="mt-3 text-xs leading-relaxed text-white/55 line-clamp-3">{mod.shortDesc}</p></div>
-                </button>
-                <div className="mt-auto px-5 pb-5 flex gap-2"><button type="button" onClick={() => mod.installationType === "automatic" ? onInstall(mod) : onOpenDownloadModal(mod)} className={`flex-1 rounded-lg px-3 py-2.5 text-[10px] font-black uppercase flex items-center justify-center gap-2 ${mod.installationType === "automatic" ? "bg-white text-[#711361]" : "border border-white/15 hover:bg-white/5"}`}>{mod.installationType === "automatic" ? <>{t("home.install")} <Download className="w-3.5 h-3.5" /></> : <>{t("home.viewSource")} <ExternalLink className="w-3.5 h-3.5" /></>}</button></div>
+                  <div className="max-w-[42rem]">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#e6a6d9]">{mod.author} / {mod.version}</p>
+                    <h3 className="mt-4 text-4xl font-black uppercase leading-[0.88] tracking-[-0.055em] sm:text-6xl lg:text-7xl">{mod.title}</h3>
+                    <p className="mt-5 max-w-xl text-sm leading-6 text-white/64 sm:text-base sm:leading-7">{mod.shortDesc}</p>
+                    <div className="mt-7 flex flex-wrap gap-2">
+                      {mod.tags.slice(0, 4).map((tag) => <span key={tag} className="rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.1em] text-white/60 backdrop-blur">{tag}</span>)}
+                    </div>
+                    <div className="mt-8 flex flex-wrap gap-3">
+                      <button onClick={() => onSelectMod(mod)} className="group/button inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-black transition hover:bg-[#edc7e7]">{copy.openDrop}<ArrowRight className="h-4 w-4 transition-transform group-hover/button:translate-x-1" /></button>
+                      <button onClick={() => triggerModAction(mod)} className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/25 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-white backdrop-blur transition hover:border-white/55">
+                        {mod.status === "pending_review" ? copy.detailPending : mod.installationType === "automatic" ? t("home.install") : t("home.viewSource")}
+                        {mod.installationType === "automatic" ? <Download className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+            <button onClick={onNavigateToAllMods} className="group flex min-h-[24rem] flex-col items-center justify-center rounded-[1.8rem] border border-white/12 bg-[#110d10] px-12 text-center transition hover:border-[#9c278a] hover:bg-[#180d16] lg:h-[72vh] lg:min-h-[580px] lg:w-[32vw] lg:min-w-[360px] lg:flex-none lg:rounded-[2.4rem]">
+              <span className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 transition group-hover:rotate-90 group-hover:border-[#d774c7]"><Plus className="h-6 w-6" /></span>
+              <span className="mt-7 text-2xl font-black uppercase tracking-[-0.04em]">{t("home.allCatalog")}</span>
+              <span className="mt-3 max-w-xs text-xs leading-6 text-white/45">{t("home.catalogDescription")}</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden border-y border-white/8 bg-[#0a0809] px-5 py-28 sm:px-8 lg:px-12 lg:py-44">
+        <div className="absolute inset-0 stryker-noise opacity-20" />
+        <div className="relative mx-auto max-w-[1380px]" data-reveal>
+          <p className="editorial-kicker">{copy.manifestoEyebrow}</p>
+          <h2 className="mt-7 max-w-[1240px] text-[clamp(3.4rem,9vw,9.7rem)] font-black uppercase leading-[0.8] tracking-[-0.08em] text-white/22">
+            <span className="text-white">{copy.manifestoTitle.split(". ")[0]}.</span>{" "}{copy.manifestoTitle.split(". ").slice(1).join(". ")}
+          </h2>
+          <p className="ml-auto mt-12 max-w-2xl border-l border-[#9c278a] pl-6 text-base leading-8 text-white/58 sm:text-lg">{copy.manifestoBody}</p>
+        </div>
+      </section>
+
+      <section className="px-5 py-28 sm:px-8 lg:px-12 lg:py-40">
+        <div className="mx-auto max-w-[1380px]">
+          <div data-reveal>
+            <p className="editorial-kicker">{copy.methodEyebrow}</p>
+            <h2 className="mt-5 max-w-5xl text-[clamp(2.8rem,6.5vw,6.8rem)] font-black uppercase leading-[0.84] tracking-[-0.07em]">{copy.methodTitle}</h2>
+          </div>
+          <div className="mt-16 grid border-t border-white/12 lg:grid-cols-3">
+            {copy.methodSteps.map((step) => (
+              <article key={step.number} data-reveal className="group border-b border-white/12 py-8 lg:border-b-0 lg:border-r lg:px-8 lg:py-10 first:lg:pl-0 last:lg:border-r-0">
+                <div className="flex items-center justify-between"><span className="text-5xl font-black tracking-[-0.07em] text-white/18">{step.number}</span><ArrowRight className="h-5 w-5 text-[#ba55a8] transition-transform group-hover:translate-x-2" /></div>
+                <h3 className="mt-16 text-2xl font-black uppercase tracking-[-0.04em]">{step.title}</h3>
+                <p className="mt-4 max-w-sm text-sm leading-7 text-white/48">{step.body}</p>
               </article>
             ))}
           </div>
+        </div>
+      </section>
 
-          <div className="mt-10 text-center"><button onClick={onNavigateToAllMods} className="inline-flex items-center gap-3 rounded-full bg-white px-9 py-3.5 text-sm font-black uppercase text-[#711361] hover:scale-[1.02] transition">{t("home.allCatalog")} <ArrowRight className="w-4 h-4" /></button></div>
+      <section className="px-3 pb-28 lg:pb-40">
+        <div className="relative mx-auto max-w-[1380px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#7f1d70] px-6 py-16 sm:px-12 lg:min-h-[680px] lg:rounded-[2.7rem] lg:px-20 lg:py-20" data-reveal>
+          <div className="absolute inset-0 stryker-noise opacity-25" />
+          <div className="absolute -right-24 -top-28 h-[520px] w-[520px] rounded-full bg-[#d067bf]/30 blur-[100px]" />
+          <div className="relative grid gap-14 lg:grid-cols-[1.15fr_.85fr] lg:items-end">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/65">{copy.appEyebrow}</p>
+              <h2 className="mt-7 text-[clamp(3.3rem,7vw,7.4rem)] font-black uppercase leading-[0.82] tracking-[-0.075em]">{copy.appTitle}</h2>
+            </div>
+            <div className="lg:pb-2">
+              <p className="text-sm leading-7 text-white/68 sm:text-base">{copy.appBody}</p>
+              <ul className="mt-8 space-y-3 text-xs font-bold uppercase tracking-[0.11em] text-white/75">
+                {[copy.appPoint1, copy.appPoint2, copy.appPoint3].map((point) => <li key={point} className="flex items-center gap-3"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#7f1d70]"><Check className="h-3.5 w-3.5" /></span>{point}</li>)}
+              </ul>
+              <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+                <a href={STRYKER_DOWNLOAD_URL} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-black transition hover:bg-[#f4ddef]"><Download className="h-4 w-4" />{t("home.downloadApp")}</a>
+                <button onClick={onDownloadExe} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] transition hover:bg-white/10"><Monitor className="h-4 w-4" />{t("home.openApp")}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-5 pb-32 sm:px-8 lg:px-12 lg:pb-44">
+        <div className="mx-auto max-w-[1380px]">
+          <div data-reveal><p className="editorial-kicker">{copy.faqEyebrow}</p><h2 className="mt-5 text-[clamp(2.8rem,6vw,6.4rem)] font-black uppercase leading-[0.85] tracking-[-0.07em]">{copy.faqTitle}</h2></div>
+          <div className="mt-14 border-t border-white/12">
+            {copy.faqs.map((item) => (
+              <details key={item.question} className="faq-row group border-b border-white/12" data-reveal>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-5 py-7 text-left text-base font-black uppercase tracking-[-0.02em] sm:text-xl"><span>{item.question}</span><Plus className="h-5 w-5 shrink-0 text-white/45 transition-transform group-open:rotate-45" /></summary>
+                <p className="max-w-3xl pb-8 text-sm leading-7 text-white/48">{item.answer}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
     </main>

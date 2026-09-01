@@ -61,28 +61,27 @@ export const PublishModPage: React.FC<PublishModPageProps> = ({ onBackToHome }) 
 
   if (done) {
     return (
-      <main className="min-h-screen bg-[#37002E] px-6 py-16 text-white">
-        <section className="mx-auto max-w-xl rounded-3xl border border-emerald-500/30 bg-[#260C22] p-8 text-center">
+      <main className="min-h-screen bg-[#050405] px-6 pb-20 pt-32 text-white">
+        <section className="mx-auto max-w-xl rounded-[2rem] border border-emerald-500/25 bg-[#0d0a0c] p-8 text-center">
           <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-400" />
           <h1 className="mt-5 text-3xl font-black uppercase">{t("publish.sent")}</h1>
           <p className="mt-3 text-sm leading-relaxed text-white/60">{t("publish.sentDescription")}</p>
-          <button onClick={onBackToHome} className="mt-7 rounded-full bg-white px-6 py-3 text-xs font-black uppercase text-[#711361]">{t("publish.back")}</button>
+          <button onClick={onBackToHome} className="mt-7 rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-black">{t("publish.back")}</button>
         </section>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#37002E] px-6 md:px-12 py-10 text-white">
-      <div className="mx-auto max-w-4xl">
-        <button onClick={onBackToHome} className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/20 px-4 py-2 text-xs font-bold"><ArrowLeft className="h-4 w-4" /> {t("nav.home")}</button>
-        <div className="mt-8">
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d870c5]">{t("publish.eyebrow")}</p>
-          <h1 className="mt-2 text-4xl font-black uppercase md:text-6xl">{t("publish.title")}</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/60">{t("publish.description")}</p>
+    <main className="min-h-screen bg-[#050405] px-5 pb-28 pt-28 text-white sm:px-8 lg:px-12 lg:pb-40 lg:pt-36">
+      <div className="mx-auto max-w-[1180px]">
+        <button onClick={onBackToHome} className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.14em] text-white/65 transition hover:border-white/40"><ArrowLeft className="h-4 w-4" /> {t("nav.home")}</button>
+        <div className="mt-14 grid gap-8 border-b border-white/10 pb-12 lg:grid-cols-[1.2fr_.8fr] lg:items-end">
+          <div><p className="editorial-kicker">{t("publish.eyebrow")}</p><h1 className="mt-6 text-[clamp(3.5rem,8vw,8rem)] font-black uppercase leading-[0.8] tracking-[-0.08em]">{t("publish.title")}</h1></div>
+          <p className="max-w-xl text-sm leading-7 text-white/50 lg:justify-self-end">{t("publish.description")}</p>
         </div>
 
-        <form onSubmit={submit} className="mt-9 space-y-6 rounded-3xl border border-white/10 bg-[#260C22] p-6 md:p-8">
+        <form onSubmit={submit} className="mt-10 space-y-7 rounded-[2rem] border border-white/10 bg-[#0d090c] p-6 md:p-10">
           <div className="grid gap-5 md:grid-cols-2">
             <Field label={t("publish.name")}><input required value={form.title} onChange={(event) => setField("title", event.target.value)} className="field" /></Field>
             <Field label={t("publish.author")}><input required value={form.author} onChange={(event) => setField("author", event.target.value)} className="field" /></Field>
@@ -113,7 +112,7 @@ export const PublishModPage: React.FC<PublishModPageProps> = ({ onBackToHome }) 
 
           <div className="flex gap-3 rounded-xl border border-white/10 bg-black/20 p-4 text-[11px] leading-relaxed text-white/50"><ShieldCheck className="h-5 w-5 flex-shrink-0 text-emerald-400" /><p>{t("publish.security")}</p></div>
           {error && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-100">{error}</p>}
-          <button disabled={busy || !archive || !form.distributionPermission} className="ml-auto flex items-center gap-2 rounded-full bg-white px-7 py-3 text-xs font-black uppercase text-[#711361] disabled:opacity-40"><Send className="h-4 w-4" /> {busy ? t("publish.sending") : t("publish.send")}</button>
+          <button disabled={busy || !archive || !form.distributionPermission} className="ml-auto flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-[10px] font-black uppercase tracking-[0.12em] text-black disabled:opacity-40"><Send className="h-4 w-4" /> {busy ? t("publish.sending") : t("publish.send")}</button>
         </form>
       </div>
     </main>
@@ -121,5 +120,5 @@ export const PublishModPage: React.FC<PublishModPageProps> = ({ onBackToHome }) 
 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block text-[11px] font-bold text-white/70"><span className="mb-2 block">{label}</span>{children}</label>;
+  return <label className="block text-[10px] font-black uppercase tracking-[0.08em] text-white/55"><span className="mb-2.5 block">{label}</span>{children}</label>;
 }

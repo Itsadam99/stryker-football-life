@@ -8,8 +8,18 @@ import { extractZipSafely } from "./zip-extractor.js";
 const MAX_ARCHIVE_BYTES = 20 * 1024 * 1024 * 1024;
 const MAX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024 * 1024;
 const MAX_FILES = 200_000;
-const BLOCKED_EXECUTABLE_EXTENSIONS = new Set([".exe", ".dll", ".bat", ".cmd", ".com", ".msi", ".ps1", ".vbs"]);
+const BLOCKED_EXECUTABLE_EXTENSIONS = new Set([
+  ".exe", ".dll", ".bat", ".cmd", ".com", ".msi", ".ps1", ".vbs",
+  ".py", ".pyw", ".js", ".jse", ".wsf", ".wsh", ".hta", ".scr", ".jar", ".lnk", ".reg", ".sh", ".cpl", ".pif",
+]);
 const ALLOWED_CATEGORIES = new Set(["gameplay", "turf", "menu", "audio", "kit", "face", "scoreboard", "other"]);
+
+function normalizeSiderOverlay(value) {
+  if (!value || typeof value !== "object") return null;
+  const toggleVkey = String(value.toggleVkey || "").trim().toLowerCase();
+  if (toggleVkey !== "0x79") throw new Error("Le raccourci d’overlay déclaré n’est pas autorisé. Seul F10 (0x79) est accepté.");
+  return { toggleVkey, primary: value.primary === true };
+}
 
 function cleanText(value, fallback, maxLength = 200) {
   const text = typeof value === "string" ? value.replace(/[\u0000-\u001f\u007f]/g, " ").trim() : "";
@@ -296,6 +306,7 @@ export class ModEngine {
         category: ALLOWED_CATEGORIES.has(metadata.category || manifest.category) ? (metadata.category || manifest.category) : inferCategory(requestedName),
         compatibility: (Array.isArray(metadata.compatibility) ? metadata.compatibility : Array.isArray(manifest.compatibility) ? manifest.compatibility : []).filter((value) => typeof value === "string").slice(0, 20).map((value) => value.slice(0, 100)),
         dependencies: (Array.isArray(manifest.dependencies) ? manifest.dependencies : []).filter((dependency) => dependency && typeof dependency.id === "string" && dependency.id.length <= 160).slice(0, 100).map((dependency) => ({ id: dependency.id, ...(typeof dependency.version === "string" ? { version: dependency.version.slice(0, 40) } : {}) })),
+        siderOverlay: manifest.siderOverlay ? normalizeSiderOverlay(manifest.siderOverlay) : null,
         sourceUrl: cleanText(metadata.sourceUrl || manifest.sourceUrl, "", 1000),
         sourceType: metadata.sourceType || "local-archive",
         archiveName: path.basename(resolvedArchive),

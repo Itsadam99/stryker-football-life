@@ -12,7 +12,7 @@ test("déploie un bloc géré, préserve le manuel et restaure une sauvegarde", 
   const data = ensureDataDirectories(path.join(root, "data"));
   const siderPath = path.join(root, "game", "SiderAddons", "sider.ini");
   fs.mkdirSync(path.dirname(siderPath), { recursive: true });
-  const original = '[sider]\r\ncpk.root = ".\\livecpk\\manual"\r\nlua.module = "manual.lua"\r\n';
+  const original = '[sider]\r\noverlay.vkey.toggle = 0x20\r\ncpk.root = ".\\livecpk\\manual"\r\nlua.module = "manual.lua"\r\n';
   fs.writeFileSync(siderPath, original);
 
   const staging = path.join(data.mods, "fixture");
@@ -29,6 +29,7 @@ test("déploie un bloc géré, préserve le manuel et restaure une sauvegarde", 
     mods: {
       fixture: {
         id: "fixture", name: "Fixture", version: "1.0.0", stagingPath: staging,
+        siderOverlay: { toggleVkey: "0x79", primary: true },
         components: [
           { type: "livecpk", root: "content" },
           { type: "lua", root: "lua", entrypoints: ["feature.lua"] },
@@ -45,13 +46,16 @@ test("déploie un bloc géré, préserve le manuel et restaure une sauvegarde", 
   assert.match(deployed, /cpk\.root = "\.\\livecpk\\manual"/);
   assert.match(deployed, new RegExp(MANAGED_START.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.ok(deployed.indexOf(MANAGED_START) < deployed.indexOf('cpk.root = ".\\livecpk\\manual"'));
+  assert.match(deployed, /overlay\.vkey\.toggle = 0x79/);
   assert.match(deployed, /lua\.module = "STRYKER\\fixture\\feature\.lua"/);
+  assert.ok(deployed.indexOf('lua.module = "STRYKER\\fixture\\feature.lua"') < deployed.indexOf('lua.module = "manual.lua"'));
   assert.ok(fs.existsSync(path.join(path.dirname(siderPath), "modules", "STRYKER", "fixture", "feature.lua")));
   assert.equal(fs.readFileSync(path.join(path.dirname(siderPath), "content", "ui-colors", "map.txt"), "utf-8"), "managed");
   assert.ok(fs.existsSync(deployment.backupPath));
 
   manager.deploy(state, { ...profile, enabledMods: [] });
   assert.equal(fs.readFileSync(path.join(path.dirname(siderPath), "content", "ui-colors", "map.txt"), "utf-8"), "original");
+  assert.match(fs.readFileSync(siderPath, "utf-8"), /overlay\.vkey\.toggle = 0x20/);
 
   const backupName = path.basename(deployment.backupPath);
   manager.restoreBackup(siderPath, backupName);

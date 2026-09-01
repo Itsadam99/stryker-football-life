@@ -6,6 +6,7 @@ import { Readable } from "node:stream";
 import test from "node:test";
 import { startServer } from "../server/index.js";
 import { createZip } from "./helpers/zip.js";
+import { trustedDownloadRequest, trustedDownloadResponse } from "../server/remote-installer.js";
 
 function validMetadata(overrides = {}) {
   return {
@@ -86,4 +87,14 @@ test("utilise le sélecteur Electron injecté quand il est disponible", async (t
   assert.equal((await gameResponse.json()).path, selectedPath);
   const archiveResponse = await fetch(`${base}/api/mods/browse-archive`, { method: "POST", headers: { "X-STRYKER-Token": token } });
   assert.equal((await archiveResponse.json()).cancelled, true);
+});
+
+test("limite les téléchargements distants au dépôt ou aux assets Release STRYKER", () => {
+  const repository = new URL("https://raw.githubusercontent.com/Itsadam99/stryker-football-life/main/public/repository/");
+  const release = new URL("https://github.com/Itsadam99/stryker-football-life/releases/download/mods-2026.09/mod.zip");
+  assert.equal(trustedDownloadRequest(new URL("api/catalog/mod/download", repository), repository), true);
+  assert.equal(trustedDownloadRequest(release, repository), true);
+  assert.equal(trustedDownloadRequest(new URL("https://example.com/mod.zip"), repository), false);
+  assert.equal(trustedDownloadResponse(new URL("https://release-assets.githubusercontent.com/object"), release, repository), true);
+  assert.equal(trustedDownloadResponse(new URL("https://evil.example/object"), release, repository), false);
 });

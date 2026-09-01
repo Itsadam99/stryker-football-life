@@ -30,6 +30,7 @@ export interface ManagedMod {
   category: ModCategory;
   compatibility: string[];
   dependencies: Array<{ id: string; version?: string }>;
+  siderOverlay?: { toggleVkey: "0x79"; primary: boolean } | null;
   sourceUrl: string;
   sourceType: string;
   archiveName: string;
@@ -127,6 +128,7 @@ export interface CatalogMod {
   publishedAt?: string | null;
   license?: string;
   sourceUrl?: string;
+  repositoryUrl?: string;
 }
 
 export interface HubSubmission extends CatalogMod {
@@ -164,6 +166,34 @@ export interface GameConfig {
   isDemoMode: boolean;
   isLinked: boolean;
   stagingPath: string;
+}
+
+export interface DlssSettings {
+  linked: boolean;
+  installed: boolean;
+  configurable: boolean;
+  enabled: boolean;
+  qualityMode: number;
+  qualityId: "default" | "performance" | "balanced" | "quality" | "ultra-performance" | "ultra-quality" | "dlaa";
+  autoExposure: boolean;
+  missingFiles: string[];
+  configPath: string;
+  backupPath: string;
+  compatibility: {
+    gpuName: string;
+    gpuGeneration: "rtx20" | "rtx30" | "rtx40" | "rtx50" | "unsupported" | "unknown";
+    supported: boolean;
+    needsLegacyPatch: boolean;
+    patchInstalled: boolean;
+    runtimeState: "missing" | "legacy-patched" | "nvidia-original" | "custom";
+    runtimeHash: string;
+    runtimePath: string;
+    pinnedVersion: string;
+    pinnedHash: string;
+    pinnedSourceUrl: string;
+    backupPath: string;
+    canRestore: boolean;
+  };
 }
 
 export interface GameProcessStatus {

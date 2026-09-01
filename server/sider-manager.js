@@ -63,6 +63,25 @@ function inlineComment(value) {
   return String(value || "").replace(/[\r\n\u0000-\u001f\u007f]+/g, " ").slice(0, 240);
 }
 
+function readSiderSetting(content, key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const matches = [...String(content || "").matchAll(new RegExp(`^\\s*${escaped}\\s*=\\s*([^;\\r\\n]+)`, "gmi"))];
+  return matches.length > 0 ? matches.at(-1)[1].trim() : null;
+}
+
+function writeSiderSetting(content, key, value) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`^(\\s*${escaped}\\s*=\\s*)[^;\\r\\n]+(\\s*;.*)?$`, "gmi");
+  if (pattern.test(content)) return content.replace(pattern, `$1${value}$2`);
+  const newline = content.includes("\r\n") ? "\r\n" : "\n";
+  return `${content.replace(/(?:\r?\n)*$/, "")}${newline}${key} = ${value}${newline}`;
+}
+
+function removeSiderSetting(content, key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return content.replace(new RegExp(`^\\s*${escaped}\\s*=.*(?:\\r?\\n|$)`, "gmi"), "");
+}
+
 function parseModLine(raw, index, managed) {
   const trimmed = raw.trim();
   const uncommented = trimmed.replace(/^;\s*/, "");
@@ -216,6 +235,20 @@ export class SiderManager {
     for (const modId of orderedIds) {
       if (!enabled.has(modId)) continue;
       const mod = state.mods[modId];
+      if (!mod?.siderOverlay?.primary) continue;
+      for (const component of mod.components || []) {
+        if (component.type !== "lua") continue;
+        lines.push(`; Interface prioritaire: ${inlineComment(mod.name)} | ${inlineComment(mod.id)}`);
+        for (const entrypoint of component.entrypoints || []) {
+          const relative = path.join("STRYKER", mod.id, entrypoint).replace(/\//g, "\\");
+          lines.push(`lua.module = "${relative}"`);
+        }
+      }
+    }
+
+    for (const modId of orderedIds) {
+      if (!enabled.has(modId)) continue;
+      const mod = state.mods[modId];
       if (!mod) continue;
 
       lines.push(`; Mod: ${inlineComment(mod.name)} | ${inlineComment(mod.version || "1.0.0")} | ${inlineComment(mod.id)}`);
@@ -227,6 +260,7 @@ export class SiderManager {
           lines.push(`cpk.root = "${toWindowsPath(root)}"`);
         }
         if (component.type === "lua") {
+          if (mod.siderOverlay?.primary) continue;
           for (const entrypoint of component.entrypoints || []) {
             const relative = path.join("STRYKER", mod.id, entrypoint).replace(/\//g, "\\");
             lines.push(`lua.module = "${relative}"`);
@@ -237,6 +271,46 @@ export class SiderManager {
 
     lines.push(MANAGED_END);
     return lines;
+  }
+
+  prepareOverlaySettings(state, profile, siderPath, original) {
+    const enabled = new Set(profile.enabledMods);
+    const overlayMod = profile.modOrder
+      .map((modId) => enabled.has(modId) ? state.mods[modId] : null)
+      .find((mod) => mod?.siderOverlay?.toggleVkey);
+    const bucket = this.backupBucket(siderPath);
+    const baselinePath = path.join(bucket, "sider-overlay-baseline.json");
+    let baseline = null;
+    if (fs.existsSync(baselinePath)) {
+      try { baseline = JSON.parse(fs.readFileSync(baselinePath, "utf-8")); }
+      catch { throw new Error("La sauvegarde du raccourci overlay Sider est illisible."); }
+    }
+
+    if (overlayMod) {
+      let createdBaseline = false;
+      if (!baseline) {
+        const originalValue = readSiderSetting(original, "overlay.vkey.toggle");
+        baseline = { schemaVersion: 1, hadSetting: originalValue !== null, value: originalValue };
+        fs.mkdirSync(bucket, { recursive: true });
+        atomicWriteText(baselinePath, `${JSON.stringify(baseline, null, 2)}\n`);
+        createdBaseline = true;
+      }
+      return {
+        content: writeSiderSetting(original, "overlay.vkey.toggle", overlayMod.siderOverlay.toggleVkey),
+        commit: () => undefined,
+        rollback: () => { if (createdBaseline && fs.existsSync(baselinePath)) fs.unlinkSync(baselinePath); },
+      };
+    }
+
+    if (!baseline) return { content: original, commit: () => undefined, rollback: () => undefined };
+    const restored = baseline.hadSetting
+      ? writeSiderSetting(original, "overlay.vkey.toggle", baseline.value)
+      : removeSiderSetting(original, "overlay.vkey.toggle");
+    return {
+      content: restored,
+      commit: () => { if (fs.existsSync(baselinePath)) fs.unlinkSync(baselinePath); },
+      rollback: () => undefined,
+    };
   }
 
   deployLuaComponents(state, profile, siderPath) {
@@ -429,8 +503,10 @@ export class SiderManager {
 
     const backupPath = this.createBackup(siderPath, `deploy-${profile.id}`);
     const original = fs.readFileSync(siderPath, "utf-8");
-    const newline = original.includes("\r\n") ? "\r\n" : "\n";
-    const lines = original.split(/\r?\n/);
+    const overlayTransaction = this.prepareOverlaySettings(state, profile, siderPath, original);
+    const prepared = overlayTransaction.content;
+    const newline = prepared.includes("\r\n") ? "\r\n" : "\n";
+    const lines = prepared.split(/\r?\n/);
     const startIndex = lines.findIndex((line) => line.trim() === MANAGED_START);
     const endIndex = lines.findIndex((line, index) => index >= startIndex && line.trim() === MANAGED_END);
     const managedLines = this.buildManagedLines(state, profile);
@@ -467,9 +543,11 @@ export class SiderManager {
       atomicWriteText(siderPath, nextLines.join(newline));
       luaTransaction.commit();
       siderDataTransaction.commit();
+      overlayTransaction.commit();
     } catch (error) {
       siderDataTransaction?.rollback();
       luaTransaction?.rollback();
+      overlayTransaction.rollback();
       atomicWriteText(siderPath, fs.readFileSync(backupPath, "utf-8"));
       throw error;
     }

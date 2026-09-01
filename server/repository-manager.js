@@ -11,7 +11,10 @@ import { atomicWriteJson } from "./storage.js";
 const MAX_ARCHIVE_BYTES = 20 * 1024 * 1024 * 1024;
 const MAX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024 * 1024;
 const MAX_FILES = 200_000;
-const BLOCKED_EXTENSIONS = new Set([".exe", ".dll", ".bat", ".cmd", ".com", ".msi", ".ps1", ".vbs"]);
+const BLOCKED_EXTENSIONS = new Set([
+  ".exe", ".dll", ".bat", ".cmd", ".com", ".msi", ".ps1", ".vbs",
+  ".py", ".pyw", ".js", ".jse", ".wsf", ".wsh", ".hta", ".scr", ".jar", ".lnk", ".reg", ".sh", ".cpl", ".pif",
+]);
 const CATEGORIES = new Set(["gameplay", "turf", "menu", "audio", "kit", "face", "scoreboard", "other"]);
 
 function cleanText(value, fallback = "", maxLength = 500) {

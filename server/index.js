@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { Transform } from "stream";
 import { pipeline } from "stream/promises";
 import { detectAtPath, detectCommonInstallation } from "./game-detection.js";
+import { DlssManager } from "./dlss-manager.js";
 import { ModEngine } from "./mod-engine.js";
 import { assertPathInside, ensureDataDirectories, resolveDataRoot, sanitizeSegment } from "./paths.js";
 import { ProcessManager } from "./process-manager.js";
@@ -19,7 +20,7 @@ import { StateStore } from "./storage.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
-const APP_VERSION = "3.4.0";
+const APP_VERSION = "3.6.0";
 const MAX_LOCAL_ARCHIVE_BYTES = 20 * 1024 * 1024 * 1024;
 
 function ensureMockSandbox(mockDir) {
@@ -147,6 +148,7 @@ export function createRuntime({
   }
   const siderManager = new SiderManager({ dataDirectories });
   const modEngine = new ModEngine({ store, siderManager, dataDirectories });
+  const dlssManager = new DlssManager();
   if (siderInstallationChanged && Object.keys(store.snapshot().mods).length > 0) {
     try {
       modEngine.deployCurrentProfile();
@@ -164,11 +166,11 @@ export function createRuntime({
     onActivity: (type, message, details) => store.addActivity(type, message, details),
     launcherScriptPath: pickerScript("launchExecutable.ps1"),
   });
-  return { rootDir, dataRoot, dataDirectories, store, siderManager, modEngine, repositoryManager, remoteInstaller, processManager, updateManager, sessionToken, nativeDialogs, publicHub, adminToken };
+  return { rootDir, dataRoot, dataDirectories, store, siderManager, modEngine, dlssManager, repositoryManager, remoteInstaller, processManager, updateManager, sessionToken, nativeDialogs, publicHub, adminToken };
 }
 
 export function createApp(runtime = createRuntime()) {
-  const { rootDir, store, siderManager, modEngine, repositoryManager, remoteInstaller, processManager, updateManager, sessionToken, nativeDialogs, publicHub, adminToken } = runtime;
+  const { rootDir, store, siderManager, modEngine, dlssManager, repositoryManager, remoteInstaller, processManager, updateManager, sessionToken, nativeDialogs, publicHub, adminToken } = runtime;
   const app = express();
 
   app.disable("x-powered-by");
@@ -282,6 +284,60 @@ export function createApp(runtime = createRuntime()) {
     });
     store.addActivity("settings", "Paramètres de lancement mis à jour");
     res.json({ success: true, config: safePublicSettings(store.snapshot().settings) });
+  });
+
+  app.get("/api/dlss", (req, res) => {
+    res.json(dlssManager.status(store.snapshot().settings));
+  });
+
+  app.post("/api/dlss", (req, res, next) => {
+    try {
+      if (processManager.status().isRunning) {
+        return res.status(409).json({ success: false, error: "Fermez Football Life avant de modifier les réglages DLSS depuis STRYKER." });
+      }
+      const dlss = dlssManager.save(store.snapshot().settings, req.body || {});
+      store.addActivity("dlss", `DLSS Neural Rendering ${dlss.enabled ? "activé" : "désactivé"}`, {
+        qualityMode: dlss.qualityMode,
+        autoExposure: dlss.autoExposure,
+      });
+      res.json({ success: true, dlss, requiresRestart: true });
+    } catch (error) { next(error); }
+  });
+
+  app.post("/api/dlss/legacy/browse", async (req, res, next) => {
+    try {
+      const selected = nativeDialogs?.pickDlssNrFile
+        ? await nativeDialogs.pickDlssNrFile()
+        : await runPicker(pickerScript("browseDlssNr.ps1"));
+      res.json(selected ? { success: true, path: selected } : { success: false, cancelled: true });
+    } catch (error) { next(error); }
+  });
+
+  app.post("/api/dlss/legacy/install", (req, res, next) => {
+    try {
+      if (processManager.status().isRunning) {
+        return res.status(409).json({ success: false, error: "Fermez Football Life avant de remplacer la DLL DLSS Neural Rendering." });
+      }
+      const dlss = dlssManager.installLegacyPatch(store.snapshot().settings, req.body?.sourcePath);
+      store.addActivity("dlss", `Compatibilité DLSS installée pour ${dlss.compatibility.gpuName}`, {
+        gpuGeneration: dlss.compatibility.gpuGeneration,
+        runtimeHash: dlss.compatibility.runtimeHash,
+      });
+      res.json({ success: true, dlss, requiresRestart: true });
+    } catch (error) { next(error); }
+  });
+
+  app.post("/api/dlss/legacy/restore", (req, res, next) => {
+    try {
+      if (processManager.status().isRunning) {
+        return res.status(409).json({ success: false, error: "Fermez Football Life avant de restaurer la DLL DLSS Neural Rendering." });
+      }
+      const dlss = dlssManager.restoreLegacyPatch(store.snapshot().settings);
+      store.addActivity("dlss", "DLL DLSS Neural Rendering d’origine restaurée", {
+        runtimeHash: dlss.compatibility.runtimeHash,
+      });
+      res.json({ success: true, dlss, requiresRestart: true });
+    } catch (error) { next(error); }
   });
 
   app.post("/api/detect", (req, res, next) => {

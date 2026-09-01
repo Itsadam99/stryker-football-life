@@ -57,6 +57,9 @@ test("refuse les traversées de chemin et le code exécutable", async (t) => {
   const executable = writeZip(path.join(root, "executable.zip"), [
     { name: "livecpk/mod/common/setup.exe", data: "not-an-exe" },
   ]);
+  const pythonScript = writeZip(path.join(root, "python-script.zip"), [
+    { name: "livecpk/mod/common/tool.pyw", data: "print('unsafe')" },
+  ]);
   const symlink = writeZip(path.join(root, "symlink.zip"), [
     {
       name: "livecpk/mod/common/link",
@@ -69,6 +72,7 @@ test("refuse les traversées de chemin et le code exécutable", async (t) => {
   await assert.rejects(() => service.runtime.modEngine.installArchive(traversal), /dangereux|invalid relative path|invalid/i);
   assert.equal(fs.existsSync(path.join(root, "outside.txt")), false);
   await assert.rejects(() => service.runtime.modEngine.installArchive(executable), /code exécutable/i);
+  await assert.rejects(() => service.runtime.modEngine.installArchive(pythonScript), /code exécutable/i);
   await assert.rejects(() => service.runtime.modEngine.installArchive(symlink), /lien ou fichier spécial/i);
   assert.equal(service.runtime.modEngine.list().length, 0);
 });

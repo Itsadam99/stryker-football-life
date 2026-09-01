@@ -13,6 +13,33 @@
     "category": { "enum": ["gameplay", "turf", "menu", "audio", "kit", "face", "scoreboard", "other"] },
     "compatibility": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 100 } },
     "sourceUrl": { "type": "string", "format": "uri", "maxLength": 1000 },
+    "siderOverlay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["toggleVkey"],
+      "properties": {
+        "toggleVkey": { "const": "0x79" },
+        "primary": { "type": "boolean" }
+      }
+    },
+    "externalDependencies": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "fileName", "sha256", "sourceUrl", "bundled"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "fileName": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "version": { "type": "string", "maxLength": 40 },
+          "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+          "requiredFor": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 100 } },
+          "sourceUrl": { "type": "string", "format": "uri", "maxLength": 1000 },
+          "bundled": { "const": false }
+        }
+      }
+    },
     "dependencies": {
       "type": "array",
       "maxItems": 100,

@@ -2,6 +2,7 @@ import {
   ActivityItem,
   BackupItem,
   ConflictReport,
+  DlssSettings,
   GameConfig,
   GameProcessStatus,
   HealthReport,
@@ -59,6 +60,18 @@ export const api = {
   getConfig: () => request<GameConfig>("/config"),
   saveConfig: (config: Pick<GameConfig, "autoStartSider" | "launchMode">) =>
     request<{ success: boolean; config: GameConfig }>("/config", { method: "POST", body: JSON.stringify(config) }),
+  getDlssSettings: () => request<DlssSettings>("/dlss"),
+  saveDlssSettings: (settings: Pick<DlssSettings, "enabled" | "qualityMode" | "autoExposure">) =>
+    request<{ success: boolean; dlss: DlssSettings; requiresRestart: boolean }>("/dlss", {
+      method: "POST",
+      body: JSON.stringify(settings),
+    }),
+  browseLegacyDlssFile: () => request<{ success: boolean; path?: string; cancelled?: boolean }>("/dlss/legacy/browse", { method: "POST" }),
+  installLegacyDlssPatch: (sourcePath: string) => request<{ success: boolean; dlss: DlssSettings; requiresRestart: boolean }>("/dlss/legacy/install", {
+    method: "POST",
+    body: JSON.stringify({ sourcePath }),
+  }),
+  restoreLegacyDlssPatch: () => request<{ success: boolean; dlss: DlssSettings; requiresRestart: boolean }>("/dlss/legacy/restore", { method: "POST" }),
   detectInstallation: () => request<{ success: boolean; config: GameConfig }>("/detect", { method: "POST" }),
   linkGame: (gamePath: string) => request<{ success: boolean; message: string; config: GameConfig }>("/game/link", {
     method: "POST",

@@ -7,6 +7,7 @@ test("the open link targets the installed STRYKER application", () => {
   assert.deepEqual(parseProtocolLink("stryker://open/"), { type: "open" });
 });
 
+
 test("install links keep their mod and repository information", () => {
   assert.deepEqual(
     parseProtocolLink("stryker://install/sample-mod?repository=https%3A%2F%2Fmods.example"),

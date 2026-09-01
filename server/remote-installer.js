@@ -23,8 +23,28 @@ function repositoryBase(value) {
 async function jsonResponse(response, label) {
   if (!response.ok) throw new Error(`${label} (${response.status}).`);
   const type = response.headers.get("content-type") || "";
-  if (!type.includes("application/json")) throw new Error(`${label} : réponse non JSON.`);
+  const responseHost = new URL(response.url).hostname.toLowerCase();
+  const trustedRawGithub = responseHost === "raw.githubusercontent.com";
+  if (!type.includes("application/json") && !(trustedRawGithub && type.includes("text/plain"))) {
+    throw new Error(`${label} : réponse non JSON.`);
+  }
   return response.json();
+}
+
+const STRYKER_GITHUB_RELEASE_PREFIX = "/Itsadam99/stryker-football-life/releases/download/";
+const GITHUB_RELEASE_HOSTS = new Set(["github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com"]);
+
+function trustedDownloadRequest(url, repositoryBaseUrl) {
+  if (url.origin === repositoryBaseUrl.origin) return true;
+  return url.protocol === "https:"
+    && url.hostname.toLowerCase() === "github.com"
+    && url.pathname.startsWith(STRYKER_GITHUB_RELEASE_PREFIX);
+}
+
+function trustedDownloadResponse(url, requestedUrl, repositoryBaseUrl) {
+  if (url.origin === repositoryBaseUrl.origin) return true;
+  if (!trustedDownloadRequest(requestedUrl, repositoryBaseUrl)) return false;
+  return url.protocol === "https:" && GITHUB_RELEASE_HOSTS.has(url.hostname.toLowerCase());
 }
 
 export class RemoteInstaller {
@@ -43,8 +63,11 @@ export class RemoteInstaller {
     if (!record || record.id !== safeModId || !record.archiveHash) throw new Error("Fiche de mod distante incomplète.");
 
     const downloadUrl = new URL(record.downloadUrl, base);
-    if (downloadUrl.origin !== base.origin) throw new Error("Le téléchargement doit rester sur le dépôt STRYKER sélectionné.");
-    const response = await fetch(downloadUrl, { redirect: "error" });
+    if (!trustedDownloadRequest(downloadUrl, base)) throw new Error("Le téléchargement doit rester sur un stockage STRYKER approuvé.");
+    const response = await fetch(downloadUrl, { redirect: "follow" });
+    if (!trustedDownloadResponse(new URL(response.url), downloadUrl, base)) {
+      throw new Error("Le stockage du mod a redirigé vers un domaine non approuvé.");
+    }
     if (!response.ok || !response.body) throw new Error(`Téléchargement du mod impossible (${response.status}).`);
     const announcedSize = Number(response.headers.get("content-length") || 0);
     if (announcedSize > MAX_ARCHIVE_BYTES) throw new Error("Archive supérieure à la limite de 20 Go.");
@@ -84,4 +107,4 @@ export class RemoteInstaller {
   }
 }
 
-export { repositoryBase };
+export { repositoryBase, trustedDownloadRequest, trustedDownloadResponse };
