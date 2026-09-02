@@ -7,6 +7,6 @@
   "category": "face",
   "compatibility": ["Football Life 2026", "PES 2021", "Sider 7", "LiveCPK"],
   "components": [
-    { "type": "livecpk", "root": "livecpk/Facepack_Update_222" }
+    { "type": "livecpk", "root": "livecpk/Facepack_Update_222", "target": "football-life-livecpk-root" }
   ]
 }

@@ -86,3 +86,47 @@ test("migre une ancienne liaison racine vers SiderAddons et redéploie les mods"
   assert.match(deployed, /STRYKER MANAGED MODS/);
   assert.ok(deployed.indexOf("STRYKER MANAGED MODS") < deployed.indexOf('cpk.root = ".\\livecpk\\root"'));
 });
+
+test("migre automatiquement les Facepacks déjà installés vers la racine LiveCPK du jeu", async (t) => {
+  const root = fixture();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const gameRoot = path.join(root, "game");
+  const siderRoot = path.join(gameRoot, "SiderAddons");
+  fs.mkdirSync(path.join(siderRoot, "livecpk", "root"), { recursive: true });
+  fs.writeFileSync(path.join(gameRoot, "FL 2026 start.exe"), "fixture");
+  fs.writeFileSync(path.join(siderRoot, "sider.ini"), '[sider]\ncpk.root = ".\\livecpk\\root"\n');
+  fs.writeFileSync(path.join(siderRoot, "sider.exe"), "fixture");
+
+  const dataRoot = path.join(root, "data");
+  const first = await startServer({ port: 0, rootDir: root, dataRoot });
+  const stagingPath = path.join(first.runtime.dataDirectories.mods, "legacy-facepack");
+  const relativeFace = "Asset/model/character/face/real/12345/#Win/face.fpk";
+  const source = path.join(stagingPath, "livecpk", "faces", ...relativeFace.split("/"));
+  fs.mkdirSync(path.dirname(source), { recursive: true });
+  fs.writeFileSync(source, "legacy-face");
+  first.runtime.store.update((draft) => {
+    Object.assign(draft.settings, {
+      gamePath: gameRoot,
+      gameExecutablePath: path.join(gameRoot, "FL 2026 start.exe"),
+      siderPath: path.join(siderRoot, "sider.ini"),
+      siderExecutablePath: path.join(siderRoot, "sider.exe"),
+      detectedVersion: "SP Football Life 2026",
+      isLinked: true,
+    });
+    draft.mods["legacy-facepack"] = {
+      id: "legacy-facepack", name: "Legacy Facepack", version: "1.0.0", category: "face", stagingPath,
+      components: [{ type: "livecpk", root: "livecpk/faces", files: [relativeFace.toLowerCase()] }],
+    };
+    draft.profiles[0].modOrder = ["legacy-facepack"];
+    draft.profiles[0].enabledMods = ["legacy-facepack"];
+  });
+  await first.close();
+
+  const migrated = await startServer({ port: 0, rootDir: root, dataRoot });
+  t.after(() => migrated.close());
+  const state = migrated.runtime.store.snapshot();
+  const destination = path.join(siderRoot, "livecpk", "root", ...relativeFace.split("/"));
+  assert.equal(state.mods["legacy-facepack"].components[0].target, "football-life-livecpk-root");
+  assert.equal(fs.readFileSync(destination, "utf-8"), "legacy-face");
+  assert.match(state.activity[0].message, /Facepacks déplacés/i);
+});

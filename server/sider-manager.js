@@ -256,6 +256,7 @@ export class SiderManager {
       lines.push(`; Mod: ${inlineComment(mod.name)} | ${inlineComment(mod.version || "1.0.0")} | ${inlineComment(mod.id)}`);
       for (const component of mod.components || []) {
         if (component.type === "livecpk") {
+          if (component.target === "football-life-livecpk-root") continue;
           const root = path.resolve(mod.stagingPath, component.root);
           assertPathInside(this.dataDirectories.mods, mod.stagingPath, "Staging du mod");
           assertPathInside(mod.stagingPath, root, "Racine LiveCPK");
@@ -356,6 +357,150 @@ export class SiderManager {
       rollback: () => {
         if (fs.existsSync(modulesRoot)) fs.rmSync(modulesRoot, { recursive: true, force: true });
         if (fs.existsSync(previousRoot)) fs.renameSync(previousRoot, modulesRoot);
+      },
+    };
+  }
+
+  deployLiveCpkRootComponents(state, profile, siderPath) {
+    const enabled = new Set(profile.enabledMods);
+    const siderRoot = path.dirname(siderPath);
+    const liveCpkRoot = path.join(siderRoot, "livecpk", "root");
+    const desired = new Map();
+
+    for (const modId of profile.modOrder) {
+      if (!enabled.has(modId)) continue;
+      const mod = state.mods[modId];
+      if (!mod) continue;
+      for (const component of mod.components || []) {
+        if (component.type !== "livecpk" || component.target !== "football-life-livecpk-root") continue;
+        const sourceRoot = path.resolve(mod.stagingPath, component.root);
+        assertPathInside(this.dataDirectories.mods, mod.stagingPath, "Staging du mod");
+        assertPathInside(mod.stagingPath, sourceRoot, "Facepack LiveCPK");
+        if (!fs.existsSync(sourceRoot) || !fs.statSync(sourceRoot).isDirectory()) {
+          throw new Error("Facepack introuvable dans le staging STRYKER.");
+        }
+        for (const source of listRegularFiles(sourceRoot)) {
+          const relativeTarget = path.relative(sourceRoot, source).replace(/\\/g, "/");
+          if (!/^asset\/model\/character\/face\/real\//i.test(relativeTarget)) {
+            throw new Error("Le Facepack contient un fichier hors du dossier Asset/model/character/face/real.");
+          }
+          const key = relativeTarget.toLowerCase();
+          if (desired.has(key)) continue;
+          const destination = path.resolve(liveCpkRoot, ...relativeTarget.split("/"));
+          assertPathInside(liveCpkRoot, destination, "Destination du Facepack");
+          desired.set(key, { relativeTarget, source, destination, modId });
+        }
+      }
+    }
+
+    const bucket = this.backupBucket(siderPath);
+    const statePath = path.join(bucket, "livecpk-root-state.json");
+    const originalsRoot = path.join(bucket, "livecpk-root-originals");
+    const previousText = fs.existsSync(statePath) ? fs.readFileSync(statePath, "utf-8") : "";
+    let previousState = { schemaVersion: 1, files: {} };
+    if (previousText) {
+      try {
+        const parsed = JSON.parse(previousText);
+        if (parsed && parsed.files && typeof parsed.files === "object") previousState = parsed;
+      } catch {
+        throw new Error("L’état des Facepacks gérés est illisible. Restaurez une sauvegarde avant de redéployer.");
+      }
+    }
+    const previousFiles = previousState.files || {};
+    const allKeys = new Set([...Object.keys(previousFiles), ...desired.keys()]);
+    const rollbackRoot = fs.mkdtempSync(path.join(this.dataDirectories.temp, "livecpk-root-rollback-"));
+    const snapshots = new Map();
+    const createdOriginals = [];
+    const staleOriginals = [];
+
+    const resolveManagedDestination = (relativeTarget) => {
+      const normalized = String(relativeTarget || "").replace(/\\/g, "/").replace(/^\/+/, "");
+      if (!normalized) throw new Error("Chemin de Facepack géré invalide.");
+      const destination = path.resolve(liveCpkRoot, ...normalized.split("/"));
+      assertPathInside(liveCpkRoot, destination, "Facepack géré");
+      return destination;
+    };
+    const resolveOriginalBackup = (relativeBackup) => {
+      const backup = path.resolve(bucket, ...String(relativeBackup).replace(/\\/g, "/").split("/"));
+      assertPathInside(originalsRoot, backup, "Sauvegarde originale du Facepack");
+      return backup;
+    };
+
+    try {
+      for (const key of allKeys) {
+        const relativeTarget = desired.get(key)?.relativeTarget || previousFiles[key]?.relativeTarget || key;
+        const destination = resolveManagedDestination(relativeTarget);
+        if (fs.existsSync(destination)) {
+          if (!fs.statSync(destination).isFile()) throw new Error(`La destination du Facepack n’est pas un fichier : ${relativeTarget}`);
+          const snapshotPath = path.join(rollbackRoot, `${crypto.createHash("sha256").update(key).digest("hex")}.bak`);
+          fs.copyFileSync(destination, snapshotPath);
+          snapshots.set(key, snapshotPath);
+        } else {
+          snapshots.set(key, null);
+        }
+      }
+
+      const nextFiles = {};
+      for (const [key, item] of desired.entries()) {
+        const previous = previousFiles[key];
+        let originalBackup = previous?.originalBackup || null;
+        if (!previous && fs.existsSync(item.destination)) {
+          fs.mkdirSync(originalsRoot, { recursive: true });
+          const extension = path.extname(item.destination).slice(0, 20);
+          const backupPath = path.join(originalsRoot, `${crypto.createHash("sha256").update(key).digest("hex")}${extension}`);
+          atomicCopyFile(item.destination, backupPath);
+          originalBackup = path.relative(bucket, backupPath).replace(/\\/g, "/");
+          createdOriginals.push(backupPath);
+        }
+        atomicCopyFile(item.source, item.destination);
+        nextFiles[key] = { relativeTarget: item.relativeTarget, originalBackup, modId: item.modId };
+      }
+
+      for (const [key, previous] of Object.entries(previousFiles)) {
+        if (desired.has(key)) continue;
+        const destination = resolveManagedDestination(previous.relativeTarget || key);
+        if (previous.originalBackup) {
+          const backupPath = resolveOriginalBackup(previous.originalBackup);
+          if (!fs.existsSync(backupPath)) throw new Error(`Sauvegarde originale manquante pour ${key}.`);
+          atomicCopyFile(backupPath, destination);
+          staleOriginals.push(backupPath);
+        } else if (fs.existsSync(destination)) {
+          fs.unlinkSync(destination);
+        }
+      }
+
+      fs.mkdirSync(bucket, { recursive: true });
+      atomicWriteText(statePath, `${JSON.stringify({ schemaVersion: 1, siderPath: path.resolve(siderPath), files: nextFiles }, null, 2)}\n`);
+    } catch (error) {
+      for (const [key, snapshotPath] of snapshots.entries()) {
+        const relativeTarget = desired.get(key)?.relativeTarget || previousFiles[key]?.relativeTarget || key;
+        const destination = resolveManagedDestination(relativeTarget);
+        if (snapshotPath) atomicCopyFile(snapshotPath, destination);
+        else if (fs.existsSync(destination) && fs.statSync(destination).isFile()) fs.unlinkSync(destination);
+      }
+      if (previousText) atomicWriteText(statePath, previousText);
+      else if (fs.existsSync(statePath)) fs.unlinkSync(statePath);
+      for (const backupPath of createdOriginals) if (fs.existsSync(backupPath)) fs.unlinkSync(backupPath);
+      fs.rmSync(rollbackRoot, { recursive: true, force: true });
+      throw error;
+    }
+
+    return {
+      commit: () => {
+        for (const backupPath of staleOriginals) if (fs.existsSync(backupPath)) fs.rmSync(backupPath, { force: true });
+        fs.rmSync(rollbackRoot, { recursive: true, force: true });
+      },
+      rollback: () => {
+        for (const [key, snapshotPath] of snapshots.entries()) {
+          const relativeTarget = desired.get(key)?.relativeTarget || previousFiles[key]?.relativeTarget || key;
+          const destination = resolveManagedDestination(relativeTarget);
+          if (snapshotPath) atomicCopyFile(snapshotPath, destination);
+          else if (fs.existsSync(destination) && fs.statSync(destination).isFile()) fs.unlinkSync(destination);
+        }
+        if (previousText) atomicWriteText(statePath, previousText);
+        else if (fs.existsSync(statePath)) fs.unlinkSync(statePath);
+        for (const backupPath of createdOriginals) if (fs.existsSync(backupPath)) fs.rmSync(backupPath, { force: true });
+        fs.rmSync(rollbackRoot, { recursive: true, force: true });
       },
     };
   }
@@ -731,20 +876,24 @@ export class SiderManager {
     ];
 
     let luaTransaction = null;
+    let liveCpkRootTransaction = null;
     let siderDataTransaction = null;
     let saveTransaction = null;
     try {
       luaTransaction = this.deployLuaComponents(state, profile, siderPath);
+      liveCpkRootTransaction = this.deployLiveCpkRootComponents(state, profile, siderPath);
       siderDataTransaction = this.deploySiderDataComponents(state, profile, siderPath);
       saveTransaction = this.deploySaveComponents(state, profile);
       atomicWriteText(siderPath, nextLines.join(newline));
       luaTransaction.commit();
+      liveCpkRootTransaction.commit();
       siderDataTransaction.commit();
       saveTransaction.commit();
       overlayTransaction.commit();
     } catch (error) {
       saveTransaction?.rollback();
       siderDataTransaction?.rollback();
+      liveCpkRootTransaction?.rollback();
       luaTransaction?.rollback();
       overlayTransaction.rollback();
       atomicWriteText(siderPath, fs.readFileSync(backupPath, "utf-8"));

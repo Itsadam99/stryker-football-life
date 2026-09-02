@@ -64,6 +64,49 @@ test("déploie un bloc géré, préserve le manuel et restaure une sauvegarde", 
   assert.ok(!fs.readFileSync(siderPath, "utf-8").includes(MANAGED_END));
 });
 
+test("installe les Facepacks dans la racine LiveCPK de Football Life et les restaure à la désactivation", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-facepack-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const data = ensureDataDirectories(path.join(root, "data"));
+  const siderRoot = path.join(root, "game", "SiderAddons");
+  const siderPath = path.join(siderRoot, "sider.ini");
+  const relativeFace = path.join("Asset", "model", "character", "face", "real", "12345", "#Win", "face.fpk");
+  const destination = path.join(siderRoot, "livecpk", "root", relativeFace);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.writeFileSync(siderPath, '[sider]\ncpk.root = ".\\livecpk\\root"\n');
+  fs.writeFileSync(destination, "original-face");
+
+  const staging = path.join(data.mods, "facepack");
+  const source = path.join(staging, "livecpk", "faces", relativeFace);
+  fs.mkdirSync(path.dirname(source), { recursive: true });
+  fs.writeFileSync(source, "stryker-face");
+  const state = {
+    settings: { siderPath },
+    mods: {
+      facepack: {
+        id: "facepack", name: "Facepack", version: "1.0.0", stagingPath: staging,
+        components: [{
+          type: "livecpk",
+          root: "livecpk/faces",
+          target: "football-life-livecpk-root",
+          files: [relativeFace.replace(/\\/g, "/").toLowerCase()],
+        }],
+      },
+    },
+  };
+  const profile = { id: "default", name: "Test", modOrder: ["facepack"], enabledMods: ["facepack"] };
+  const manager = new SiderManager({ dataDirectories: data });
+
+  manager.deploy(state, profile);
+  assert.equal(fs.readFileSync(destination, "utf-8"), "stryker-face");
+  const deployedIni = fs.readFileSync(siderPath, "utf-8");
+  assert.doesNotMatch(deployedIni, /AppData.*Facepack/i);
+  assert.equal((deployedIni.match(/cpk\.root/g) || []).length, 1);
+
+  manager.deploy(state, { ...profile, enabledMods: [] });
+  assert.equal(fs.readFileSync(destination, "utf-8"), "original-face");
+});
+
 test("installe, préserve puis restaure un Option File Football Life", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-save-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

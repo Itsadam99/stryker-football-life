@@ -66,7 +66,7 @@ const EMPTY_DLSS: DlssSettings = {
 };
 
 const EMPTY_UPDATE: UpdateStatus = {
-  currentVersion: "3.8.0",
+  currentVersion: "3.8.1",
   availableVersion: null,
   state: "disabled",
   progress: 0,

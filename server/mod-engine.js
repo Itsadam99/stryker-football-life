@@ -117,7 +117,18 @@ function validateManifestComponents(manifestInfo, extractRoot) {
       type: component.type,
       root: path.relative(extractRoot, absoluteRoot),
     };
-    if (component.type === "livecpk") normalized.files = relativeFiles(absoluteRoot);
+    if (component.type === "livecpk") {
+      const target = String(component.target || "").trim().toLowerCase();
+      if (target && target !== "football-life-livecpk-root") {
+        throw new Error("La cible LiveCPK du manifeste n’est pas prise en charge.");
+      }
+      const files = relativeFiles(absoluteRoot);
+      if (target && !files.every((file) => /^asset\/model\/character\/face\/real\//i.test(file))) {
+        throw new Error("Un Facepack destiné à Football Life ne peut contenir que des fichiers Asset/model/character/face/real.");
+      }
+      if (target) normalized.target = target;
+      normalized.files = files;
+    }
     if (component.type === "lua") {
       const entrypoints = Array.isArray(component.entrypoints) ? component.entrypoints : [];
       if (entrypoints.length === 0) throw new Error("Un composant Lua doit déclarer au moins un entrypoint.");

@@ -165,6 +165,28 @@ test("installe et restaure les données content requises par un module Sider", a
   assert.equal(fs.readFileSync(originalPath, "utf-8"), "original");
 });
 
+test("conserve la destination Football Life déclarée par un Facepack", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-facepack-manifest-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const manifest = JSON.stringify({
+    id: "facepack-fixture",
+    name: "Facepack fixture",
+    category: "face",
+    components: [{ type: "livecpk", root: "livecpk/faces", target: "football-life-livecpk-root" }],
+  });
+  const archive = writeZip(path.join(root, "facepack.zip"), [
+    { name: "stryker.mod.json", data: manifest },
+    { name: "livecpk/faces/Asset/model/character/face/real/12345/#Win/face.fpk", data: "face-data" },
+  ]);
+  const service = await startServer({ port: 0, rootDir: root, dataRoot: path.join(root, "data") });
+  t.after(() => service.close());
+
+  const installed = await service.runtime.modEngine.installArchive(archive);
+  assert.equal(installed.components[0].target, "football-life-livecpk-root");
+  const destination = path.join(root, "data", "demo", "livecpk", "root", "Asset", "model", "character", "face", "real", "12345", "#Win", "face.fpk");
+  assert.equal(fs.readFileSync(destination, "utf-8"), "face-data");
+});
+
 test("installe un Option File avec sauvegarde et désactivation gérées", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-option-file-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

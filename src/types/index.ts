@@ -16,7 +16,7 @@ export interface ModItem {
 export interface ManagedComponent {
   type: "livecpk" | "lua" | "sider" | "save";
   root: string;
-  target?: "content" | "football-life-save";
+  target?: "content" | "football-life-save" | "football-life-livecpk-root";
   files?: string[];
   entrypoints?: string[];
 }

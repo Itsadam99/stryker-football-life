@@ -63,7 +63,11 @@
             "type": "object",
             "additionalProperties": false,
             "required": ["type", "root"],
-            "properties": { "type": { "const": "livecpk" }, "root": { "type": "string", "minLength": 1 } }
+            "properties": {
+              "type": { "const": "livecpk" },
+              "root": { "type": "string", "minLength": 1 },
+              "target": { "const": "football-life-livecpk-root" }
+            }
           },
           {
             "type": "object",

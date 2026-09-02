@@ -20,7 +20,7 @@ import { StateStore } from "./storage.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
-const APP_VERSION = "3.8.0";
+const APP_VERSION = "3.8.1";
 const MAX_LOCAL_ARCHIVE_BYTES = 20 * 1024 * 1024 * 1024;
 
 function ensureMockSandbox(mockDir) {
@@ -127,6 +127,23 @@ export function createRuntime({
   });
   const existingSettings = store.snapshot().settings;
   let siderInstallationChanged = false;
+  let facepackDeploymentChanged = false;
+  const migratedFaceComponents = [];
+  store.update((draft) => {
+    for (const [modId, mod] of Object.entries(draft.mods || {})) {
+      for (const [componentIndex, component] of (mod.components || []).entries()) {
+        const componentFiles = component.files || [];
+        const hasFaceFiles = component.type === "livecpk"
+          && componentFiles.length > 0
+          && componentFiles.every((file) => /^asset\/model\/character\/face\/real\//i.test(String(file).replace(/\\/g, "/")));
+        if (hasFaceFiles && component.target !== "football-life-livecpk-root") {
+          migratedFaceComponents.push({ modId, componentIndex, previousTarget: component.target });
+          component.target = "football-life-livecpk-root";
+          facepackDeploymentChanged = true;
+        }
+      }
+    }
+  });
   if (existingSettings.isLinked && existingSettings.gamePath) {
     try {
       const refreshed = detectAtPath(existingSettings.gamePath);
@@ -149,15 +166,29 @@ export function createRuntime({
   const siderManager = new SiderManager({ dataDirectories });
   const modEngine = new ModEngine({ store, siderManager, dataDirectories });
   const dlssManager = new DlssManager();
-  if (siderInstallationChanged && Object.keys(store.snapshot().mods).length > 0) {
+  if ((siderInstallationChanged || facepackDeploymentChanged) && Object.keys(store.snapshot().mods).length > 0) {
     try {
       modEngine.deployCurrentProfile();
-      store.addActivity("migration", "Mods redéployés vers l’installation Sider réellement utilisée par Football Life", {
+      store.addActivity("migration", facepackDeploymentChanged
+        ? "Facepacks déplacés dans le dossier LiveCPK de Football Life"
+        : "Mods redéployés vers l’installation Sider réellement utilisée par Football Life", {
         previousSiderPath: existingSettings.siderPath,
         siderPath: store.snapshot().settings.siderPath,
       });
     } catch (error) {
-      store.addActivity("error", "Le redéploiement automatique vers Sider a échoué", { message: error.message });
+      if (facepackDeploymentChanged) {
+        store.update((draft) => {
+          for (const migration of migratedFaceComponents) {
+            const component = draft.mods[migration.modId]?.components?.[migration.componentIndex];
+            if (!component) continue;
+            if (migration.previousTarget === undefined) delete component.target;
+            else component.target = migration.previousTarget;
+          }
+        });
+      }
+      store.addActivity("error", facepackDeploymentChanged
+        ? "La migration automatique des Facepacks a échoué et sera retentée"
+        : "Le redéploiement automatique vers Sider a échoué", { message: error.message });
     }
   }
   const repositoryManager = new RepositoryManager({ dataDirectories, bundledDirectory: path.join(rootDir, "bundled-mods") });
