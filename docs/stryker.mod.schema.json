@@ -84,6 +84,16 @@
               "root": { "type": "string", "minLength": 1 },
               "target": { "const": "content" }
             }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "root", "target"],
+            "properties": {
+              "type": { "const": "save" },
+              "root": { "type": "string", "minLength": 1 },
+              "target": { "const": "football-life-save" }
+            }
           }
         ]
       }

@@ -165,6 +165,41 @@ test("installe et restaure les données content requises par un module Sider", a
   assert.equal(fs.readFileSync(originalPath, "utf-8"), "original");
 });
 
+test("installe un Option File avec sauvegarde et désactivation gérées", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-option-file-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const previousUserProfile = process.env.USERPROFILE;
+  const previousOneDrive = process.env.OneDrive;
+  process.env.USERPROFILE = path.join(root, "profile");
+  process.env.OneDrive = "";
+  t.after(() => {
+    if (previousUserProfile === undefined) delete process.env.USERPROFILE;
+    else process.env.USERPROFILE = previousUserProfile;
+    if (previousOneDrive === undefined) delete process.env.OneDrive;
+    else process.env.OneDrive = previousOneDrive;
+  });
+  const saveRoot = path.join(process.env.USERPROFILE, "Documents", "KONAMI", "eFootball PES 2021 SEASON UPDATE", "2026", "save");
+  fs.mkdirSync(saveRoot, { recursive: true });
+  const editPath = path.join(saveRoot, "EDIT00000000");
+  fs.writeFileSync(editPath, "original-edit");
+  const manifest = JSON.stringify({
+    id: "option-file-fixture",
+    name: "Option File fixture",
+    components: [{ type: "save", root: "save", target: "football-life-save" }],
+  });
+  const archive = writeZip(path.join(root, "option-file.zip"), [
+    { name: "stryker.mod.json", data: manifest },
+    { name: "save/EDIT00000000", data: "updated-edit" },
+  ]);
+  const service = await startServer({ port: 0, rootDir: root, dataRoot: path.join(root, "data") });
+  t.after(() => service.close());
+
+  const mod = await service.runtime.modEngine.installArchive(archive);
+  assert.equal(fs.readFileSync(editPath, "utf-8"), "updated-edit");
+  service.runtime.modEngine.toggle(mod.id, false);
+  assert.equal(fs.readFileSync(editPath, "utf-8"), "original-edit");
+});
+
 test("clone et active des profils sans dupliquer les fichiers", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-profile-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

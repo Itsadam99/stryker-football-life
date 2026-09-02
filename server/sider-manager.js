@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { assertPathInside, sanitizeSegment, toWindowsPath } from "./paths.js";
 
@@ -137,8 +138,9 @@ function inferCategory(value) {
 }
 
 export class SiderManager {
-  constructor({ dataDirectories }) {
+  constructor({ dataDirectories, documentsRoots = null }) {
     this.dataDirectories = dataDirectories;
+    this.documentsRoots = documentsRoots;
   }
 
   parse(siderPath) {
@@ -377,12 +379,37 @@ export class SiderManager {
         for (const source of listRegularFiles(sourceRoot)) {
           const relativeSource = path.relative(sourceRoot, source).replace(/\\/g, "/");
           const relativeTarget = `${targetRoot}/${relativeSource}`;
-          if (desired.has(relativeTarget.toLowerCase())) continue;
+          const key = relativeTarget.toLowerCase();
+          if (key === "content/kits/map.txt" && desired.has(key)) {
+            desired.get(key).mergeSources.push({ source, modId });
+            continue;
+          }
+          if (desired.has(key)) continue;
           const destination = path.resolve(siderRoot, ...relativeTarget.split("/"));
           assertPathInside(siderRoot, destination, "Destination des données Sider");
-          desired.set(relativeTarget.toLowerCase(), { relativeTarget, source, destination, modId });
+          desired.set(key, { relativeTarget, source, destination, modId, mergeSources: [{ source, modId }] });
         }
       }
+    }
+
+    const mergedRoot = fs.mkdtempSync(path.join(this.dataDirectories.temp, "sider-merged-"));
+    for (const [key, item] of desired.entries()) {
+      if (key !== "content/kits/map.txt" || item.mergeSources.length < 2) continue;
+      const seenTeamIds = new Set();
+      const lines = ["# STRYKER — map Kitserver fusionnée automatiquement"];
+      for (const sourceItem of item.mergeSources) {
+        lines.push("", `# ${inlineComment(sourceItem.modId)}`);
+        for (const line of fs.readFileSync(sourceItem.source, "utf-8").split(/\r?\n/)) {
+          const teamId = line.match(/^\s*(\d+)\s*,/)?.[1];
+          if (teamId && seenTeamIds.has(teamId)) continue;
+          if (teamId) seenTeamIds.add(teamId);
+          if (line.trim()) lines.push(line);
+        }
+      }
+      const merged = path.join(mergedRoot, "kits-map.txt");
+      fs.writeFileSync(merged, `${lines.join("\r\n")}\r\n`, "utf-8");
+      item.source = merged;
+      item.modId = item.mergeSources.map(({ modId }) => modId).join(",");
     }
 
     const bucket = this.backupBucket(siderPath);
@@ -474,6 +501,7 @@ export class SiderManager {
       else if (fs.existsSync(statePath)) fs.unlinkSync(statePath);
       for (const backupPath of createdOriginals) if (fs.existsSync(backupPath)) fs.unlinkSync(backupPath);
       fs.rmSync(rollbackRoot, { recursive: true, force: true });
+      fs.rmSync(mergedRoot, { recursive: true, force: true });
       throw error;
     }
 
@@ -481,6 +509,7 @@ export class SiderManager {
       commit: () => {
         for (const backupPath of staleOriginals) if (fs.existsSync(backupPath)) fs.rmSync(backupPath, { force: true });
         fs.rmSync(rollbackRoot, { recursive: true, force: true });
+        fs.rmSync(mergedRoot, { recursive: true, force: true });
       },
       rollback: () => {
         for (const [key, snapshotPath] of snapshots.entries()) {
@@ -492,6 +521,172 @@ export class SiderManager {
         if (previousText) atomicWriteText(statePath, previousText);
         else if (fs.existsSync(statePath)) fs.unlinkSync(statePath);
         for (const backupPath of createdOriginals) if (fs.existsSync(backupPath)) fs.rmSync(backupPath, { force: true });
+        fs.rmSync(rollbackRoot, { recursive: true, force: true });
+        fs.rmSync(mergedRoot, { recursive: true, force: true });
+      },
+    };
+  }
+
+  resolveFootballLifeSaveRoot(state) {
+    const versionText = [
+      state?.settings?.detectedVersion,
+      state?.settings?.gameExecutablePath,
+      state?.settings?.gamePath,
+    ].filter(Boolean).join(" ");
+    const year = versionText.match(/20(?:24|25|26)/)?.[0] || "2026";
+    const configuredRoots = Array.isArray(this.documentsRoots) ? this.documentsRoots : [
+      process.env.OneDrive ? path.join(process.env.OneDrive, "Documents") : "",
+      process.env.USERPROFILE ? path.join(process.env.USERPROFILE, "Documents") : "",
+      path.join(os.homedir(), "Documents"),
+    ];
+    const roots = [...new Set(configuredRoots.filter(Boolean).map((root) => path.resolve(root)))];
+    if (roots.length === 0) throw new Error("Le dossier Documents de Windows est introuvable.");
+    const candidates = roots.map((root) => path.join(root, "KONAMI", "eFootball PES 2021 SEASON UPDATE", year, "save"));
+    const existing = candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isDirectory());
+    const selected = existing || candidates.find((candidate) => fs.existsSync(path.dirname(path.dirname(candidate)))) || candidates[0];
+    fs.mkdirSync(selected, { recursive: true });
+    return selected;
+  }
+
+  deploySaveComponents(state, profile) {
+    const enabled = new Set(profile.enabledMods);
+    const bucket = path.join(this.dataDirectories.backups, "football-life-saves");
+    const statePath = path.join(bucket, "state.json");
+    const hasEnabledSave = profile.modOrder.some((modId) => enabled.has(modId)
+      && state.mods[modId]?.components?.some((component) => component.type === "save"));
+    if (!hasEnabledSave && !fs.existsSync(statePath)) {
+      return { commit: () => undefined, rollback: () => undefined };
+    }
+    const saveRoot = this.resolveFootballLifeSaveRoot(state);
+    const desired = new Map();
+    for (const modId of profile.modOrder) {
+      if (!enabled.has(modId)) continue;
+      const mod = state.mods[modId];
+      if (!mod) continue;
+      for (const component of mod.components || []) {
+        if (component.type !== "save") continue;
+        if (component.target !== "football-life-save") throw new Error("Cible Option File invalide.");
+        const sourceRoot = path.resolve(mod.stagingPath, component.root);
+        assertPathInside(this.dataDirectories.mods, mod.stagingPath, "Staging du mod");
+        assertPathInside(mod.stagingPath, sourceRoot, "Option File");
+        const source = path.join(sourceRoot, "EDIT00000000");
+        if (!fs.existsSync(source) || !fs.statSync(source).isFile()) throw new Error("EDIT00000000 est introuvable dans le mod.");
+        if (!desired.has("edit00000000")) {
+          desired.set("edit00000000", {
+            source,
+            destination: path.join(saveRoot, "EDIT00000000"),
+            modId,
+            sourceHash: fileHash(source),
+          });
+        }
+      }
+    }
+
+    const originalsRoot = path.join(bucket, "originals");
+    const historyRoot = path.join(bucket, "history");
+    const previousText = fs.existsSync(statePath) ? fs.readFileSync(statePath, "utf-8") : "";
+    let previousState = { schemaVersion: 1, files: {} };
+    if (previousText) {
+      try {
+        const parsed = JSON.parse(previousText);
+        if (parsed && parsed.files && typeof parsed.files === "object") previousState = parsed;
+      } catch {
+        throw new Error("L’état des Option Files gérés est illisible.");
+      }
+    }
+    const previousFiles = previousState.files || {};
+    const allKeys = new Set([...Object.keys(previousFiles), ...desired.keys()]);
+    const rollbackRoot = fs.mkdtempSync(path.join(this.dataDirectories.temp, "save-rollback-"));
+    const snapshots = new Map();
+    const createdOriginals = [];
+    const createdHistory = [];
+
+    const safeDestination = (value) => {
+      const destination = path.resolve(value || path.join(saveRoot, "EDIT00000000"));
+      assertPathInside(saveRoot, destination, "Sauvegarde Football Life");
+      if (path.basename(destination).toLowerCase() !== "edit00000000") throw new Error("Nom d’Option File invalide.");
+      return destination;
+    };
+
+    try {
+      for (const key of allKeys) {
+        const destination = safeDestination(desired.get(key)?.destination || previousFiles[key]?.destination);
+        if (fs.existsSync(destination)) {
+          const snapshot = path.join(rollbackRoot, `${key}.bak`);
+          fs.copyFileSync(destination, snapshot);
+          snapshots.set(key, snapshot);
+        } else snapshots.set(key, null);
+      }
+
+      const nextFiles = {};
+      for (const [key, item] of desired.entries()) {
+        const previous = previousFiles[key];
+        let originalBackup = previous?.originalBackup || null;
+        if (!previous && fs.existsSync(item.destination)) {
+          fs.mkdirSync(originalsRoot, { recursive: true });
+          const backup = path.join(originalsRoot, `${key}-${crypto.randomBytes(6).toString("hex")}.bak`);
+          fs.copyFileSync(item.destination, backup);
+          originalBackup = backup;
+          createdOriginals.push(backup);
+        }
+        const unchanged = previous
+          && previous.modId === item.modId
+          && previous.sourceHash === item.sourceHash
+          && path.resolve(previous.destination) === path.resolve(item.destination)
+          && fs.existsSync(item.destination);
+        if (!unchanged) {
+          if (previous && fs.existsSync(item.destination)) {
+            fs.mkdirSync(historyRoot, { recursive: true });
+            const history = path.join(historyRoot, `${key}-${Date.now()}-${crypto.randomBytes(3).toString("hex")}.bak`);
+            fs.copyFileSync(item.destination, history);
+            createdHistory.push(history);
+          }
+          atomicCopyFile(item.source, item.destination);
+        }
+        nextFiles[key] = { destination: item.destination, originalBackup, modId: item.modId, sourceHash: item.sourceHash };
+      }
+
+      for (const [key, previous] of Object.entries(previousFiles)) {
+        if (desired.has(key)) continue;
+        const destination = safeDestination(previous.destination);
+        if (fs.existsSync(destination)) {
+          fs.mkdirSync(historyRoot, { recursive: true });
+          const history = path.join(historyRoot, `${key}-${Date.now()}-${crypto.randomBytes(3).toString("hex")}.bak`);
+          fs.copyFileSync(destination, history);
+          createdHistory.push(history);
+        }
+        if (previous.originalBackup && fs.existsSync(previous.originalBackup)) atomicCopyFile(previous.originalBackup, destination);
+        else if (fs.existsSync(destination)) fs.unlinkSync(destination);
+      }
+
+      fs.mkdirSync(bucket, { recursive: true });
+      atomicWriteText(statePath, `${JSON.stringify({ schemaVersion: 1, files: nextFiles }, null, 2)}\n`);
+    } catch (error) {
+      for (const [key, snapshot] of snapshots.entries()) {
+        const destination = safeDestination(desired.get(key)?.destination || previousFiles[key]?.destination);
+        if (snapshot) atomicCopyFile(snapshot, destination);
+        else if (fs.existsSync(destination)) fs.unlinkSync(destination);
+      }
+      if (previousText) atomicWriteText(statePath, previousText);
+      else if (fs.existsSync(statePath)) fs.unlinkSync(statePath);
+      for (const file of createdOriginals) if (fs.existsSync(file)) fs.unlinkSync(file);
+      for (const file of createdHistory) if (fs.existsSync(file)) fs.unlinkSync(file);
+      fs.rmSync(rollbackRoot, { recursive: true, force: true });
+      throw error;
+    }
+
+    return {
+      commit: () => fs.rmSync(rollbackRoot, { recursive: true, force: true }),
+      rollback: () => {
+        for (const [key, snapshot] of snapshots.entries()) {
+          const destination = safeDestination(desired.get(key)?.destination || previousFiles[key]?.destination);
+          if (snapshot) atomicCopyFile(snapshot, destination);
+          else if (fs.existsSync(destination)) fs.unlinkSync(destination);
+        }
+        if (previousText) atomicWriteText(statePath, previousText);
+        else if (fs.existsSync(statePath)) fs.unlinkSync(statePath);
+        for (const file of createdOriginals) if (fs.existsSync(file)) fs.unlinkSync(file);
+        for (const file of createdHistory) if (fs.existsSync(file)) fs.unlinkSync(file);
         fs.rmSync(rollbackRoot, { recursive: true, force: true });
       },
     };
@@ -537,14 +732,18 @@ export class SiderManager {
 
     let luaTransaction = null;
     let siderDataTransaction = null;
+    let saveTransaction = null;
     try {
       luaTransaction = this.deployLuaComponents(state, profile, siderPath);
       siderDataTransaction = this.deploySiderDataComponents(state, profile, siderPath);
+      saveTransaction = this.deploySaveComponents(state, profile);
       atomicWriteText(siderPath, nextLines.join(newline));
       luaTransaction.commit();
       siderDataTransaction.commit();
+      saveTransaction.commit();
       overlayTransaction.commit();
     } catch (error) {
+      saveTransaction?.rollback();
       siderDataTransaction?.rollback();
       luaTransaction?.rollback();
       overlayTransaction.rollback();

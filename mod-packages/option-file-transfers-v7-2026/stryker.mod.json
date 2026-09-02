@@ -1,0 +1,10 @@
+{
+  "$schema": "../../docs/stryker.mod.schema.json",
+  "id": "option-file-transfers-v7-2026",
+  "name": "Transferts joueurs — Option File V7",
+  "version": "7.0.0",
+  "author": "Prayudi StarGames / communauté SmokePatch",
+  "category": "other",
+  "compatibility": ["Football Life 2026", "Option File 2026", "EDIT00000000"],
+  "components": [{ "type": "save", "root": "save", "target": "football-life-save" }]
+}

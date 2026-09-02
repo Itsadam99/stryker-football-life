@@ -101,7 +101,7 @@ function findManifest(extractRoot) {
 
 function validateManifestComponents(manifestInfo, extractRoot) {
   return manifestInfo.manifest.components.map((component) => {
-    if (!component || !["livecpk", "lua", "sider"].includes(component.type)) {
+    if (!component || !["livecpk", "lua", "sider", "save"].includes(component.type)) {
       throw new Error("Le manifeste contient un type de composant non pris en charge.");
     }
     if (!component.root || typeof component.root !== "string") {
@@ -137,6 +137,18 @@ function validateManifestComponents(manifestInfo, extractRoot) {
       }
       normalized.target = target;
       normalized.files = relativeFiles(absoluteRoot);
+    }
+    if (component.type === "save") {
+      const target = String(component.target || "").trim().toLowerCase();
+      if (target !== "football-life-save") {
+        throw new Error("Un composant de sauvegarde ne peut cibler que le dossier de sauvegarde Football Life.");
+      }
+      const files = relativeFiles(absoluteRoot);
+      if (files.length !== 1 || files[0] !== "edit00000000") {
+        throw new Error("Un Option File STRYKER doit contenir uniquement le fichier EDIT00000000.");
+      }
+      normalized.target = target;
+      normalized.files = files;
     }
     return normalized;
   });

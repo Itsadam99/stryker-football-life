@@ -63,3 +63,68 @@ test("déploie un bloc géré, préserve le manuel et restaure une sauvegarde", 
   assert.equal(manager.parse(siderPath).mods.filter((mod) => !mod.managed).length, 2);
   assert.ok(!fs.readFileSync(siderPath, "utf-8").includes(MANAGED_END));
 });
+
+test("installe, préserve puis restaure un Option File Football Life", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-save-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const data = ensureDataDirectories(path.join(root, "data"));
+  const siderPath = path.join(root, "game", "SiderAddons", "sider.ini");
+  fs.mkdirSync(path.dirname(siderPath), { recursive: true });
+  fs.writeFileSync(siderPath, "[sider]\n");
+  const documents = path.join(root, "Documents");
+  const saveRoot = path.join(documents, "KONAMI", "eFootball PES 2021 SEASON UPDATE", "2026", "save");
+  fs.mkdirSync(saveRoot, { recursive: true });
+  const editPath = path.join(saveRoot, "EDIT00000000");
+  fs.writeFileSync(editPath, "original");
+  const staging = path.join(data.mods, "transfers");
+  fs.mkdirSync(path.join(staging, "save"), { recursive: true });
+  fs.writeFileSync(path.join(staging, "save", "EDIT00000000"), "transfers-v7");
+  const state = {
+    settings: { siderPath, detectedVersion: "SP Football Life 2026" },
+    mods: {
+      transfers: {
+        id: "transfers", name: "Transfers", stagingPath: staging,
+        components: [{ type: "save", root: "save", target: "football-life-save" }],
+      },
+    },
+  };
+  const profile = { id: "default", name: "Test", modOrder: ["transfers"], enabledMods: ["transfers"] };
+  const manager = new SiderManager({ dataDirectories: data, documentsRoots: [documents] });
+
+  manager.deploy(state, profile);
+  assert.equal(fs.readFileSync(editPath, "utf-8"), "transfers-v7");
+  fs.writeFileSync(editPath, "player-customized");
+  manager.deploy(state, profile);
+  assert.equal(fs.readFileSync(editPath, "utf-8"), "player-customized");
+  manager.deploy(state, { ...profile, enabledMods: [] });
+  assert.equal(fs.readFileSync(editPath, "utf-8"), "original");
+  assert.ok(fs.readdirSync(path.join(data.backups, "football-life-saves", "history")).length > 0);
+});
+
+test("fusionne les maps Kitserver de plusieurs Kitpacks selon la priorité", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-kitmaps-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const data = ensureDataDirectories(path.join(root, "data"));
+  const siderPath = path.join(root, "game", "SiderAddons", "sider.ini");
+  fs.mkdirSync(path.dirname(siderPath), { recursive: true });
+  fs.writeFileSync(siderPath, "[sider]\n");
+  const first = path.join(data.mods, "first", "content", "kits");
+  const second = path.join(data.mods, "second", "content", "kits");
+  fs.mkdirSync(first, { recursive: true });
+  fs.mkdirSync(second, { recursive: true });
+  fs.writeFileSync(path.join(first, "map.txt"), '101, "First League\\Alpha"\n102, "First League\\Beta"\n');
+  fs.writeFileSync(path.join(second, "map.txt"), '101, "Second League\\Duplicate"\n201, "Second League\\Gamma"\n');
+  const state = {
+    settings: { siderPath },
+    mods: {
+      first: { id: "first", name: "First", stagingPath: path.join(data.mods, "first"), components: [{ type: "sider", root: "content", target: "content" }] },
+      second: { id: "second", name: "Second", stagingPath: path.join(data.mods, "second"), components: [{ type: "sider", root: "content", target: "content" }] },
+    },
+  };
+  const manager = new SiderManager({ dataDirectories: data });
+  manager.deploy(state, { id: "default", name: "Test", modOrder: ["first", "second"], enabledMods: ["first", "second"] });
+  const merged = fs.readFileSync(path.join(path.dirname(siderPath), "content", "kits", "map.txt"), "utf-8");
+  assert.match(merged, /101, "First League\\Alpha"/);
+  assert.doesNotMatch(merged, /Second League\\Duplicate/);
+  assert.match(merged, /201, "Second League\\Gamma"/);
+});
