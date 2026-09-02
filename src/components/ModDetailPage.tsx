@@ -28,13 +28,12 @@ export const ModDetailPage: React.FC<ModDetailPageProps> = ({ mod, onBack, onIns
     <main className="min-h-screen bg-[#050405] pb-24 pt-24 sm:pt-28">
       <section className="px-3 sm:px-5">
         <div className="relative mx-auto min-h-[72vh] max-w-[1380px] overflow-hidden rounded-[1.8rem] border border-white/10 bg-[#130b11] sm:rounded-[2.5rem]">
-          <img src={mod.thumbnail || "/stryker-logo.png"} onError={(event) => { event.currentTarget.src = "/stryker-logo.png"; }} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/65 to-black/10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_28%,rgba(143,28,121,.3),transparent_38%),linear-gradient(130deg,#050405_0%,#160b13_58%,#080607_100%)]" />
+          <img src="/stryker-logo.png" alt="" aria-hidden="true" className="absolute -right-[12%] top-[-18%] w-[74rem] max-w-none opacity-[0.1] mix-blend-screen" />
           <div className="absolute inset-0 stryker-noise opacity-20" />
           <div className="relative z-10 flex min-h-[72vh] flex-col justify-between p-6 sm:p-10 lg:p-16">
             <div className="flex items-center justify-between gap-4">
-              <button onClick={onBack} className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/30 px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.14em] backdrop-blur transition hover:border-white/50"><ArrowLeft className="h-4 w-4" />{copy.detailBack}</button>
+              <button onClick={onBack} className="motion-button inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/30 px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.14em] backdrop-blur"><ArrowLeft className="h-4 w-4" />{copy.detailBack}</button>
               <span className="rounded-full border border-white/20 bg-black/30 px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.14em] text-white/65 backdrop-blur">{copy.detailRelease}</span>
             </div>
             <div className="max-w-5xl pt-28">
@@ -82,9 +81,9 @@ export const ModDetailPage: React.FC<ModDetailPageProps> = ({ mod, onBack, onIns
                 {mod.tags.slice(0, 4).map((tag) => <p key={tag} className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-[#c05aaa]" />{tag}</p>)}
               </div>
               <div className="mt-8 space-y-3">
-                {automatic && <button onClick={() => onInstall(mod)} className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-black transition hover:bg-[#edc7e7]"><Download className="h-4 w-4" />{t("detail.installStryker")}</button>}
-                {!automatic && sourceAvailable && <button onClick={() => onOpenSource(mod)} className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-black transition hover:bg-[#edc7e7]"><ExternalLink className="h-4 w-4" />{copy.detailOpenSource}</button>}
-                {sourceAvailable && <a href={mod.sourceUrl || mod.downloadUrl} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-full border border-white/18 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-white transition hover:border-white/45">{t("detail.modPage")}<ArrowUpRight className="h-4 w-4" /></a>}
+                {automatic && <button onClick={() => onInstall(mod)} className="motion-button flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-black"><Download className="h-4 w-4" />{t("detail.installStryker")}</button>}
+                {!automatic && sourceAvailable && <button onClick={() => onOpenSource(mod)} className="motion-button flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-black"><ExternalLink className="h-4 w-4" />{copy.detailOpenSource}</button>}
+                {sourceAvailable && <a href={mod.sourceUrl || mod.downloadUrl} target="_blank" rel="noreferrer" className="motion-button flex w-full items-center justify-center gap-2 rounded-full border border-white/18 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-white">{t("detail.modPage")}<ArrowUpRight className="h-4 w-4" /></a>}
               </div>
             </div>
           </aside>

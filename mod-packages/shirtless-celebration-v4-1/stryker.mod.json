@@ -1,0 +1,13 @@
+{
+  "$schema": "../../docs/stryker.mod.schema.json",
+  "id": "shirtless-celebration-v4-1",
+  "name": "Shirtless Celebration",
+  "version": "4.1.0",
+  "author": "alston2016",
+  "category": "other",
+  "compatibility": ["Football Life 2026", "Sider 7"],
+  "components": [
+    { "type": "livecpk", "root": "livecpk/ShirtlessCelebration" },
+    { "type": "lua", "root": "modules", "entrypoints": ["shirtless_celebration.lua"] }
+  ]
+}

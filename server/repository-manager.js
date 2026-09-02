@@ -4,6 +4,7 @@ import path from "path";
 import { Transform } from "stream";
 import { pipeline } from "stream/promises";
 import { extractZipSafely } from "./zip-extractor.js";
+import { expandPackedPayload } from "./packed-payload.js";
 import { hashFile, walkFiles } from "./mod-engine.js";
 import { assertPathInside, sanitizeSegment } from "./paths.js";
 import { atomicWriteJson } from "./storage.js";
@@ -237,6 +238,7 @@ export class RepositoryManager {
           }
         },
       });
+      await expandPackedPayload(extractRoot);
       const files = walkFiles(extractRoot);
       const blocked = files.filter((file) => BLOCKED_EXTENSIONS.has(path.extname(file).toLowerCase()));
       if (blocked.length > 0) throw new Error("Archive refusée : elle contient du code exécutable.");

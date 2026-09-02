@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { startServer } from "../server/index.js";
 import { createZip } from "./helpers/zip.js";
+import { createPackedPayload } from "../server/packed-payload.js";
 
 function writeZip(filePath, entries) {
   fs.writeFileSync(filePath, createZip(entries));
@@ -75,6 +76,41 @@ test("refuse les traversées de chemin et le code exécutable", async (t) => {
   await assert.rejects(() => service.runtime.modEngine.installArchive(pythonScript), /code exécutable/i);
   await assert.rejects(() => service.runtime.modEngine.installArchive(symlink), /lien ou fichier spécial/i);
   assert.equal(service.runtime.modEngine.list().length, 0);
+});
+
+test("installe un payload STRYKER à compression solide et contrôle son contenu", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-packed-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const source = path.join(root, "source");
+  fs.mkdirSync(path.join(source, "livecpk", "packed", "common"), { recursive: true });
+  fs.writeFileSync(path.join(source, "livecpk", "packed", "common", "fixture.bin"), "packed fixture");
+  const payload = path.join(root, "stryker.payload.br");
+  await createPackedPayload(source, payload);
+  const manifest = JSON.stringify({
+    id: "packed-fixture",
+    name: "Packed fixture",
+    components: [{ type: "livecpk", root: "livecpk/packed" }],
+  });
+  const archive = writeZip(path.join(root, "packed.zip"), [
+    { name: "stryker.mod.json", data: manifest },
+    { name: "stryker.payload.br", data: fs.readFileSync(payload) },
+  ]);
+  const service = await startServer({ port: 0, rootDir: root, dataRoot: path.join(root, "data") });
+  t.after(() => service.close());
+
+  const installed = await service.runtime.modEngine.installArchive(archive);
+  assert.equal(installed.packageId, "packed-fixture");
+  assert.equal(fs.readFileSync(path.join(installed.stagingPath, "livecpk", "packed", "common", "fixture.bin"), "utf-8"), "packed fixture");
+  assert.equal(fs.existsSync(path.join(installed.stagingPath, "stryker.payload.br")), false);
+});
+
+test("refuse le code exécutable caché dans un payload STRYKER", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-packed-unsafe-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const source = path.join(root, "source");
+  fs.mkdirSync(path.join(source, "livecpk", "unsafe", "common"), { recursive: true });
+  fs.writeFileSync(path.join(source, "livecpk", "unsafe", "common", "setup.exe"), "unsafe");
+  await assert.rejects(() => createPackedPayload(source, path.join(root, "payload.br")), /code exécutable/i);
 });
 
 test("réinstalle un paquet sans doublon et conserve son état désactivé", async (t) => {

@@ -16,7 +16,7 @@ export const StrykerLogo: React.FC<StrykerLogoProps> = ({
         src="/stryker-logo.png"
         alt="STRYKER Logo"
         style={{ height: `${size}px`, width: "auto" }}
-        className="object-contain drop-shadow-[0_0_15px_rgba(113,19,97,0.8)] filter transition-all hover:scale-105"
+        className="object-contain drop-shadow-[0_0_15px_rgba(113,19,97,0.8)] filter"
       />
     </div>
   );

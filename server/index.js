@@ -20,7 +20,7 @@ import { StateStore } from "./storage.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
-const APP_VERSION = "3.6.0";
+const APP_VERSION = "3.7.0";
 const MAX_LOCAL_ARCHIVE_BYTES = 20 * 1024 * 1024 * 1024;
 
 function ensureMockSandbox(mockDir) {

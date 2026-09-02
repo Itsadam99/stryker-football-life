@@ -5,17 +5,16 @@ STRYKER utilise `electron-updater` avec les installateurs NSIS produits par `ele
 ## Préparer une version
 
 1. Augmenter la version dans `package.json`, `package-lock.json`, `server/index.js` et la valeur de secours de `DesktopApp.tsx`.
-2. Définir l’adresse HTTPS permanente qui hébergera les mises à jour.
+2. Utiliser le flux GitHub Releases STRYKER par défaut, ou définir une autre adresse HTTPS permanente.
 3. Construire l’installateur.
 
 ```powershell
-$env:STRYKER_UPDATE_URL = "https://votre-domaine.example/updates/windows"
 npm run check
 npm test
 npm run package:win
 ```
 
-Le domaine et le chemin doivent rester stables entre les versions. Une construction sans `STRYKER_UPDATE_URL` utilise volontairement le domaine réservé `.invalid` : l’interface indique alors que les mises à jour ne sont pas configurées et aucune requête réseau n’est envoyée.
+Sans `STRYKER_UPDATE_URL`, le build utilise `https://github.com/Itsadam99/stryker-football-life/releases/latest/download`. Pour un miroir privé, définissez une adresse HTTPS stable avant l’empaquetage.
 
 ## Publier une version
 

@@ -69,7 +69,7 @@ Pour produire l’installateur Windows x64 :
 npm run package:win
 ```
 
-L’artefact stable `STRYKER-Setup-x64.exe` et son manifeste `latest.yml` sont créés dans `release/`. Pour une version publique, configurez l’adresse HTTPS du flux avant l’empaquetage :
+L’artefact stable `STRYKER-Setup-x64.exe` et son manifeste `latest.yml` sont créés dans `release/`. Le flux public utilise par défaut la dernière GitHub Release STRYKER. Pour employer un miroir privé :
 
 ```powershell
 $env:STRYKER_UPDATE_URL = "https://votre-domaine.example/updates/windows"

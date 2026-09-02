@@ -1,0 +1,15 @@
+{
+  "$schema": "../../docs/stryker.mod.schema.json",
+  "id": "fl26-pyro-no-spectator-patch",
+  "name": "FL26 Pyro — No Spectator Patch",
+  "version": "1.0.0",
+  "author": "heazebell666",
+  "category": "other",
+  "compatibility": ["Football Life 2026", "Sider 7"],
+  "dependencies": [
+    { "id": "fl26-pyro-supporters-v0-9a", "version": "0.9a" }
+  ],
+  "components": [
+    { "type": "sider", "root": "content", "target": "content" }
+  ]
+}

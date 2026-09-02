@@ -1,0 +1,13 @@
+{
+  "$schema": "../../docs/stryker.mod.schema.json",
+  "id": "premier-league-facepack-vol-1",
+  "name": "Premier League Facepack Vol. 1",
+  "version": "1.0.0",
+  "author": "Nabilemu / Pudd Faceporting Workshop",
+  "category": "face",
+  "compatibility": ["Football Life 2026", "PES 2021", "Sider 7", "LiveCPK"],
+  "sourceUrl": "https://evoweb.uk/threads/pudds-face-porting-workshop-2025-efootball-26-v5-4-0-and-fc26-face-conversion-here.95151/",
+  "components": [
+    { "type": "livecpk", "root": "livecpk/Premier_League_Facepack_Vol_1" }
+  ]
+}

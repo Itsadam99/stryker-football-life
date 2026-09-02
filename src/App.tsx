@@ -107,7 +107,7 @@ export function App() {
     <div className="min-h-screen bg-[#050405] text-white flex flex-col font-poppins selection:bg-[#711361] selection:text-white">
       <Navbar currentPage={currentPage} setCurrentPage={navigateTo} onOpenDesktop={openDesktop} />
 
-      <div className="flex-1">
+      <div key={selectedMod ? `mod-${selectedMod.id}` : currentPage} className="site-page-transition flex-1">
         {selectedMod ? (
           <ModDetailPage mod={selectedMod} onBack={closeMod} onInstall={installWithStryker} onOpenSource={setSourceMod} />
         ) : currentPage === "home" ? (
@@ -142,7 +142,7 @@ export function App() {
         <div className="mx-auto max-w-[1380px]">
           <div className="flex flex-col gap-9 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="flex items-center gap-3"><StrykerLogo size={36} /><span className="text-xl font-black tracking-[-0.05em]">STRYKER</span></div>
+              <div className="motion-logo inline-flex"><StrykerLogo size={64} /></div>
               <p className="mt-5 max-w-lg text-xs leading-6 text-white/45">{t("footer.community")}</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">

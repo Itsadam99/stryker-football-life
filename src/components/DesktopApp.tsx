@@ -66,7 +66,7 @@ const EMPTY_DLSS: DlssSettings = {
 };
 
 const EMPTY_UPDATE: UpdateStatus = {
-  currentVersion: "3.4.0",
+  currentVersion: "3.7.0",
   availableVersion: null,
   state: "disabled",
   progress: 0,
@@ -149,7 +149,7 @@ export function DesktopApp() {
   }, [mods, search]);
   const externalCatalogMods = useMemo(
     () => VERIFIED_CATALOG_MODS
-      .filter((mod) => mod.status !== "pending_review" && Boolean(mod.sourceUrl || mod.downloadUrl))
+      .filter((mod) => mod.status === "pending_review" || Boolean(mod.sourceUrl || mod.downloadUrl))
       .map((mod) => localizeCatalogMod(mod, language)),
     [language],
   );
@@ -531,7 +531,7 @@ export function DesktopApp() {
                       const installedMod = mods.find((item) => item.packageId === mod.id || item.archiveHash === mod.archiveHash || item.id.startsWith(`${mod.id}-`));
                       return (
                         <article key={mod.id} className={`rounded-xl overflow-hidden border bg-black/20 flex flex-col ${installedMod ? "border-emerald-500/35" : "border-white/10"}`}>
-                          <div className="h-36 bg-black relative"><img src={mod.thumbnail || "/stryker-logo.png"} onError={(event) => { event.currentTarget.src = "/stryker-logo.png"; }} alt="" className="w-full h-full object-cover opacity-75" /><span className="absolute top-3 left-3 rounded-full bg-[#711361] px-2 py-1 text-[9px] font-black uppercase">{t("desktop.hosted")}</span>{installedMod && <span className="absolute top-3 right-3 rounded-full bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase text-black">{installedMod.installCount && installedMod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")}</span>}</div>
+                          <div className="relative h-36 overflow-hidden bg-[radial-gradient(circle_at_75%_20%,rgba(130,27,110,.34),transparent_42%),#090708]"><img src="/stryker-logo.png" alt="" aria-hidden="true" className="absolute -right-8 -top-12 w-64 max-w-none opacity-15 mix-blend-screen" /><span className="absolute top-3 left-3 rounded-full bg-[#711361] px-2 py-1 text-[9px] font-black uppercase">{t("desktop.hosted")}</span>{installedMod && <span className="absolute top-3 right-3 rounded-full bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase text-black">{installedMod.installCount && installedMod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")}</span>}</div>
                           <div className="p-4 flex-1 flex flex-col"><p className="text-[10px] uppercase text-[#d870c5] font-bold">{mod.author} · {mod.version}</p><h2 className="font-bold text-sm mt-1">{mod.title}</h2><p className="text-[11px] text-white/45 mt-2 line-clamp-3 flex-1">{mod.shortDesc}</p><p className="mt-3 text-[9px] text-white/30">SHA-256 {mod.archiveHash?.slice(0, 12)}… · {mod.downloadsCount} {t("desktop.installations")}</p><div className="mt-4 grid grid-cols-2 gap-2"><button onClick={() => runAction(() => api.installCatalogMod(mod.id), config.isLinked ? `${mod.title} ${installedMod ? t("desktop.reinstalledDeployed") : t("desktop.installedDeployed")}` : `${mod.title} ${t("desktop.preparedLink")}`)} disabled={busy} className="rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase text-[#711361] flex items-center justify-center gap-1.5"><Download className="w-3.5 h-3.5" /> {installedMod ? t("desktop.reinstall") : t("desktop.install")}</button>{installedMod ? <button onClick={() => runAction(() => api.toggleManagedMod(installedMod.id, !installedMod.enabled), installedMod.enabled ? t("desktop.disabled") : t("desktop.enabled"))} disabled={busy} className="rounded-lg border border-white/15 px-3 py-2 text-[10px] font-black uppercase">{installedMod.enabled ? t("desktop.disable") : t("desktop.enable")}</button> : <span />}</div></div>
                         </article>
                       );
@@ -552,12 +552,16 @@ export function DesktopApp() {
 
               <Panel title={t("desktop.externalResources")} icon={ExternalLink}>
               <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {externalCatalogMods.map((mod) => (
-                  <article key={mod.id} className="rounded-xl overflow-hidden border border-white/10 bg-[#151015] flex flex-col">
-                    <div className="h-36 bg-black relative"><img src={mod.thumbnail || "/stryker-logo.png"} onError={(event) => { event.currentTarget.src = "/stryker-logo.png"; }} alt="" className="w-full h-full object-cover opacity-75" /><span className={`absolute top-3 left-3 rounded-full px-2 py-1 text-[9px] font-black uppercase ${mod.legalStatus === "verified_source" ? "bg-emerald-600" : "bg-amber-500 text-black"}`}>{mod.legalStatus === "verified_source" ? t("desktop.verifiedSource") : t("desktop.communityLink")}</span></div>
-                    <div className="p-4 flex-1 flex flex-col"><p className="text-[10px] uppercase text-[#d870c5] font-bold">{mod.author}</p><h2 className="font-bold text-sm mt-1">{mod.title}</h2><p className="text-[11px] text-white/45 mt-2 line-clamp-3 flex-1">{mod.shortDesc}</p><div className="flex gap-2 mt-4"><a href={mod.sourceUrl || mod.downloadUrl} target="_blank" rel="noreferrer" className="flex-1 rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold text-center flex items-center justify-center gap-1.5 hover:bg-white/5">{t("desktop.authorSource")} <ExternalLink className="w-3 h-3" /></a></div></div>
-                  </article>
-                ))}
+                {externalCatalogMods.map((mod) => {
+                  const installedMod = mods.find((item) => item.packageId === mod.id || item.archiveHash === mod.archiveHash || item.id.startsWith(`${mod.id}-`));
+                  const remoteInstallable = mod.status !== "pending_review" && mod.installationType === "automatic" && Boolean(mod.repositoryUrl);
+                  return (
+                    <article key={mod.id} className={`rounded-xl overflow-hidden border bg-[#151015] flex flex-col ${installedMod ? "border-emerald-500/35" : "border-white/10"}`}>
+                      <div className="relative h-36 overflow-hidden bg-[radial-gradient(circle_at_75%_20%,rgba(130,27,110,.34),transparent_42%),#090708]"><img src="/stryker-logo.png" alt="" aria-hidden="true" className="absolute -right-8 -top-12 w-64 max-w-none opacity-15 mix-blend-screen" /><span className={`absolute top-3 left-3 rounded-full px-2 py-1 text-[9px] font-black uppercase ${mod.status === "pending_review" ? "bg-amber-300 text-black" : remoteInstallable || mod.legalStatus === "verified_source" ? "bg-emerald-600" : "bg-amber-500 text-black"}`}>{mod.status === "pending_review" ? t("desktop.pendingReview") : remoteInstallable ? t("desktop.hosted") : mod.legalStatus === "verified_source" ? t("desktop.verifiedSource") : t("desktop.communityLink")}</span>{installedMod && <span className="absolute top-3 right-3 rounded-full bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase text-black">{installedMod.installCount && installedMod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")}</span>}</div>
+                      <div className="p-4 flex-1 flex flex-col"><p className="text-[10px] uppercase text-[#d870c5] font-bold">{mod.author}</p><h2 className="font-bold text-sm mt-1">{mod.title}</h2><p className="text-[11px] text-white/45 mt-2 line-clamp-3 flex-1">{mod.shortDesc}</p><div className="flex gap-2 mt-4">{mod.status === "pending_review" ? <span className="flex-1 rounded-lg border border-amber-300/20 bg-amber-300/5 px-3 py-2 text-center text-[10px] font-bold text-amber-100/65">{t("desktop.pendingReview")}</span> : remoteInstallable ? <button onClick={() => runAction(() => api.installRemoteCatalogMod(mod.repositoryUrl || "", mod.id), config.isLinked ? `${mod.title} ${installedMod ? t("desktop.reinstalledDeployed") : t("desktop.installedDeployed")}` : `${mod.title} ${t("desktop.preparedLink")}`)} disabled={busy} className="flex-1 rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase text-[#711361] flex items-center justify-center gap-1.5"><Download className="w-3.5 h-3.5" /> {installedMod ? t("desktop.reinstall") : t("desktop.install")}</button> : <a href={mod.sourceUrl || mod.downloadUrl} target="_blank" rel="noreferrer" className="flex-1 rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold text-center flex items-center justify-center gap-1.5 hover:bg-white/5">{t("desktop.authorSource")} <ExternalLink className="w-3 h-3" /></a>}</div></div>
+                    </article>
+                  );
+                })}
               </div>
               </Panel>
             </div>

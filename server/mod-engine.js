@@ -4,6 +4,7 @@ import path from "path";
 import { assertPathInside, sanitizeSegment } from "./paths.js";
 import { inferCategory } from "./sider-manager.js";
 import { extractZipSafely } from "./zip-extractor.js";
+import { expandPackedPayload } from "./packed-payload.js";
 
 const MAX_ARCHIVE_BYTES = 20 * 1024 * 1024 * 1024;
 const MAX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024 * 1024;
@@ -258,6 +259,8 @@ export class ModEngine {
           }
         },
       });
+
+      await expandPackedPayload(tempRoot);
 
       inspectExtractedContent(tempRoot);
       const manifestInfo = findManifest(tempRoot);

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { ArrowDown, ArrowRight, Check, Download, ExternalLink, Monitor, Plus } from "lucide-react";
 import type { CatalogMod } from "../types";
 import { useI18n } from "../i18n";
@@ -15,9 +15,9 @@ interface HomePageProps {
 }
 
 const FEATURED_IDS = [
-  "mega-facepack-v2-fl26-sider",
-  "stryker-dlss5-controller",
-  "eferq-graphic-menu-epl-2526",
+  "premier-league-facepack-vol-1",
+  "ficabre-goalnets-module-v1",
+  "fl26-pyro-supporters-v0-9a",
 ];
 
 function statusLabel(mod: CatalogMod, labels: { hosted: string; verified: string; community: string }) {
@@ -37,10 +37,6 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
   const { language, t } = useI18n();
   const copy = SITE_COPY[language];
-  const showcaseRef = useRef<HTMLElement>(null);
-  const railRef = useRef<HTMLDivElement>(null);
-  const [railX, setRailX] = useState(0);
-
   const featured = useMemo(() => {
     const chosen = FEATURED_IDS.map((id) => mods.find((mod) => mod.id === id)).filter(Boolean) as CatalogMod[];
     return chosen.length === FEATURED_IDS.length ? chosen : mods.slice(0, 3);
@@ -58,35 +54,6 @@ export const HomePage: React.FC<HomePageProps> = ({
     }, { threshold: 0.14 });
     elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [featured.length]);
-
-  useEffect(() => {
-    let frame = 0;
-    const updateRail = () => {
-      frame = 0;
-      const section = showcaseRef.current;
-      const rail = railRef.current;
-      if (!section || !rail || window.innerWidth < 900) {
-        setRailX(0);
-        return;
-      }
-      const rect = section.getBoundingClientRect();
-      const travel = Math.max(1, section.offsetHeight - window.innerHeight);
-      const progress = Math.max(0, Math.min(1, -rect.top / travel));
-      const maxOffset = Math.max(0, rail.scrollWidth - window.innerWidth + 56);
-      setRailX(-progress * maxOffset);
-    };
-    const requestUpdate = () => {
-      if (!frame) frame = window.requestAnimationFrame(updateRail);
-    };
-    updateRail();
-    window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate);
-    return () => {
-      if (frame) window.cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", requestUpdate);
-      window.removeEventListener("resize", requestUpdate);
-    };
   }, [featured.length]);
 
   const triggerModAction = (mod: CatalogMod) => {
@@ -110,16 +77,15 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           <div className="relative z-[2] m-auto w-full px-4 pb-32 pt-40 text-center sm:px-8 sm:pb-36">
             <p className="mb-4 text-[10px] font-black uppercase tracking-[0.42em] text-[#e6a6d9] sm:mb-6 sm:text-xs">{copy.heroKicker}</p>
-            <h1 aria-label="STRYKER" className="stryker-wordmark mx-auto text-[20.5vw] font-black uppercase leading-[0.67] tracking-[-0.105em] text-white sm:text-[18vw] xl:text-[15.3rem]">
-              STRYKER
-            </h1>
+            <h1 className="sr-only">STRYKER</h1>
+            <img src="/stryker-logo.png" alt="STRYKER" className="stryker-hero-logo mx-auto w-full max-w-5xl object-contain" />
             <p className="mx-auto mt-9 max-w-2xl text-sm font-medium leading-relaxed text-white/66 sm:mt-12 sm:text-base">
               {t("home.description")}
             </p>
             <div className="mx-auto mt-7 flex max-w-3xl flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-              <button onClick={onNavigateToAllMods} className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-black transition hover:bg-[#edc7e7]">{t("home.viewMods")} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></button>
-              <a href={STRYKER_DOWNLOAD_URL} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#7f1d70] px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-white transition hover:bg-[#9c278a]"><Download className="h-4 w-4" /> {t("home.downloadApp")}</a>
-              <button onClick={onDownloadExe} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-black/20 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-white backdrop-blur transition hover:border-white/45 hover:bg-white/10"><Monitor className="h-4 w-4" /> {t("home.openApp")}</button>
+              <button onClick={onNavigateToAllMods} className="motion-button group inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-black">{t("home.viewMods")} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></button>
+              <a href={STRYKER_DOWNLOAD_URL} className="motion-button inline-flex items-center justify-center gap-2 rounded-full bg-[#7f1d70] px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-white"><Download className="h-4 w-4" /> {t("home.downloadApp")}</a>
+              <button onClick={onDownloadExe} className="motion-button inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-black/20 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-white backdrop-blur"><Monitor className="h-4 w-4" /> {t("home.openApp")}</button>
             </div>
           </div>
 
@@ -144,43 +110,36 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      <section ref={showcaseRef} className="mod-showcase relative lg:h-[310vh]">
-        <div className="lg:sticky lg:top-0 lg:flex lg:h-screen lg:items-center lg:overflow-hidden">
-          <div ref={railRef} className="mod-showcase-rail flex flex-col gap-5 px-5 pb-28 sm:px-8 lg:flex-row lg:gap-7 lg:px-12 lg:pb-0" style={{ transform: `translate3d(${railX}px, 0, 0)` }}>
-            {featured.map((mod, index) => (
-              <article key={mod.id} className="group relative min-h-[34rem] overflow-hidden rounded-[1.8rem] border border-white/10 bg-[#160c14] lg:h-[72vh] lg:min-h-[580px] lg:w-[78vw] lg:max-w-[1120px] lg:flex-none lg:rounded-[2.4rem]">
-                <img src={mod.thumbnail || "/stryker-logo.png"} onError={(event) => { event.currentTarget.src = "/stryker-logo.png"; }} alt="" className="absolute inset-0 h-full w-full object-cover transition duration-1000 group-hover:scale-[1.035]" />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/92 via-black/50 to-black/5" />
-                <div className="absolute inset-0 stryker-noise opacity-20" />
-                <div className="relative z-10 flex h-full min-h-[34rem] flex-col justify-between p-6 sm:p-10 lg:min-h-[580px] lg:p-14">
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="rounded-full border border-white/20 bg-black/35 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] backdrop-blur">{statusLabel(mod, { hosted: t("home.hosted"), verified: t("home.verified"), community: t("home.community") })}</span>
-                    <span className="text-5xl font-black tracking-[-0.08em] text-white/20 sm:text-7xl">0{index + 1}</span>
-                  </div>
-                  <div className="max-w-[42rem]">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#e6a6d9]">{mod.author} / {mod.version}</p>
-                    <h3 className="mt-4 text-4xl font-black uppercase leading-[0.88] tracking-[-0.055em] sm:text-6xl lg:text-7xl">{mod.title}</h3>
-                    <p className="mt-5 max-w-xl text-sm leading-6 text-white/64 sm:text-base sm:leading-7">{mod.shortDesc}</p>
-                    <div className="mt-7 flex flex-wrap gap-2">
-                      {mod.tags.slice(0, 4).map((tag) => <span key={tag} className="rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.1em] text-white/60 backdrop-blur">{tag}</span>)}
-                    </div>
-                    <div className="mt-8 flex flex-wrap gap-3">
-                      <button onClick={() => onSelectMod(mod)} className="group/button inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-black transition hover:bg-[#edc7e7]">{copy.openDrop}<ArrowRight className="h-4 w-4 transition-transform group-hover/button:translate-x-1" /></button>
-                      <button onClick={() => triggerModAction(mod)} className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/25 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-white backdrop-blur transition hover:border-white/55">
-                        {mod.status === "pending_review" ? copy.detailPending : mod.installationType === "automatic" ? t("home.install") : t("home.viewSource")}
-                        {mod.installationType === "automatic" ? <Download className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
+      <section className="px-5 pb-28 sm:px-8 lg:px-12 lg:pb-40">
+        <div className="mx-auto grid max-w-[1380px] gap-5 lg:grid-cols-3">
+          {featured.map((mod, index) => (
+            <article key={mod.id} data-reveal className="brand-mod-card group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[1.8rem] border border-white/10 p-6 sm:p-8">
+              <img src="/stryker-logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -right-20 -top-12 w-[25rem] max-w-none opacity-[0.075] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.12]" />
+              <div className="relative z-10 flex items-start justify-between gap-4">
+                <span className="rounded-full border border-white/15 bg-black/30 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.16em]">{statusLabel(mod, { hosted: t("home.hosted"), verified: t("home.verified"), community: t("home.community") })}</span>
+                <span className="text-4xl font-black tracking-[-0.08em] text-white/16">{String(index + 1).padStart(2, "0")}</span>
+              </div>
+              <div className="relative z-10 mt-auto pt-28">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-[#d76bc5]">{mod.author} / {mod.version}</p>
+                <h3 className="mt-4 text-3xl font-black uppercase leading-[0.9] tracking-[-0.055em] sm:text-4xl">{mod.title}</h3>
+                <p className="mt-5 text-sm leading-7 text-white/52">{mod.shortDesc}</p>
+                <div className="mt-7 flex flex-wrap gap-2">{mod.tags.slice(0, 3).map((tag) => <span key={tag} className="rounded-full border border-white/12 px-3 py-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-white/42">{tag}</span>)}</div>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <button onClick={() => onSelectMod(mod)} className="motion-button group/button inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-[9px] font-black uppercase tracking-[0.13em] text-black">{copy.openDrop}<ArrowRight className="h-4 w-4 transition-transform group-hover/button:translate-x-1" /></button>
+                  <button onClick={() => triggerModAction(mod)} className="motion-button inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/20 px-5 py-3 text-[9px] font-black uppercase tracking-[0.13em] text-white">
+                    {mod.status === "pending_review" ? copy.detailPending : mod.installationType === "automatic" ? t("home.install") : t("home.viewSource")}
+                    {mod.installationType === "automatic" ? <Download className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+                  </button>
                 </div>
-              </article>
-            ))}
-            <button onClick={onNavigateToAllMods} className="group flex min-h-[24rem] flex-col items-center justify-center rounded-[1.8rem] border border-white/12 bg-[#110d10] px-12 text-center transition hover:border-[#9c278a] hover:bg-[#180d16] lg:h-[72vh] lg:min-h-[580px] lg:w-[32vw] lg:min-w-[360px] lg:flex-none lg:rounded-[2.4rem]">
-              <span className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 transition group-hover:rotate-90 group-hover:border-[#d774c7]"><Plus className="h-6 w-6" /></span>
-              <span className="mt-7 text-2xl font-black uppercase tracking-[-0.04em]">{t("home.allCatalog")}</span>
-              <span className="mt-3 max-w-xs text-xs leading-6 text-white/45">{t("home.catalogDescription")}</span>
-            </button>
-          </div>
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="mx-auto mt-5 max-w-[1380px]" data-reveal>
+          <button onClick={onNavigateToAllMods} className="motion-button group flex w-full items-center justify-between rounded-[1.5rem] border border-white/12 bg-[#100b0e] px-6 py-6 text-left sm:px-8">
+            <span><span className="block text-lg font-black uppercase tracking-[-0.03em]">{t("home.allCatalog")}</span><span className="mt-1 block text-xs text-white/42">{t("home.catalogDescription")}</span></span>
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/18 transition group-hover:rotate-90 group-hover:border-[#d774c7]"><Plus className="h-5 w-5" /></span>
+          </button>
         </div>
       </section>
 
@@ -228,8 +187,8 @@ export const HomePage: React.FC<HomePageProps> = ({
                 {[copy.appPoint1, copy.appPoint2, copy.appPoint3].map((point) => <li key={point} className="flex items-center gap-3"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#7f1d70]"><Check className="h-3.5 w-3.5" /></span>{point}</li>)}
               </ul>
               <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-                <a href={STRYKER_DOWNLOAD_URL} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-black transition hover:bg-[#f4ddef]"><Download className="h-4 w-4" />{t("home.downloadApp")}</a>
-                <button onClick={onDownloadExe} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] transition hover:bg-white/10"><Monitor className="h-4 w-4" />{t("home.openApp")}</button>
+                <a href={STRYKER_DOWNLOAD_URL} className="motion-button inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-black"><Download className="h-4 w-4" />{t("home.downloadApp")}</a>
+                <button onClick={onDownloadExe} className="motion-button inline-flex items-center justify-center gap-2 rounded-full border border-white/30 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em]"><Monitor className="h-4 w-4" />{t("home.openApp")}</button>
               </div>
             </div>
           </div>

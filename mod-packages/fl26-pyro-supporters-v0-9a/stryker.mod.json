@@ -1,0 +1,13 @@
+{
+  "$schema": "../../docs/stryker.mod.schema.json",
+  "id": "fl26-pyro-supporters-v0-9a",
+  "name": "FL26 Pyro Supporters",
+  "version": "0.9a",
+  "author": "heazebell666",
+  "category": "other",
+  "compatibility": ["Football Life 2026", "Sider 7"],
+  "components": [
+    { "type": "lua", "root": "modules", "entrypoints": ["Real-Life-Feel-SmokeBomb.lua"] },
+    { "type": "sider", "root": "content", "target": "content" }
+  ]
+}

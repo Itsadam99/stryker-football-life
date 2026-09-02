@@ -37,7 +37,7 @@ export const AllModsPage: React.FC<AllModsPageProps> = ({ mods, onBackToHome, on
   return (
     <main className="min-h-screen bg-[#050405] px-5 pb-28 pt-28 text-white sm:px-8 lg:px-12 lg:pb-40 lg:pt-36">
       <div className="mx-auto max-w-[1380px]">
-        <button onClick={onBackToHome} className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.14em] text-white/65 transition hover:border-white/40 hover:text-white"><ArrowLeft className="h-4 w-4" /> {t("nav.home")}</button>
+        <button onClick={onBackToHome} className="motion-button inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.14em] text-white/65"><ArrowLeft className="h-4 w-4" /> {t("nav.home")}</button>
 
         <div className="mt-14 grid gap-10 border-b border-white/12 pb-12 lg:grid-cols-[1.25fr_.75fr] lg:items-end">
           <div><p className="editorial-kicker">{t("catalog.eyebrow")}</p><h1 className="mt-6 text-[clamp(3.5rem,8vw,8.5rem)] font-black uppercase leading-[0.8] tracking-[-0.085em]">{t("catalog.title")}</h1></div>
@@ -51,13 +51,14 @@ export const AllModsPage: React.FC<AllModsPageProps> = ({ mods, onBackToHome, on
 
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((mod, index) => (
-            <article key={mod.id} className="group flex min-h-[31rem] flex-col overflow-hidden rounded-[1.7rem] border border-white/10 bg-[#0d090c] transition duration-500 hover:-translate-y-1 hover:border-white/25">
+            <article key={mod.id} className="brand-mod-card group flex min-h-[27rem] flex-col overflow-hidden rounded-[1.7rem] border border-white/10 transition duration-500 hover:-translate-y-1 hover:border-[#8f277f]/70 hover:shadow-[0_22px_70px_rgba(105,20,88,0.18)]">
               <button type="button" onClick={() => onSelectMod(mod)} className="flex flex-1 flex-col text-left">
-                <div className="relative h-60 overflow-hidden bg-[#120b10]">
-                  <img src={mod.thumbnail || "/stryker-logo.png"} onError={(event) => { event.currentTarget.src = "/stryker-logo.png"; }} alt="" className="h-full w-full object-cover transition duration-1000 group-hover:scale-[1.045]" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0d090c] via-transparent to-black/10" />
+                <div className="relative h-40 overflow-hidden border-b border-white/8 bg-[#100a0e]">
+                  <img src="/stryker-logo.png" alt="" aria-hidden="true" className="absolute -right-12 -top-16 w-80 max-w-none opacity-[0.09] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.14]" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(140,35,119,.24),transparent_45%)]" />
                   <span className="absolute left-4 top-4 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.14em] backdrop-blur">{mod.status === "pending_review" ? "Preview" : mod.installationType === "automatic" ? t("home.hosted") : mod.legalStatus === "verified_source" ? t("home.verified") : t("catalog.community")}</span>
                   <span className="absolute right-4 top-4 text-3xl font-black tracking-[-0.08em] text-white/28">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="absolute bottom-4 left-4 text-[9px] font-black uppercase tracking-[0.18em] text-[#c75ab5]">{categoryLabels[mod.category as keyof typeof categoryLabels] || categoryLabels.other}</span>
                 </div>
                 <div className="flex flex-1 flex-col p-6">
                   <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#c15bae]">{mod.author} / {mod.version}</p>
@@ -68,7 +69,7 @@ export const AllModsPage: React.FC<AllModsPageProps> = ({ mods, onBackToHome, on
               </button>
               <div className="mx-6 flex items-center justify-between gap-3 border-t border-white/10 py-5">
                 <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white/35"><ShieldCheck className="h-3.5 w-3.5" /> {mod.status === "pending_review" ? copy.detailPending : mod.installationType === "automatic" ? t("detail.archiveChecked") : t("detail.sourceChecked")}</span>
-                <button onClick={() => triggerAction(mod)} className="group/action inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.1em] text-black transition hover:bg-[#edc7e7]">
+                <button onClick={() => triggerAction(mod)} className="motion-button group/action inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.1em] text-black">
                   {mod.status === "pending_review" ? copy.openDrop : mod.installationType === "automatic" ? t("home.install") : t("home.viewSource")}
                   {mod.installationType === "automatic" ? <Download className="h-3.5 w-3.5" /> : mod.status === "pending_review" ? <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/action:translate-x-1" /> : <ExternalLink className="h-3.5 w-3.5" />}
                 </button>

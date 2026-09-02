@@ -1,4 +1,5 @@
 import type { CatalogMod } from "../types";
+import { DESKTOP_COMMUNITY_MODS, DESKTOP_COMMUNITY_TRANSLATIONS } from "./communityCatalogData";
 
 const STRYKER_RAW_REPOSITORY = "https://raw.githubusercontent.com/Itsadam99/stryker-football-life/main/public/repository/";
 
@@ -13,7 +14,7 @@ export const BUNDLED_CATALOG_MODS: CatalogMod[] = [
     category: "menu",
     compatibility: ["PES 2021", "Football Life 2026", "Sider 7.3.4"],
     size: "127,1 Mo",
-    thumbnail: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+    thumbnail: "/stryker-logo.png",
     downloadUrl: "",
     screenshots: [],
     installationType: "manual",
@@ -40,7 +41,7 @@ export const BUNDLED_CATALOG_MODS: CatalogMod[] = [
     category: "other",
     compatibility: ["Football Life 2026", "PES 2021", "Sider 7", "RenoDX DLSS SF 0.1", "GeForce RTX 20 / 30 / 40 / 50"],
     size: "5,0 Ko",
-    thumbnail: "/mods/dlss5-cover.png",
+    thumbnail: "/stryker-logo.png",
     downloadUrl: "",
     screenshots: [],
     installationType: "automatic",
@@ -74,7 +75,7 @@ export const VERIFIED_CATALOG_MODS: CatalogMod[] = [
     category: "face",
     compatibility: ["Football Life 2026", "PES 2021", "Sider 7", "LiveCPK"],
     size: "30,3 Mo — paquet optimisé",
-    thumbnail: "/mods/facepack-v2-cover.png",
+    thumbnail: "/stryker-logo.png",
     downloadUrl: "",
     screenshots: [],
     installationType: "manual",
@@ -89,6 +90,7 @@ export const VERIFIED_CATALOG_MODS: CatalogMod[] = [
     fileCount: 273,
     license: "Crédits conservés pour les FaceMakers listés dans l’archive d’origine. Autorisation de redistribution publique à confirmer avant hébergement.",
   },
+  ...DESKTOP_COMMUNITY_MODS,
   {
     id: "smokepatch-fl26",
     title: "SmokePatch Football Life 2026",
@@ -99,7 +101,7 @@ export const VERIFIED_CATALOG_MODS: CatalogMod[] = [
     category: "other",
     compatibility: ["Football Life 2026"],
     size: "Voir la source",
-    thumbnail: "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=1200&q=80",
+    thumbnail: "/stryker-logo.png",
     downloadUrl: "https://www.pessmokepatch.com/2025/10/spfl26.html",
     screenshots: [],
     installationType: "manual",
@@ -119,7 +121,7 @@ export const VERIFIED_CATALOG_MODS: CatalogMod[] = [
     category: "face",
     compatibility: ["Football Life 2026", "Football Life 2027"],
     size: "37,4 Go installés",
-    thumbnail: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+    thumbnail: "/stryker-logo.png",
     downloadUrl: "https://www.pessmokepatch.com/2025/10/faces2627.html",
     screenshots: [],
     installationType: "manual",
@@ -139,7 +141,7 @@ export const VERIFIED_CATALOG_MODS: CatalogMod[] = [
     category: "turf",
     compatibility: ["Football Life", "Sider 7"],
     size: "Selon le stade",
-    thumbnail: "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?auto=format&fit=crop&w=1200&q=80",
+    thumbnail: "/stryker-logo.png",
     downloadUrl: "https://www.pessmokepatch.com/2024/11/siderstadiums.html",
     screenshots: [],
     installationType: "mixed",
@@ -159,7 +161,7 @@ export const VERIFIED_CATALOG_MODS: CatalogMod[] = [
     category: "audio",
     compatibility: ["Football Life"],
     size: "Selon la langue",
-    thumbnail: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1200&q=80",
+    thumbnail: "/stryker-logo.png",
     downloadUrl: "https://www.pessmokepatch.com/2025/10/flcoms.html",
     screenshots: [],
     installationType: "manual",
@@ -179,7 +181,7 @@ export const VERIFIED_CATALOG_MODS: CatalogMod[] = [
     category: "audio",
     compatibility: ["Football Life"],
     size: "Voir la source",
-    thumbnail: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80",
+    thumbnail: "/stryker-logo.png",
     downloadUrl: "https://www.pessmokepatch.com/2024/06/BGM.html",
     screenshots: [],
     installationType: "manual",
@@ -199,7 +201,7 @@ export const VERIFIED_CATALOG_MODS: CatalogMod[] = [
     category: "other",
     compatibility: ["Football Life 2026", "PES 2021", "DirectX 11", "GeForce RTX 50", "ReShade 6.8.0 Add-on"],
     size: "Téléchargements externes",
-    thumbnail: "/mods/dlss5-cover.png",
+    thumbnail: "/stryker-logo.png",
     downloadUrl: "https://github.com/RankFTW/rhi-repo/releases/tag/renodx-dlss-SF-0.1",
     screenshots: [],
     installationType: "manual",
@@ -221,7 +223,7 @@ export const VERIFIED_CATALOG_MODS: CatalogMod[] = [
     category: "gameplay",
     compatibility: ["PES 2021", "Football Life (à vérifier selon la version)"],
     size: "Voir la source",
-    thumbnail: "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=1200&q=80",
+    thumbnail: "/stryker-logo.png",
     downloadUrl: "https://evoweb.uk/threads/new-gameplay-mod-world-soccer-world-soccer-2-new-update-available.84356/",
     screenshots: [],
     installationType: "manual",
@@ -397,6 +399,6 @@ const CATALOG_TRANSLATIONS: Record<Exclude<CatalogLanguage, "fr">, Record<string
 
 export function localizeCatalogMod(mod: CatalogMod, language: CatalogLanguage): CatalogMod {
   if (language === "fr") return mod;
-  const translation = CATALOG_TRANSLATIONS[language][mod.id];
+  const translation = CATALOG_TRANSLATIONS[language][mod.id] || DESKTOP_COMMUNITY_TRANSLATIONS[language][mod.id];
   return translation ? { ...mod, ...translation } : mod;
 }

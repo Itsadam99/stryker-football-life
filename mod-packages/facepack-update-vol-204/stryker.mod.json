@@ -1,0 +1,12 @@
+{
+  "$schema": "../../docs/stryker.mod.schema.json",
+  "id": "facepack-update-vol-204",
+  "name": "Facepack Update Vol. 204",
+  "version": "204",
+  "author": "Communauté FaceMaker",
+  "category": "face",
+  "compatibility": ["Football Life 2026", "PES 2021", "Sider 7", "LiveCPK"],
+  "components": [
+    { "type": "livecpk", "root": "livecpk/Facepack_Update_204" }
+  ]
+}

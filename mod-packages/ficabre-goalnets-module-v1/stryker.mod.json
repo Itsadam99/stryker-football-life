@@ -1,0 +1,13 @@
+{
+  "$schema": "../../docs/stryker.mod.schema.json",
+  "id": "ficabre-goalnets-module-v1",
+  "name": "Ficabre Goalnets Module",
+  "version": "1.0.0",
+  "author": "Ficabre",
+  "category": "turf",
+  "compatibility": ["Football Life 2026", "PES 2021", "Sider 7"],
+  "components": [
+    { "type": "livecpk", "root": "livecpk/goalnets" },
+    { "type": "lua", "root": "modules/goalnets", "entrypoints": ["goalnets.lua"] }
+  ]
+}
