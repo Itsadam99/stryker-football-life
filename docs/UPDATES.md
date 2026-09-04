@@ -24,6 +24,21 @@ Sans `STRYKER_UPDATE_URL`, le build utilise `https://github.com/Itsadam99/stryke
 
 ## Publier une version
 
+### Automatique (recommandé)
+
+Poussez un tag correspondant à la version de `package.json` :
+
+```powershell
+git tag v3.9.1
+git push origin v3.9.1
+```
+
+GitHub construit l'installateur et le publie tout seul (`.github/workflows/release.yml`) : types, tests, empaquetage, puis publication. Le workflow refuse de continuer si le tag et `package.json` annoncent des versions différentes. Rien à lancer en local, aucune machine de build à disposition.
+
+Le même workflow est déclenchable à la main depuis l'onglet **Actions** de GitHub.
+
+### Manuelle
+
 ```powershell
 npm run release:check   # contrôle le lot sans rien envoyer
 npm run release         # crée la release GitHub et téléverse les trois fichiers
