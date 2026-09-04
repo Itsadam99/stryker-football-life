@@ -13,6 +13,7 @@ import {
 } from "../types";
 import { StrykerLogo } from "./StrykerLogo";
 import { Language, LanguageSwitcher, useI18n } from "../i18n";
+import { DLSS_COPY } from "../services/dlssCopy";
 
 type DesktopPage = "dashboard" | "mods" | "catalog" | "profiles" | "conflicts" | "settings";
 
@@ -45,6 +46,15 @@ const EMPTY_DLSS: DlssSettings = {
   qualityMode: 0,
   qualityId: "default",
   autoExposure: false,
+  intensity: 1,
+  autoMask: true,
+  diffuseWhiteNits: 500,
+  uiCorrectionMode: 2,
+  globalToneStrength: 1,
+  localToneStrength: 1,
+  localStructureStrength: 1,
+  skinStructureStrength: 1,
+  overlay: { configured: false, shortcut: "F10", hotReload: true, nativePanelDetected: false },
   missingFiles: [],
   configPath: "",
   backupPath: "",
@@ -65,8 +75,10 @@ const EMPTY_DLSS: DlssSettings = {
   },
 };
 
+const APP_VERSION = "3.9.0";
+
 const EMPTY_UPDATE: UpdateStatus = {
-  currentVersion: "3.8.1",
+  currentVersion: APP_VERSION,
   availableVersion: null,
   state: "disabled",
   progress: 0,
@@ -74,6 +86,10 @@ const EMPTY_UPDATE: UpdateStatus = {
   updaterConfigured: false,
   message: "",
 };
+
+/** Cadence normale du suivi de session, et plafond quand le moteur local ne répond plus. */
+const POLL_INTERVAL_MS = 1_500;
+const POLL_BACKOFF_MAX_MS = 30_000;
 
 function formatDuration(seconds: number) {
   const hours = Math.floor(seconds / 3600);
@@ -112,7 +128,7 @@ export function DesktopApp() {
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [catalogMods, setCatalogMods] = useState<CatalogMod[]>([]);
   const [submissions, setSubmissions] = useState<HubSubmission[]>([]);
-  const [version, setVersion] = useState("3.4.0");
+  const [version, setVersion] = useState(APP_VERSION);
   const [busy, setBusy] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [notice, setNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -124,6 +140,23 @@ export function DesktopApp() {
   const deepLinkHandled = useRef(false);
 
   const activeProfile = profiles.find((profile) => profile.active);
+  const activeProfileLabel = activeProfile?.id === "default" ? t("desktop.mainProfile") : activeProfile?.name || "—";
+  const conflictBadge = conflicts ? conflicts.total + conflicts.dependencyIssues.length : 0;
+  const dlssCopy = DLSS_COPY[language];
+  const dlssQualityLabel = [
+    t("desktop.dlssDefault"), t("desktop.dlssPerformance"), t("desktop.dlssBalanced"), t("desktop.dlssQualityMode"),
+    t("desktop.dlssUltraPerformance"), t("desktop.dlssUltraQuality"), "DLAA",
+  ][dlss.qualityMode] || t("desktop.dlssDefault");
+
+  /** Ouvre le centre DLSS dans sa propre fenêtre (BrowserWindow sous Electron). */
+  const openDlssStudio = () => {
+    const target = new URL(window.location.href);
+    target.searchParams.set("mode", "dlss");
+    target.searchParams.delete("installMod");
+    target.searchParams.delete("repository");
+    target.hash = "";
+    window.open(target.href, "stryker-dlss", "width=1060,height=880");
+  };
   const localizeHealthCheck = (check: HealthCheck) => {
     const labels: Record<string, string> = {
       linked: t("desktop.gameLinked"),
@@ -197,12 +230,32 @@ export function DesktopApp() {
       .finally(() => setInitialLoading(false));
   }, []);
 
+  // Suivi de session : boucle auto-planifiée qui ralentit quand le moteur local
+  // est injoignable, au lieu de marteler l'API toutes les 1,5 s.
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      api.getLauncherStatus().then(setStatus).catch(() => undefined);
-      api.getVersion().then(setUpdateStatus).catch(() => undefined);
-    }, 1500);
-    return () => window.clearInterval(timer);
+    let cancelled = false;
+    let timer = 0;
+    let failures = 0;
+
+    const tick = async () => {
+      try {
+        const [nextStatus, nextVersion] = await Promise.all([api.getLauncherStatus(), api.getVersion()]);
+        if (cancelled) return;
+        setStatus(nextStatus);
+        setUpdateStatus(nextVersion);
+        failures = 0;
+      } catch {
+        failures += 1;
+      }
+      if (cancelled) return;
+      const delay = failures === 0
+        ? POLL_INTERVAL_MS
+        : Math.min(POLL_INTERVAL_MS * 2 ** failures, POLL_BACKOFF_MAX_MS);
+      timer = window.setTimeout(tick, delay);
+    };
+
+    timer = window.setTimeout(tick, POLL_INTERVAL_MS);
+    return () => { cancelled = true; window.clearTimeout(timer); };
   }, []);
 
   const runAction = async (action: () => Promise<unknown>, successMessage?: string) => {
@@ -315,125 +368,253 @@ export function DesktopApp() {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-[#070507] text-white flex items-center justify-center font-poppins">
-        <div className="text-center space-y-4">
-          <StrykerLogo size={72} />
-          <RefreshCw className="w-5 h-5 animate-spin text-[#d870c5] mx-auto" />
-          <p className="text-xs uppercase tracking-[0.2em] text-white/50">{t("desktop.loading")}</p>
+      <div className="flex min-h-screen items-center justify-center bg-[color:var(--sk-void)] font-poppins text-white">
+        <div className="relative flex flex-col items-center gap-6">
+          <div className="absolute -inset-24 rounded-full bg-[#711361]/25 blur-[90px]" aria-hidden="true" />
+          <div className="relative motion-logo"><StrykerLogo size={96} /></div>
+          <div className="relative h-px w-40 overflow-hidden bg-white/10">
+            <span className="absolute inset-y-0 left-0 w-1/3 animate-[sk-scan_1.4s_ease-in-out_infinite] bg-[color:var(--sk-brand-glow)]" />
+          </div>
+          <p className="sk-label relative">{t("desktop.loading")}</p>
         </div>
+        <style>{"@keyframes sk-scan{0%{transform:translateX(-120%)}100%{transform:translateX(400%)}}"}</style>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#080608] text-white font-poppins lg:flex">
+    <div className="min-h-screen bg-[color:var(--sk-void)] font-poppins text-white lg:flex">
       {notice && (
-        <div role="status" aria-live="polite" className={`fixed right-5 top-5 z-[80] max-w-md rounded-xl border px-4 py-3 text-sm shadow-2xl ${notice.type === "success" ? "bg-emerald-950 border-emerald-500/50 text-emerald-100" : "bg-rose-950 border-rose-500/50 text-rose-100"}`}>
-          {notice.message}
+        <div
+          role="status"
+          aria-live="polite"
+          className={`sk-toast fixed bottom-5 right-5 z-[80] max-w-md px-4 py-3.5 text-xs font-semibold ${
+            notice.type === "success"
+              ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
+              : "border-rose-400/40 bg-rose-500/15 text-rose-100"
+          }`}
+        >
+          <span className="flex items-start gap-2.5">
+            {notice.type === "success"
+              ? <CheckCircle2 className="mt-px h-4 w-4 shrink-0 text-emerald-300" />
+              : <AlertTriangle className="mt-px h-4 w-4 shrink-0 text-rose-300" />}
+            {notice.message}
+          </span>
         </div>
       )}
 
-      <aside className="border-b lg:border-b-0 lg:border-r border-white/10 bg-[#100b10] lg:w-64 lg:min-h-screen flex-shrink-0">
-        <div className="p-5 border-b border-white/10 flex items-center gap-3">
-          <StrykerLogo size={42} />
-          <div>
-            <div className="font-black text-xl tracking-tight">STRYKER</div>
-            <div className="text-[10px] uppercase tracking-widest text-[#d870c5]">Mod Manager v{version}</div>
-          </div>
-        </div>
-
-        <div className="p-4">
-          <div className="rounded-xl bg-black/35 border border-white/10 p-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-wider text-white/40">{t("desktop.activeGame")}</p>
-                <p className="text-xs font-bold truncate mt-1">{config.isLinked ? config.detectedVersion : t("desktop.noGame")}</p>
-              </div>
-              <span className={`mt-0.5 w-2.5 h-2.5 rounded-full ${config.isLinked ? "bg-emerald-400" : "bg-amber-400"}`} />
+      {/* ---------------------------------------------------------------- RAIL */}
+      <aside className="z-30 shrink-0 border-b border-white/10 bg-[color:var(--sk-surface)] lg:sticky lg:top-0 lg:h-screen lg:w-[var(--sk-rail)] lg:border-b-0 lg:border-r">
+        <div className="flex h-full flex-col">
+          <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+            <div className="motion-logo"><StrykerLogo size={40} /></div>
+            <div className="min-w-0">
+              <p className="sk-display text-[1.35rem] leading-none">STRYKER</p>
+              <p className="mt-1 text-[8px] font-black uppercase tracking-[0.18em] text-[color:var(--sk-brand-glow)]">
+                Mod Manager · v{version}
+              </p>
             </div>
-            <p className="text-[10px] text-white/35 truncate mt-2">{config.isLinked ? config.gamePath : t("desktop.gameUnlinked")}</p>
+          </div>
+
+          <div className="px-4 pt-4">
+            <div className="sk-panel overflow-hidden">
+              <div className="flex items-start justify-between gap-2 px-3.5 pt-3">
+                <p className="sk-label">{t("desktop.activeGame")}</p>
+                <span className={`relative mt-0.5 flex h-2 w-2 shrink-0 rounded-full ${config.isLinked ? "bg-[color:var(--sk-ok)]" : "bg-[color:var(--sk-warn)]"}`}>
+                  {config.isLinked && <span className="absolute inset-0 animate-ping rounded-full bg-[color:var(--sk-ok)] opacity-60" />}
+                </span>
+              </div>
+              <p className="truncate px-3.5 pt-1.5 text-[13px] font-black tracking-tight">
+                {config.isLinked ? config.detectedVersion : t("desktop.noGame")}
+              </p>
+              <p className="truncate px-3.5 pb-3 pt-1 font-mono text-[9px] text-[color:var(--sk-ghost)]">
+                {config.isLinked ? config.gamePath : t("desktop.gameUnlinked")}
+              </p>
+              {status.isRunning && (
+                <div className="flex items-center justify-between gap-2 border-t border-white/10 bg-emerald-500/10 px-3.5 py-2">
+                  <span className="sk-label text-emerald-200/80">{t("desktop.launch")}</span>
+                  <span className="font-mono text-[10px] font-bold text-emerald-200">{formatDuration(status.playDurationSeconds)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <nav aria-label={t("desktop.navigation")} className="grid grid-cols-2 gap-1 overflow-y-auto px-4 py-4 sm:grid-cols-3 lg:flex lg:flex-1 lg:flex-col">
+            {navigation.map((item, index) => {
+              const Icon = item.icon;
+              const badge = item.id === "conflicts" && conflictBadge > 0 ? conflictBadge : null;
+              const active = page === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setPage(item.id)}
+                  data-active={active}
+                  aria-current={active ? "page" : undefined}
+                  className="sk-rail-item"
+                >
+                  {/* Le numéro est masqué sur les écrans étroits : il vole la
+                      place nécessaire aux libellés longs du menu à deux colonnes. */}
+                  <span className="sk-rail-index hidden sm:inline">{String(index + 1).padStart(2, "0")}</span>
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 truncate text-left">{item.label}</span>
+                  {badge ? (
+                    <span className="rounded-full bg-[color:var(--sk-warn)] px-1.5 text-[9px] font-black text-black">{badge}</span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="hidden border-t border-white/10 px-5 py-3.5 lg:block">
+            <p className="text-[8px] font-black uppercase tracking-[0.16em] text-[color:var(--sk-ghost)]">
+              Find. Install. Play.
+            </p>
           </div>
         </div>
-
-        <nav aria-label={t("desktop.navigation")} className="px-3 pb-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-1">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            const badge = item.id === "conflicts" && conflicts && (conflicts.total + conflicts.dependencyIssues.length) > 0
-              ? conflicts.total + conflicts.dependencyIssues.length : null;
-            return (
-              <button key={item.id} onClick={() => setPage(item.id)} aria-current={page === item.id ? "page" : undefined} className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-semibold transition ${page === item.id ? "bg-[#711361] text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}`}>
-                <Icon className="w-4 h-4" />
-                <span className="flex-1">{item.label}</span>
-                {badge ? <span className="rounded-full bg-amber-400 text-black px-1.5 text-[9px] font-black">{badge}</span> : null}
-              </button>
-            );
-          })}
-        </nav>
       </aside>
 
-      <div className="flex-1 min-w-0">
-        <header className="min-h-20 border-b border-white/10 bg-black/25 px-5 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-30 backdrop-blur-xl">
-          <div>
-            <h1 className="text-xl font-black">{navigation.find((item) => item.id === page)?.label}</h1>
-            <p className="text-xs text-white/45 mt-0.5">{t("desktop.profile")} : <strong className="text-white/75">{activeProfile?.id === "default" ? t("desktop.mainProfile") : activeProfile?.name || "—"}</strong></p>
+      <div className="min-w-0 flex-1">
+        {/* ------------------------------------------------------------ TOPBAR */}
+        <header className="sticky top-0 z-30 flex min-h-[var(--sk-topbar)] flex-col justify-between gap-3 border-b border-white/10 bg-[color:var(--sk-ink)]/85 px-5 py-4 backdrop-blur-xl sm:flex-row sm:items-center lg:px-8">
+          <div className="min-w-0">
+            <p className="sk-eyebrow">
+              {t("desktop.profile")} · {activeProfileLabel}
+            </p>
+            <h1 className="sk-display mt-1.5 text-[clamp(1.5rem,2.6vw,2rem)]">
+              {navigation.find((item) => item.id === page)?.label}
+            </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <LanguageSwitcher compact />
-            <button onClick={() => runAction(() => Promise.resolve(), t("desktop.updated"))} disabled={busy} aria-label={t("desktop.refresh")} className="p-2.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50">
-              <RefreshCw className={`w-4 h-4 ${busy ? "animate-spin" : ""}`} />
+            <button
+              onClick={() => runAction(() => Promise.resolve(), t("desktop.updated"))}
+              disabled={busy}
+              aria-label={t("desktop.refresh")}
+              className="sk-icon-btn"
+            >
+              <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
             </button>
-            <button onClick={launchOrStop} disabled={busy || (!status.isRunning && !config.isLinked)} className={`rounded-lg px-5 py-2.5 text-xs font-black uppercase tracking-wider flex items-center gap-2 disabled:opacity-40 ${status.isRunning ? "bg-rose-700 hover:bg-rose-600" : "bg-white text-[#711361] hover:bg-white/90"}`}>
-              {status.isRunning ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-              {status.isRunning ? `${t("desktop.stop")} · ${formatDuration(status.playDurationSeconds)}` : config.isLinked ? t("desktop.launch") : t("desktop.gameUnlinked")}
+            <button
+              onClick={launchOrStop}
+              disabled={busy || (!status.isRunning && !config.isLinked)}
+              className={`sk-btn ${status.isRunning ? "sk-btn-danger" : "sk-btn-primary"}`}
+            >
+              {status.isRunning ? <Square className="h-3.5 w-3.5 fill-current" /> : <Play className="h-3.5 w-3.5 fill-current" />}
+              {status.isRunning
+                ? `${t("desktop.stop")} · ${formatDuration(status.playDurationSeconds)}`
+                : config.isLinked ? t("desktop.launch") : t("desktop.gameUnlinked")}
             </button>
           </div>
         </header>
 
-        <main className="p-5 lg:p-8 max-w-[1500px] mx-auto">
+        <main className="mx-auto max-w-[1500px] p-5 lg:p-8">
           {updateStatus.updaterConfigured && ["available", "downloading", "ready"].includes(updateStatus.state) && (
-            <section className="mb-6 rounded-2xl border border-sky-400/30 bg-sky-500/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4" aria-label={t("desktop.updateTitle")}>
+            <section className="sk-statusband mb-6 flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center" aria-label={t("desktop.updateTitle")}>
               <div>
-                <p className="text-sm font-black text-sky-100">{t("desktop.updateTitle")} {updateStatus.availableVersion ? `· v${updateStatus.availableVersion}` : ""}</p>
-                <p className="mt-1 text-[11px] text-sky-100/65">{updateStateLabel}{updateStatus.state === "downloading" ? ` · ${Math.round(updateStatus.progress)} %` : ""}</p>
+                <p className="sk-eyebrow text-sky-300">{t("desktop.updateTitle")}</p>
+                <p className="mt-2 text-sm font-black">
+                  {updateStatus.availableVersion ? `v${updateStatus.availableVersion}` : t("desktop.updateTitle")}
+                </p>
+                <p className="mt-1 text-[11px] text-[color:var(--sk-muted)]">
+                  {updateStateLabel}{updateStatus.state === "downloading" ? ` · ${Math.round(updateStatus.progress)} %` : ""}
+                </p>
               </div>
-              {updateStatus.state !== "downloading" && <button onClick={updateAction} disabled={busy} className="rounded-lg bg-sky-100 px-4 py-2.5 text-xs font-black text-sky-950 disabled:opacity-50">{updateStatus.state === "ready" ? t("desktop.updateInstall") : t("desktop.updateDownload")}</button>}
+              {updateStatus.state !== "downloading" && (
+                <button onClick={updateAction} disabled={busy} className="sk-btn sk-btn-primary">
+                  {updateStatus.state === "ready" ? t("desktop.updateInstall") : t("desktop.updateDownload")}
+                </button>
+              )}
             </section>
           )}
+
+          {/* --------------------------------------------------------- DASHBOARD */}
           {page === "dashboard" && (
             <div className="space-y-6">
-              <section className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <Metric icon={PackageOpen} label={t("desktop.managedMods")} value={String(mods.length)} detail={`${mods.filter((mod) => mod.enabled).length} ${t("desktop.active")}`} />
-                <Metric icon={UserRoundCog} label={t("desktop.activeProfile")} value={activeProfile?.id === "default" ? t("desktop.mainProfile") : activeProfile?.name || "—"} detail={`${activeProfile?.enabledCount || 0} mods ${t("desktop.active")}`} />
-                <Metric icon={Wrench} label={t("desktop.conflicts")} value={String(conflicts?.total || 0)} detail={t("desktop.siderOrder")} warning={Boolean(conflicts?.total)} />
-                <Metric icon={ArchiveRestore} label={t("desktop.backups")} value={String(backups.length)} detail={`${t("desktop.lastDeployment")} : ${formatDate(health?.deployment.lastDeployedAt, language, t("desktop.never"))}`} />
+              <section className="sk-statusband flex flex-col gap-6 p-6 lg:flex-row lg:items-center lg:justify-between lg:p-8">
+                <img src="/stryker-logo.png" alt="" aria-hidden="true" width={1536} height={1024} decoding="async" className="sk-watermark -right-16 -top-20 w-[26rem] max-w-none" />
+                <div className="relative min-w-0">
+                  <p className="sk-eyebrow">{t("desktop.activeGame")}</p>
+                  <h2 className="sk-display mt-3 text-[clamp(1.9rem,4.4vw,3.2rem)]">
+                    {config.isLinked ? config.detectedVersion : t("desktop.noGame")}
+                  </h2>
+                  <p className="mt-3 truncate font-mono text-[10px] text-[color:var(--sk-faint)]">
+                    {config.isLinked ? config.gamePath : t("desktop.gameUnlinked")}
+                  </p>
+                </div>
+                <div className="relative flex shrink-0 flex-wrap items-center gap-2.5">
+                  <span className="sk-chip" data-tone={status.isRunning ? "ok" : config.isLinked ? "brand" : "warn"}>
+                    {status.isRunning
+                      ? `${t("desktop.activeStatus")} · ${formatDuration(status.playDurationSeconds)}`
+                      : config.isLinked ? t("desktop.gameLinked") : t("desktop.gameUnlinked")}
+                  </span>
+                  {config.isLinked ? (
+                    <button onClick={launchOrStop} disabled={busy} className={`sk-btn ${status.isRunning ? "sk-btn-danger" : "sk-btn-brand"}`}>
+                      {status.isRunning ? <Square className="h-3.5 w-3.5 fill-current" /> : <Play className="h-3.5 w-3.5 fill-current" />}
+                      {status.isRunning ? t("desktop.stop") : t("desktop.launch")}
+                    </button>
+                  ) : (
+                    <button onClick={linkGame} disabled={busy} className="sk-btn sk-btn-brand">
+                      <FolderSearch className="h-3.5 w-3.5" /> {t("desktop.linkGame")}
+                    </button>
+                  )}
+                </div>
+              </section>
+
+              <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <Metric index="01" icon={PackageOpen} label={t("desktop.managedMods")} value={String(mods.length)} detail={`${mods.filter((mod) => mod.enabled).length} ${t("desktop.active")}`} />
+                <Metric index="02" icon={UserRoundCog} label={t("desktop.activeProfile")} value={activeProfileLabel} detail={`${activeProfile?.enabledCount || 0} mods ${t("desktop.active")}`} />
+                <Metric index="03" icon={Wrench} label={t("desktop.conflicts")} value={String(conflicts?.total || 0)} detail={t("desktop.siderOrder")} warning={Boolean(conflicts?.total)} />
+                <Metric index="04" icon={ArchiveRestore} label={t("desktop.backups")} value={String(backups.length)} detail={`${t("desktop.lastDeployment")} : ${formatDate(health?.deployment.lastDeployedAt, language, t("desktop.never"))}`} />
               </section>
 
               {!config.isLinked ? (
-                <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="font-bold text-amber-200">{t("desktop.linkTitle")}</h2>
-                    <p className="text-xs text-amber-100/60 mt-1">{t("desktop.linkDescription")}</p>
+                <section className="flex flex-col justify-between gap-4 rounded-[var(--sk-r-lg)] border border-amber-400/30 bg-amber-400/[0.07] p-5 md:flex-row md:items-center">
+                  <div className="flex gap-3.5">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                    <div>
+                      <h2 className="sk-display text-base text-amber-100">{t("desktop.linkTitle")}</h2>
+                      <p className="mt-1.5 text-xs leading-relaxed text-amber-100/60">{t("desktop.linkDescription")}</p>
+                    </div>
                   </div>
-                  <button onClick={linkGame} disabled={busy} className="px-4 py-2.5 rounded-lg bg-amber-300 text-black text-xs font-black flex items-center gap-2"><FolderSearch className="w-4 h-4" /> {t("desktop.linkGame")}</button>
+                  <button onClick={linkGame} disabled={busy} className="sk-btn shrink-0 bg-amber-300 text-black hover:bg-amber-200">
+                    <FolderSearch className="h-3.5 w-3.5" /> {t("desktop.linkGame")}
+                  </button>
                 </section>
               ) : null}
 
-              <section className="grid xl:grid-cols-[1.15fr_0.85fr] gap-6">
-                <Panel title={t("desktop.health")} icon={HeartPulse} action={<button onClick={() => setPage("settings")} className="text-xs text-[#d870c5]">{t("desktop.settings")}</button>}>
-                  <div className="divide-y divide-white/5">
+              <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+                <Panel
+                  title={t("desktop.health")}
+                  icon={HeartPulse}
+                  action={<button onClick={() => setPage("settings")} className="sk-cta text-xs">{t("desktop.settings")}</button>}
+                >
+                  <div className="divide-y divide-white/[0.06]">
                     {health?.checks.map((check) => {
                       const text = localizeHealthCheck(check);
-                      return <div key={check.id} className="py-3 flex items-start gap-3">
-                        {check.ok ? <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5" /> : check.warning ? <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5" /> : <XCircle className="w-4 h-4 text-rose-400 mt-0.5" />}
-                        <div className="min-w-0"><p className="text-xs font-semibold">{text.label}</p><p className="text-[11px] text-white/40 truncate mt-0.5">{text.detail}</p></div>
-                      </div>;
+                      return (
+                        <div key={check.id} className="sk-row flex items-start gap-3 px-2 py-3">
+                          {check.ok
+                            ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--sk-ok)]" />
+                            : check.warning
+                              ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--sk-warn)]" />
+                              : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--sk-danger)]" />}
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold">{text.label}</p>
+                            <p className="mt-0.5 truncate font-mono text-[10px] text-[color:var(--sk-faint)]">{text.detail}</p>
+                          </div>
+                        </div>
+                      );
                     })}
                   </div>
                 </Panel>
+
                 <Panel title={t("desktop.activity")} icon={Activity}>
-                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                  <div className="max-h-80 space-y-1 overflow-y-auto pr-1">
                     {activity.length === 0 ? <Empty text={t("desktop.noActivity")} /> : activity.slice(0, 12).map((item) => (
-                      <div key={item.id} className="border-l-2 border-[#711361] pl-3 py-1"><p className="text-xs text-white/80">{item.message}</p><p className="text-[10px] text-white/35 mt-0.5">{formatDate(item.createdAt, language, t("desktop.never"))}</p></div>
+                      <div key={item.id} className="sk-row border-l-2 border-[color:var(--sk-brand)] py-2 pl-3 pr-2">
+                        <p className="text-xs leading-relaxed text-white/80">{item.message}</p>
+                        <p className="mt-1 font-mono text-[9px] text-[color:var(--sk-ghost)]">{formatDate(item.createdAt, language, t("desktop.never"))}</p>
+                      </div>
                     ))}
                   </div>
                 </Panel>
@@ -441,11 +622,19 @@ export function DesktopApp() {
             </div>
           )}
 
+          {/* -------------------------------------------------------------- MODS */}
           {page === "mods" && (
             <div className="space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("desktop.searchMods")} className="w-full md:max-w-lg rounded-lg bg-[#151015] border border-white/10 px-4 py-2.5 text-xs outline-none focus:border-[#711361]" />
-                <button onClick={importArchive} disabled={busy} className="rounded-lg bg-[#711361] hover:bg-[#861872] px-4 py-2.5 text-xs font-black flex items-center justify-center gap-2"><Download className="w-4 h-4" /> {t("desktop.installZip")}</button>
+              <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={t("desktop.searchMods")}
+                  className="sk-input md:max-w-lg"
+                />
+                <button onClick={importArchive} disabled={busy} className="sk-btn sk-btn-brand">
+                  <Download className="h-3.5 w-3.5" /> {t("desktop.installZip")}
+                </button>
               </div>
 
               <section
@@ -459,39 +648,81 @@ export function DesktopApp() {
                   if (!(relatedTarget instanceof Node) || !event.currentTarget.contains(relatedTarget)) setDropActive(false);
                 }}
                 onDrop={handleArchiveDrop}
-                className={`rounded-2xl border-2 border-dashed p-7 transition-colors ${busy ? "border-white/10 bg-white/[0.02] opacity-60" : dropActive ? "border-[#d870c5] bg-[#711361]/25" : "border-white/15 bg-[#151015] hover:border-[#711361]/70"}`}
+                className={`rounded-[var(--sk-r-xl)] border-2 border-dashed p-8 transition-colors duration-300 ${
+                  busy
+                    ? "border-white/10 bg-white/[0.02] opacity-60"
+                    : dropActive
+                      ? "border-[color:var(--sk-brand-glow)] bg-[#711361]/25"
+                      : "border-white/15 bg-[color:var(--sk-surface)] hover:border-[color:var(--sk-line-brand)]"
+                }`}
               >
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center sm:text-left pointer-events-none">
-                  <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${dropActive ? "bg-[#d870c5] text-[#37002E]" : "bg-[#711361]/25 text-[#d870c5]"}`}><UploadCloud className="h-6 w-6" /></span>
+                <div className="pointer-events-none flex flex-col items-center justify-center gap-4 text-center sm:flex-row sm:text-left">
+                  <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-[var(--sk-r-md)] transition-colors ${dropActive ? "bg-[color:var(--sk-brand-glow)] text-[#37002E]" : "bg-[#711361]/25 text-[color:var(--sk-brand-glow)]"}`}>
+                    <UploadCloud className="h-7 w-7" />
+                  </span>
                   <div>
-                    <h2 className="text-sm font-black uppercase tracking-wide">{busy ? t("desktop.dropBusy") : dropActive ? t("desktop.dropActive") : t("desktop.dropTitle")}</h2>
-                    <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-white/50">{t("desktop.dropDescription")}</p>
-                    <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-[#d870c5]">{t("desktop.dropLimit")}</p>
+                    <h2 className="sk-display text-lg">
+                      {busy ? t("desktop.dropBusy") : dropActive ? t("desktop.dropActive") : t("desktop.dropTitle")}
+                    </h2>
+                    <p className="mt-1.5 max-w-2xl text-[11px] leading-relaxed text-[color:var(--sk-muted)]">{t("desktop.dropDescription")}</p>
+                    <p className="mt-2 text-[9px] font-black uppercase tracking-[0.16em] text-[color:var(--sk-brand-glow)]">{t("desktop.dropLimit")}</p>
                   </div>
                 </div>
               </section>
 
-              <Panel title={`${t("desktop.managedMods")} (${filteredMods.length})`} icon={ShieldCheck}>
+              <Panel title={t("desktop.managedMods")} icon={ShieldCheck} count={filteredMods.length}>
                 {filteredMods.length === 0 ? <Empty text={t("desktop.noManagedMods")} /> : (
                   <div className="overflow-x-auto">
-                    <div className="min-w-[850px]">
-                      <div className="grid grid-cols-[60px_minmax(240px,1fr)_110px_120px_120px_150px] gap-3 px-3 pb-2 text-[10px] uppercase tracking-wider text-white/35">
-                        <span>{t("desktop.order")}</span><span>{t("desktop.mod")}</span><span>{t("desktop.type")}</span><span>{t("desktop.version")}</span><span>{t("desktop.state")}</span><span className="text-right">{t("desktop.actions")}</span>
+                    <div className="min-w-[880px]">
+                      <div className="grid grid-cols-[56px_minmax(240px,1fr)_120px_100px_128px_140px] gap-3 border-b border-white/10 px-3 pb-2.5">
+                        <span className="sk-label">{t("desktop.order")}</span>
+                        <span className="sk-label">{t("desktop.mod")}</span>
+                        <span className="sk-label">{t("desktop.type")}</span>
+                        <span className="sk-label">{t("desktop.version")}</span>
+                        <span className="sk-label">{t("desktop.state")}</span>
+                        <span className="sk-label text-right">{t("desktop.actions")}</span>
                       </div>
-                      <div className="divide-y divide-white/5">
+                      <div className="divide-y divide-white/[0.05]">
                         {filteredMods.map((mod) => {
                           const trueIndex = mods.findIndex((item) => item.id === mod.id);
                           return (
-                            <div key={mod.id} className={`grid grid-cols-[60px_minmax(240px,1fr)_110px_120px_120px_150px] gap-3 items-center px-3 py-3 ${mod.enabled ? "" : "opacity-55"}`}>
-                              <div className="flex items-center"><span className="w-7 h-7 rounded-md bg-white/5 flex items-center justify-center text-xs font-black">{mod.priority}</span></div>
-                              <div className="min-w-0"><p className="text-xs font-bold truncate">{mod.name}</p><p className="text-[10px] text-white/35 truncate mt-1">{mod.author} · {mod.installCount && mod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")} · SHA-256 {mod.archiveHash.slice(0, 10)}…</p></div>
-                              <span className="text-[10px] uppercase text-white/55">{mod.components.map((component) => component.type).join(" + ")}</span>
-                              <span className="text-xs text-white/60">{mod.version}</span>
-                              <button role="switch" aria-checked={mod.enabled} aria-label={`${mod.enabled ? t("desktop.disable") : t("desktop.enable")} ${mod.name}`} onClick={() => runAction(() => api.toggleManagedMod(mod.id, !mod.enabled), mod.enabled ? t("desktop.disabled") : t("desktop.enabled"))} className="flex items-center gap-2 text-[10px] font-bold"><span className={`relative block w-11 h-6 rounded-full p-1 transition ${mod.enabled ? "bg-emerald-600" : "bg-white/15"}`}><span className={`block w-4 h-4 bg-white rounded-full transition-transform ${mod.enabled ? "translate-x-5" : ""}`} /></span><span>{mod.enabled ? t("desktop.activeStatus") : t("desktop.disabledState")}</span></button>
-                              <div className="flex justify-end gap-1">
-                                <IconButton label={`${t("desktop.moveUp")} ${mod.name}`} disabled={trueIndex === 0} onClick={() => moveMod(trueIndex, "up")}><ArrowUp className="w-4 h-4" /></IconButton>
-                                <IconButton label={`${t("desktop.moveDown")} ${mod.name}`} disabled={trueIndex === mods.length - 1} onClick={() => moveMod(trueIndex, "down")}><ArrowDown className="w-4 h-4" /></IconButton>
-                                <IconButton label={`${t("desktop.uninstall")} ${mod.name}`} danger onClick={() => { if (window.confirm(`${t("desktop.uninstall")} ${mod.name} ? ${t("desktop.uninstallConfirm")}`)) runAction(() => api.uninstallMod(mod.id), t("desktop.uninstalled")); }}><Trash2 className="w-4 h-4" /></IconButton>
+                            <div
+                              key={mod.id}
+                              className={`sk-row grid grid-cols-[56px_minmax(240px,1fr)_120px_100px_128px_140px] items-center gap-3 px-3 py-3 ${mod.enabled ? "" : "opacity-50"}`}
+                            >
+                              <span className="grid h-8 w-8 place-items-center rounded-[var(--sk-r-xs)] border border-white/10 bg-white/[0.04] text-[11px] font-black">
+                                {mod.priority}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-black tracking-tight">{mod.name}</p>
+                                <p className="mt-1 truncate font-mono text-[9px] text-[color:var(--sk-ghost)]">
+                                  {mod.author} · {mod.installCount && mod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")} · SHA-256 {mod.archiveHash.slice(0, 10)}…
+                                </p>
+                              </div>
+                              <span className="truncate text-[9px] font-bold uppercase tracking-[0.08em] text-[color:var(--sk-muted)]">
+                                {mod.components.map((component) => component.type).join(" + ")}
+                              </span>
+                              <span className="text-[11px] font-semibold text-[color:var(--sk-muted)]">{mod.version}</span>
+                              <button
+                                role="switch"
+                                aria-checked={mod.enabled}
+                                aria-label={`${mod.enabled ? t("desktop.disable") : t("desktop.enable")} ${mod.name}`}
+                                onClick={() => runAction(() => api.toggleManagedMod(mod.id, !mod.enabled), mod.enabled ? t("desktop.disabled") : t("desktop.enabled"))}
+                                className="flex items-center gap-2.5 text-[9px] font-black uppercase tracking-[0.08em]"
+                              >
+                                <span className="sk-switch" data-on={mod.enabled ? "on" : "off"}><span /></span>
+                                <span className={mod.enabled ? "text-[color:var(--sk-ok)]" : "text-[color:var(--sk-ghost)]"}>
+                                  {mod.enabled ? t("desktop.activeStatus") : t("desktop.disabledState")}
+                                </span>
+                              </button>
+                              <div className="flex justify-end gap-1.5">
+                                <IconButton label={`${t("desktop.moveUp")} ${mod.name}`} disabled={trueIndex === 0} onClick={() => moveMod(trueIndex, "up")}><ArrowUp className="h-4 w-4" /></IconButton>
+                                <IconButton label={`${t("desktop.moveDown")} ${mod.name}`} disabled={trueIndex === mods.length - 1} onClick={() => moveMod(trueIndex, "down")}><ArrowDown className="h-4 w-4" /></IconButton>
+                                <IconButton
+                                  label={`${t("desktop.uninstall")} ${mod.name}`}
+                                  danger
+                                  onClick={() => { if (window.confirm(`${t("desktop.uninstall")} ${mod.name} ? ${t("desktop.uninstallConfirm")}`)) runAction(() => api.uninstallMod(mod.id), t("desktop.uninstalled")); }}
+                                ><Trash2 className="h-4 w-4" /></IconButton>
                               </div>
                             </div>
                           );
@@ -502,14 +733,21 @@ export function DesktopApp() {
                 )}
               </Panel>
 
-              <Panel title={`${t("desktop.manualEntries")} (${manualMods.length})`} icon={Wrench}>
-                <p className="text-[11px] text-white/40 mb-4">{t("desktop.manualDescription")}</p>
-                <div className="space-y-2">
+              <Panel title={t("desktop.manualEntries")} icon={Wrench} count={manualMods.length}>
+                <p className="mb-4 text-[11px] leading-relaxed text-[color:var(--sk-faint)]">{t("desktop.manualDescription")}</p>
+                <div className="space-y-1.5">
                   {manualMods.length === 0 ? <Empty text={t("desktop.noManual")} /> : manualMods.map((mod) => (
-                    <div key={`${mod.id}-${mod.lineIndex}`} className="rounded-lg bg-black/20 border border-white/5 px-3 py-2.5 flex items-center gap-3">
-                      <span className="text-xs font-semibold flex-1 truncate">{mod.name}</span>
-                      <code className="hidden md:block text-[10px] text-white/35 max-w-md truncate">{mod.siderLine}</code>
-                      <button role="switch" aria-checked={mod.enabled} aria-label={`${mod.enabled ? t("desktop.disable") : t("desktop.enable")} ${t("desktop.manualEntry")} ${mod.name}`} onClick={() => runAction(() => api.toggleManualMod(mod.lineIndex, !mod.enabled), t("desktop.manualUpdated"))} className={`relative w-11 h-6 rounded-full p-1 ${mod.enabled ? "bg-[#711361]" : "bg-white/15"}`}><span className={`block w-4 h-4 bg-white rounded-full transition-transform ${mod.enabled ? "translate-x-5" : ""}`} /></button>
+                    <div key={`${mod.id}-${mod.lineIndex}`} className="sk-row flex items-center gap-3 border border-white/[0.06] bg-black/20 px-3.5 py-2.5">
+                      <span className="flex-1 truncate text-xs font-bold">{mod.name}</span>
+                      <code className="hidden max-w-md truncate font-mono text-[9px] text-[color:var(--sk-ghost)] md:block">{mod.siderLine}</code>
+                      <button
+                        role="switch"
+                        aria-checked={mod.enabled}
+                        aria-label={`${mod.enabled ? t("desktop.disable") : t("desktop.enable")} ${t("desktop.manualEntry")} ${mod.name}`}
+                        onClick={() => runAction(() => api.toggleManualMod(mod.lineIndex, !mod.enabled), t("desktop.manualUpdated"))}
+                        className="sk-switch"
+                        data-on={mod.enabled ? "brand" : "off"}
+                      ><span /></button>
                     </div>
                   ))}
                 </div>
@@ -517,166 +755,333 @@ export function DesktopApp() {
             </div>
           )}
 
+          {/* ----------------------------------------------------------- CATALOG */}
           {page === "catalog" && (
             <div className="space-y-5">
-              <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-xs text-emerald-100/75">
-                {t("desktop.catalogIntro")}
+              <div className="flex flex-col justify-between gap-3 rounded-[var(--sk-r-lg)] border border-emerald-400/25 bg-emerald-500/[0.08] p-4 sm:flex-row sm:items-center">
+                <p className="flex gap-3 text-[11px] leading-relaxed text-emerald-100/75">
+                  <ShieldCheck className="mt-px h-4 w-4 shrink-0 text-emerald-300" />
+                  {t("desktop.catalogIntro")}
+                </p>
+                <button onClick={importArchive} disabled={busy} className="sk-btn sk-btn-primary shrink-0">
+                  <Download className="h-3.5 w-3.5" /> {t("desktop.installDownloaded")}
+                </button>
               </div>
-              <div className="flex justify-end"><button onClick={importArchive} disabled={busy} className="rounded-lg bg-white text-[#711361] px-4 py-2.5 text-xs font-black flex items-center gap-2"><Download className="w-4 h-4" /> {t("desktop.installDownloaded")}</button></div>
 
-              <Panel title={`${t("desktop.catalog")} (${catalogMods.length})`} icon={Library}>
+              <Panel title={t("desktop.catalog")} icon={Library} count={catalogMods.length}>
                 {catalogMods.length === 0 ? <Empty text={t("desktop.noPublished")} /> : (
-                  <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {catalogMods.map((mod) => {
                       const installedMod = mods.find((item) => item.packageId === mod.id || item.archiveHash === mod.archiveHash || item.id.startsWith(`${mod.id}-`));
                       return (
-                        <article key={mod.id} className={`rounded-xl overflow-hidden border bg-black/20 flex flex-col ${installedMod ? "border-emerald-500/35" : "border-white/10"}`}>
-                          <div className="relative h-36 overflow-hidden bg-[radial-gradient(circle_at_75%_20%,rgba(130,27,110,.34),transparent_42%),#090708]"><img src="/stryker-logo.png" alt="" aria-hidden="true" className="absolute -right-8 -top-12 w-64 max-w-none opacity-15 mix-blend-screen" /><span className="absolute top-3 left-3 rounded-full bg-[#711361] px-2 py-1 text-[9px] font-black uppercase">{t("desktop.hosted")}</span>{installedMod && <span className="absolute top-3 right-3 rounded-full bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase text-black">{installedMod.installCount && installedMod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")}</span>}</div>
-                          <div className="p-4 flex-1 flex flex-col"><p className="text-[10px] uppercase text-[#d870c5] font-bold">{mod.author} · {mod.version}</p><h2 className="font-bold text-sm mt-1">{mod.title}</h2><p className="text-[11px] text-white/45 mt-2 line-clamp-3 flex-1">{mod.shortDesc}</p><p className="mt-3 text-[9px] text-white/30">SHA-256 {mod.archiveHash?.slice(0, 12)}… · {mod.downloadsCount} {t("desktop.installations")}</p><div className="mt-4 grid grid-cols-2 gap-2"><button onClick={() => runAction(() => api.installCatalogMod(mod.id), config.isLinked ? `${mod.title} ${installedMod ? t("desktop.reinstalledDeployed") : t("desktop.installedDeployed")}` : `${mod.title} ${t("desktop.preparedLink")}`)} disabled={busy} className="rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase text-[#711361] flex items-center justify-center gap-1.5"><Download className="w-3.5 h-3.5" /> {installedMod ? t("desktop.reinstall") : t("desktop.install")}</button>{installedMod ? <button onClick={() => runAction(() => api.toggleManagedMod(installedMod.id, !installedMod.enabled), installedMod.enabled ? t("desktop.disabled") : t("desktop.enabled"))} disabled={busy} className="rounded-lg border border-white/15 px-3 py-2 text-[10px] font-black uppercase">{installedMod.enabled ? t("desktop.disable") : t("desktop.enable")}</button> : <span />}</div></div>
-                        </article>
+                        <ModCard
+                          key={mod.id}
+                          mod={mod}
+                          installed={Boolean(installedMod)}
+                          badge={t("desktop.hosted")}
+                          badgeTone="brand"
+                          installedLabel={installedMod?.installCount && installedMod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")}
+                          meta={`SHA-256 ${mod.archiveHash?.slice(0, 12)}… · ${mod.downloadsCount} ${t("desktop.installations")}`}
+                        >
+                          <button
+                            onClick={() => runAction(
+                              () => api.installCatalogMod(mod.id),
+                              config.isLinked
+                                ? `${mod.title} ${installedMod ? t("desktop.reinstalledDeployed") : t("desktop.installedDeployed")}`
+                                : `${mod.title} ${t("desktop.preparedLink")}`,
+                            )}
+                            disabled={busy}
+                            className="sk-btn sk-btn-primary flex-1"
+                          >
+                            <Download className="h-3.5 w-3.5" /> {installedMod ? t("desktop.reinstall") : t("desktop.install")}
+                          </button>
+                          {installedMod && (
+                            <button
+                              onClick={() => runAction(() => api.toggleManagedMod(installedMod.id, !installedMod.enabled), installedMod.enabled ? t("desktop.disabled") : t("desktop.enabled"))}
+                              disabled={busy}
+                              className="sk-btn sk-btn-ghost flex-1"
+                            >
+                              {installedMod.enabled ? t("desktop.disable") : t("desktop.enable")}
+                            </button>
+                          )}
+                        </ModCard>
                       );
                     })}
                   </div>
                 )}
               </Panel>
 
-              <Panel title={`${t("desktop.moderation")} (${submissions.length})`} icon={ShieldCheck}>
-                <p className="mb-4 text-[11px] text-white/40">{t("desktop.moderationDescription")}</p>
-                {submissions.length === 0 ? <Empty text={t("desktop.noSubmissions")} /> : <div className="space-y-3">{submissions.map((submission) => (
-                  <article key={submission.id} className="rounded-xl border border-white/10 bg-black/20 p-4 md:flex md:items-center gap-4">
-                    <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-bold">{submission.title}</h3><span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase ${submission.status === "pending_review" ? "bg-amber-400 text-black" : submission.status === "rejected" ? "bg-rose-700" : "bg-white/10"}`}>{submission.status === "pending_review" ? t("desktop.pendingReview") : submission.status === "awaiting_archive" ? t("desktop.archiveMissing") : t("desktop.rejected")}</span></div><p className="mt-1 text-[10px] text-white/40">{submission.author} · {submission.version} · {submission.fileCount || 0} {t("desktop.files")} · {submission.archiveSize ? `${(submission.archiveSize / 1024 / 1024).toFixed(1)} MB` : "—"}</p><p className="mt-2 text-[11px] text-white/55">{submission.shortDesc}</p></div>
-                    {submission.status === "pending_review" && <div className="mt-3 flex flex-wrap gap-2 md:mt-0"><button onClick={() => runAction(() => api.installSubmission(submission.id), t("desktop.testInstalled"))} className="rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold">{t("desktop.test")}</button><button onClick={() => runAction(() => api.publishSubmission(submission.id), t("desktop.published"))} className="rounded-lg bg-emerald-700 px-3 py-2 text-[10px] font-black">{t("desktop.publish")}</button><button onClick={() => { const note = window.prompt(t("desktop.rejectReason"), t("desktop.rejectDefault")); if (note !== null) runAction(() => api.rejectSubmission(submission.id, note), t("desktop.submissionRejected")); }} className="rounded-lg bg-rose-800 px-3 py-2 text-[10px] font-bold">{t("desktop.reject")}</button></div>}
-                  </article>
-                ))}</div>}
+              <Panel title={t("desktop.moderation")} icon={ShieldCheck} count={submissions.length}>
+                <p className="mb-4 text-[11px] leading-relaxed text-[color:var(--sk-faint)]">{t("desktop.moderationDescription")}</p>
+                {submissions.length === 0 ? <Empty text={t("desktop.noSubmissions")} /> : (
+                  <div className="space-y-3">
+                    {submissions.map((submission) => (
+                      <article key={submission.id} className="sk-panel gap-4 p-4 md:flex md:items-center">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="sk-display text-base">{submission.title}</h3>
+                            <span className="sk-chip" data-tone={submission.status === "pending_review" ? "warn" : submission.status === "rejected" ? "danger" : undefined}>
+                              {submission.status === "pending_review" ? t("desktop.pendingReview") : submission.status === "awaiting_archive" ? t("desktop.archiveMissing") : t("desktop.rejected")}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 font-mono text-[9px] text-[color:var(--sk-ghost)]">
+                            {submission.author} · {submission.version} · {submission.fileCount || 0} {t("desktop.files")} · {submission.archiveSize ? `${(submission.archiveSize / 1024 / 1024).toFixed(1)} MB` : "—"}
+                          </p>
+                          <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--sk-muted)]">{submission.shortDesc}</p>
+                        </div>
+                        {submission.status === "pending_review" && (
+                          <div className="mt-3 flex flex-wrap gap-2 md:mt-0">
+                            <button onClick={() => runAction(() => api.installSubmission(submission.id), t("desktop.testInstalled"))} className="sk-btn sk-btn-ghost">{t("desktop.test")}</button>
+                            <button onClick={() => runAction(() => api.publishSubmission(submission.id), t("desktop.published"))} className="sk-btn bg-emerald-600 text-white hover:bg-emerald-500">{t("desktop.publish")}</button>
+                            <button
+                              onClick={() => { const note = window.prompt(t("desktop.rejectReason"), t("desktop.rejectDefault")); if (note !== null) runAction(() => api.rejectSubmission(submission.id, note), t("desktop.submissionRejected")); }}
+                              className="sk-btn sk-btn-danger"
+                            >{t("desktop.reject")}</button>
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
               </Panel>
 
-              <Panel title={t("desktop.externalResources")} icon={ExternalLink}>
-              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {externalCatalogMods.map((mod) => {
-                  const installedMod = mods.find((item) => item.packageId === mod.id || item.archiveHash === mod.archiveHash || item.id.startsWith(`${mod.id}-`));
-                  const remoteInstallable = mod.status !== "pending_review" && mod.installationType === "automatic" && Boolean(mod.repositoryUrl);
-                  return (
-                    <article key={mod.id} className={`rounded-xl overflow-hidden border bg-[#151015] flex flex-col ${installedMod ? "border-emerald-500/35" : "border-white/10"}`}>
-                      <div className="relative h-36 overflow-hidden bg-[radial-gradient(circle_at_75%_20%,rgba(130,27,110,.34),transparent_42%),#090708]"><img src="/stryker-logo.png" alt="" aria-hidden="true" className="absolute -right-8 -top-12 w-64 max-w-none opacity-15 mix-blend-screen" /><span className={`absolute top-3 left-3 rounded-full px-2 py-1 text-[9px] font-black uppercase ${mod.status === "pending_review" ? "bg-amber-300 text-black" : remoteInstallable || mod.legalStatus === "verified_source" ? "bg-emerald-600" : "bg-amber-500 text-black"}`}>{mod.status === "pending_review" ? t("desktop.pendingReview") : remoteInstallable ? t("desktop.hosted") : mod.legalStatus === "verified_source" ? t("desktop.verifiedSource") : t("desktop.communityLink")}</span>{installedMod && <span className="absolute top-3 right-3 rounded-full bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase text-black">{installedMod.installCount && installedMod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")}</span>}</div>
-                      <div className="p-4 flex-1 flex flex-col"><p className="text-[10px] uppercase text-[#d870c5] font-bold">{mod.author}</p><h2 className="font-bold text-sm mt-1">{mod.title}</h2><p className="text-[11px] text-white/45 mt-2 line-clamp-3 flex-1">{mod.shortDesc}</p><div className="flex gap-2 mt-4">{mod.status === "pending_review" ? <span className="flex-1 rounded-lg border border-amber-300/20 bg-amber-300/5 px-3 py-2 text-center text-[10px] font-bold text-amber-100/65">{t("desktop.pendingReview")}</span> : remoteInstallable ? <button onClick={() => runAction(() => api.installRemoteCatalogMod(mod.repositoryUrl || "", mod.id), config.isLinked ? `${mod.title} ${installedMod ? t("desktop.reinstalledDeployed") : t("desktop.installedDeployed")}` : `${mod.title} ${t("desktop.preparedLink")}`)} disabled={busy} className="flex-1 rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase text-[#711361] flex items-center justify-center gap-1.5"><Download className="w-3.5 h-3.5" /> {installedMod ? t("desktop.reinstall") : t("desktop.install")}</button> : <a href={mod.sourceUrl || mod.downloadUrl} target="_blank" rel="noreferrer" className="flex-1 rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold text-center flex items-center justify-center gap-1.5 hover:bg-white/5">{t("desktop.authorSource")} <ExternalLink className="w-3 h-3" /></a>}</div></div>
-                    </article>
-                  );
-                })}
-              </div>
+              <Panel title={t("desktop.externalResources")} icon={ExternalLink} count={externalCatalogMods.length}>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {externalCatalogMods.map((mod) => {
+                    const installedMod = mods.find((item) => item.packageId === mod.id || item.archiveHash === mod.archiveHash || item.id.startsWith(`${mod.id}-`));
+                    const remoteInstallable = mod.status !== "pending_review" && mod.installationType === "automatic" && Boolean(mod.repositoryUrl);
+                    return (
+                      <ModCard
+                        key={mod.id}
+                        mod={mod}
+                        installed={Boolean(installedMod)}
+                        badge={mod.status === "pending_review" ? t("desktop.pendingReview") : remoteInstallable ? t("desktop.hosted") : mod.legalStatus === "verified_source" ? t("desktop.verifiedSource") : t("desktop.communityLink")}
+                        badgeTone={mod.status === "pending_review" ? "warn" : remoteInstallable || mod.legalStatus === "verified_source" ? "ok" : "warn"}
+                        installedLabel={installedMod?.installCount && installedMod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")}
+                      >
+                        {mod.status === "pending_review" ? (
+                          <span className="sk-btn sk-btn-ghost flex-1 cursor-default border-amber-300/25 bg-amber-300/[0.06] text-amber-100/65">{t("desktop.pendingReview")}</span>
+                        ) : remoteInstallable ? (
+                          <button
+                            onClick={() => runAction(
+                              () => api.installRemoteCatalogMod(mod.repositoryUrl || "", mod.id),
+                              config.isLinked
+                                ? `${mod.title} ${installedMod ? t("desktop.reinstalledDeployed") : t("desktop.installedDeployed")}`
+                                : `${mod.title} ${t("desktop.preparedLink")}`,
+                            )}
+                            disabled={busy}
+                            className="sk-btn sk-btn-primary flex-1"
+                          >
+                            <Download className="h-3.5 w-3.5" /> {installedMod ? t("desktop.reinstall") : t("desktop.install")}
+                          </button>
+                        ) : (
+                          <a href={mod.sourceUrl || mod.downloadUrl} target="_blank" rel="noreferrer" className="sk-btn sk-btn-ghost flex-1">
+                            {t("desktop.authorSource")} <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </ModCard>
+                    );
+                  })}
+                </div>
               </Panel>
             </div>
           )}
 
+          {/* ---------------------------------------------------------- PROFILES */}
           {page === "profiles" && (
             <div className="space-y-5">
-              <div className="flex justify-end"><button onClick={() => setProfileFormOpen(true)} className="rounded-lg bg-[#711361] px-4 py-2.5 text-xs font-black flex items-center gap-2"><Plus className="w-4 h-4" /> {t("desktop.newProfile")}</button></div>
+              <div className="flex justify-end">
+                <button onClick={() => setProfileFormOpen(true)} className="sk-btn sk-btn-brand">
+                  <Plus className="h-3.5 w-3.5" /> {t("desktop.newProfile")}
+                </button>
+              </div>
+
               {profileFormOpen && (
-                <section className="rounded-xl border border-[#711361]/60 bg-[#151015] p-5 space-y-3" aria-label={t("desktop.createProfile")}>
-                  <input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder={t("desktop.profileName")} className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2.5 text-xs" />
-                  <textarea value={profileDescription} onChange={(event) => setProfileDescription(event.target.value)} placeholder={t("desktop.optionalDescription")} className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2.5 text-xs min-h-20" />
-                  <div className="flex justify-end gap-2"><button onClick={() => setProfileFormOpen(false)} className="px-3 py-2 text-xs text-white/60">{t("desktop.cancel")}</button><button disabled={!profileName.trim() || busy} onClick={() => runAction(async () => { await api.createProfile(profileName, profileDescription, true); setProfileName(""); setProfileDescription(""); setProfileFormOpen(false); }, t("desktop.profileCreated"))} className="rounded-lg bg-white text-[#711361] px-4 py-2 text-xs font-black disabled:opacity-40">{t("desktop.createClone")}</button></div>
+                <section className="sk-panel space-y-3 border-[color:var(--sk-line-brand)] p-5" aria-label={t("desktop.createProfile")}>
+                  <p className="sk-eyebrow">{t("desktop.createProfile")}</p>
+                  <input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder={t("desktop.profileName")} className="sk-input" />
+                  <textarea value={profileDescription} onChange={(event) => setProfileDescription(event.target.value)} placeholder={t("desktop.optionalDescription")} className="sk-input min-h-20 resize-y" />
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setProfileFormOpen(false)} className="sk-btn sk-btn-ghost border-transparent">{t("desktop.cancel")}</button>
+                    <button
+                      disabled={!profileName.trim() || busy}
+                      onClick={() => runAction(async () => { await api.createProfile(profileName, profileDescription, true); setProfileName(""); setProfileDescription(""); setProfileFormOpen(false); }, t("desktop.profileCreated"))}
+                      className="sk-btn sk-btn-primary"
+                    >{t("desktop.createClone")}</button>
+                  </div>
                 </section>
               )}
-              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {profiles.map((profile) => (
-                  <article key={profile.id} className={`rounded-xl border p-5 ${profile.active ? "border-[#711361] bg-[#711361]/15" : "border-white/10 bg-[#151015]"}`}>
-                    <div className="flex items-start justify-between gap-3"><div><h2 className="font-bold text-sm">{profile.id === "default" ? t("desktop.mainProfile") : profile.name}</h2><p className="text-[11px] text-white/40 mt-1">{profile.description || t("desktop.noDescription")}</p></div>{profile.active && <span className="text-[9px] uppercase font-black text-emerald-400">{t("desktop.activeStatus")}</span>}</div>
-                    <p className="text-xs text-white/60 mt-5">{profile.enabledCount} {t("desktop.active")} / {profile.modCount} {t("desktop.installed")}</p>
-                    <div className="mt-4 flex gap-2"><button disabled={profile.active || busy} onClick={() => runAction(() => api.activateProfile(profile.id), `${t("desktop.profile")} « ${profile.id === "default" ? t("desktop.mainProfile") : profile.name} » ${t("desktop.profileActivated")}`)} className="flex-1 rounded-lg bg-white/10 px-3 py-2 text-[10px] font-bold disabled:opacity-35">{t("desktop.activate")}</button>{profile.id !== "default" && <IconButton danger label={`${t("desktop.delete")} ${profile.name}`} onClick={() => { if (window.confirm(`${t("desktop.delete")} ${t("desktop.profile").toLowerCase()} ${profile.name} ? ${t("desktop.deleteProfileConfirm")}`)) runAction(() => api.deleteProfile(profile.id), t("desktop.profileDeleted")); }}><Trash2 className="w-4 h-4" /></IconButton>}</div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {profiles.map((profile, index) => (
+                  <article
+                    key={profile.id}
+                    className={`sk-panel relative overflow-hidden p-5 ${profile.active ? "border-[color:var(--sk-line-brand)]" : ""}`}
+                  >
+                    {profile.active && <span className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color:var(--sk-brand-glow)] to-transparent" />}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="sk-rail-index">{String(index + 1).padStart(2, "0")}</p>
+                        <h2 className="sk-display mt-1.5 text-lg">{profile.id === "default" ? t("desktop.mainProfile") : profile.name}</h2>
+                        <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--sk-faint)]">{profile.description || t("desktop.noDescription")}</p>
+                      </div>
+                      {profile.active && <span className="sk-chip" data-tone="ok">{t("desktop.activeStatus")}</span>}
+                    </div>
+                    <p className="mt-5 text-xs font-bold text-[color:var(--sk-muted)]">
+                      <span className="text-lg font-black text-white">{profile.enabledCount}</span> {t("desktop.active")}
+                      <span className="text-[color:var(--sk-ghost)]"> / {profile.modCount} {t("desktop.installed")}</span>
+                    </p>
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        disabled={profile.active || busy}
+                        onClick={() => runAction(() => api.activateProfile(profile.id), `${t("desktop.profile")} « ${profile.id === "default" ? t("desktop.mainProfile") : profile.name} » ${t("desktop.profileActivated")}`)}
+                        className="sk-btn sk-btn-ghost flex-1"
+                      >{t("desktop.activate")}</button>
+                      {profile.id !== "default" && (
+                        <IconButton
+                          danger
+                          label={`${t("desktop.delete")} ${profile.name}`}
+                          onClick={() => { if (window.confirm(`${t("desktop.delete")} ${t("desktop.profile").toLowerCase()} ${profile.name} ? ${t("desktop.deleteProfileConfirm")}`)) runAction(() => api.deleteProfile(profile.id), t("desktop.profileDeleted")); }}
+                        ><Trash2 className="h-4 w-4" /></IconButton>
+                      )}
+                    </div>
                   </article>
                 ))}
               </div>
             </div>
           )}
 
+          {/* --------------------------------------------------------- CONFLICTS */}
           {page === "conflicts" && (
             <div className="space-y-6">
-              <Panel title={`${t("desktop.liveCpkConflicts")} (${conflicts?.total || 0})`} icon={Wrench}>
-                <p className="text-[11px] text-white/40 mb-4">{t("desktop.conflictDescription")}</p>
-                {!conflicts?.conflicts.length ? <Empty text={t("desktop.noConflict")} /> : <div className="space-y-2 max-h-[55vh] overflow-y-auto">{conflicts.conflicts.slice(0, 1000).map((conflict) => (
-                  <div key={`${conflict.file}-${conflict.modIds.join("-")}`} className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3"><code className="text-[10px] text-amber-100 break-all">{conflict.file}</code><p className="text-[10px] text-white/45 mt-2">{t("desktop.winner")} : <strong className="text-white/75">{mods.find((mod) => mod.id === conflict.winnerModId)?.name || conflict.winnerModId}</strong> · {t("desktop.overwrites")} {conflict.loserModIds.map((id) => mods.find((mod) => mod.id === id)?.name || id).join(", ")}</p></div>
-                ))}</div>}
+              <Panel title={t("desktop.liveCpkConflicts")} icon={Wrench} count={conflicts?.total || 0}>
+                <p className="mb-4 text-[11px] leading-relaxed text-[color:var(--sk-faint)]">{t("desktop.conflictDescription")}</p>
+                {!conflicts?.conflicts.length ? <Empty text={t("desktop.noConflict")} /> : (
+                  <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+                    {conflicts.conflicts.slice(0, 1000).map((conflict) => (
+                      <div key={`${conflict.file}-${conflict.modIds.join("-")}`} className="rounded-[var(--sk-r-sm)] border border-amber-400/20 bg-amber-400/[0.05] p-3">
+                        <code className="break-all font-mono text-[10px] text-amber-100">{conflict.file}</code>
+                        <p className="mt-2 text-[10px] text-[color:var(--sk-faint)]">
+                          {t("desktop.winner")} : <strong className="text-white/80">{mods.find((mod) => mod.id === conflict.winnerModId)?.name || conflict.winnerModId}</strong>
+                          {" · "}{t("desktop.overwrites")} {conflict.loserModIds.map((id) => mods.find((mod) => mod.id === id)?.name || id).join(", ")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Panel>
-              <Panel title={`${t("desktop.dependencies")} (${conflicts?.dependencyIssues.length || 0})`} icon={AlertTriangle}>
-                {!conflicts?.dependencyIssues.length ? <Empty text={t("desktop.dependenciesOk")} /> : conflicts.dependencyIssues.map((issue) => <div key={`${issue.modId}-${issue.dependency.id}`} className="text-xs py-2 border-b border-white/5">{mods.find((mod) => mod.id === issue.modId)?.name || issue.modId} {t("desktop.requires")} <strong>{issue.dependency.id}</strong> ({issue.reason === "missing" ? t("desktop.missing") : t("desktop.dependencyDisabled")}).</div>)}
+
+              <Panel title={t("desktop.dependencies")} icon={AlertTriangle} count={conflicts?.dependencyIssues.length || 0}>
+                {!conflicts?.dependencyIssues.length ? <Empty text={t("desktop.dependenciesOk")} /> : conflicts.dependencyIssues.map((issue) => (
+                  <div key={`${issue.modId}-${issue.dependency.id}`} className="border-b border-white/[0.06] py-2.5 text-xs text-[color:var(--sk-muted)]">
+                    {mods.find((mod) => mod.id === issue.modId)?.name || issue.modId} {t("desktop.requires")} <strong className="text-white">{issue.dependency.id}</strong> ({issue.reason === "missing" ? t("desktop.missing") : t("desktop.dependencyDisabled")}).
+                  </div>
+                ))}
               </Panel>
             </div>
           )}
 
+          {/* ---------------------------------------------------------- SETTINGS */}
           {page === "settings" && (
-            <div className="grid xl:grid-cols-2 gap-6">
+            <div className="grid gap-6 xl:grid-cols-2">
               <Panel title={t("desktop.installation")} icon={FolderSearch}>
-                <dl className="space-y-4 text-xs"><Setting label={t("desktop.gameVersion")} value={config.detectedVersion} /><Setting label={t("desktop.gameFolder")} value={config.gamePath || t("desktop.notLinked")} mono /><Setting label={t("desktop.executable")} value={config.gameExecutablePath || t("desktop.notConfigured")} mono /><Setting label={t("desktop.siderConfig")} value={config.siderPath || t("desktop.notConfigured")} mono /><Setting label={t("desktop.staging")} value={config.stagingPath || t("desktop.notConfigured")} mono /></dl>
-                <div className="flex flex-wrap gap-2 mt-5"><button onClick={linkGame} disabled={busy} className="rounded-lg bg-[#711361] px-4 py-2 text-xs font-bold">{config.isLinked ? t("desktop.changeInstallation") : t("desktop.linkInstallation")}</button>{config.isLinked && <button onClick={() => runAction(() => api.unlinkGame(), t("desktop.gameUnlinkedSuccess"))} className="rounded-lg border border-white/10 px-4 py-2 text-xs text-white/60">{t("desktop.unlink")}</button>}</div>
+                <dl className="space-y-4 text-xs">
+                  <Setting label={t("desktop.gameVersion")} value={config.detectedVersion} />
+                  <Setting label={t("desktop.gameFolder")} value={config.gamePath || t("desktop.notLinked")} mono />
+                  <Setting label={t("desktop.executable")} value={config.gameExecutablePath || t("desktop.notConfigured")} mono />
+                  <Setting label={t("desktop.siderConfig")} value={config.siderPath || t("desktop.notConfigured")} mono />
+                  <Setting label={t("desktop.staging")} value={config.stagingPath || t("desktop.notConfigured")} mono />
+                </dl>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <button onClick={linkGame} disabled={busy} className="sk-btn sk-btn-brand">
+                    {config.isLinked ? t("desktop.changeInstallation") : t("desktop.linkInstallation")}
+                  </button>
+                  {config.isLinked && (
+                    <button onClick={() => runAction(() => api.unlinkGame(), t("desktop.gameUnlinkedSuccess"))} className="sk-btn sk-btn-ghost">
+                      {t("desktop.unlink")}
+                    </button>
+                  )}
+                </div>
               </Panel>
+
               <Panel title={t("desktop.launchSettings")} icon={Play}>
-                <label className="block text-xs font-semibold mb-2" htmlFor="launch-mode">{t("desktop.method")}</label>
-                <select id="launch-mode" value={config.launchMode} onChange={(event) => setConfig({ ...config, launchMode: event.target.value as "game" | "sider", autoStartSider: true })} className="w-full rounded-lg bg-black/35 border border-white/10 px-3 py-2.5 text-xs"><option value="game">{t("desktop.officialLauncher")}</option>{!/ start\.exe$/i.test(config.gameExecutablePath) && <option value="sider">{t("desktop.siderOneClick")}</option>}</select>
-                <p className="mt-3 text-[11px] leading-relaxed text-white/40">{t("desktop.launchHelp")}</p>
-                <button onClick={() => runAction(() => api.saveConfig({ autoStartSider: config.autoStartSider, launchMode: config.launchMode }), t("desktop.launchSaved"))} className="mt-4 rounded-lg bg-white text-[#711361] px-4 py-2 text-xs font-black">{t("desktop.save")}</button>
+                <label className="sk-label mb-2 block" htmlFor="launch-mode">{t("desktop.method")}</label>
+                <select
+                  id="launch-mode"
+                  value={config.launchMode}
+                  onChange={(event) => setConfig({ ...config, launchMode: event.target.value as "game" | "sider", autoStartSider: true })}
+                  className="sk-input"
+                >
+                  <option value="game">{t("desktop.officialLauncher")}</option>
+                  {!/ start\.exe$/i.test(config.gameExecutablePath) && <option value="sider">{t("desktop.siderOneClick")}</option>}
+                </select>
+                <p className="mt-3 text-[11px] leading-relaxed text-[color:var(--sk-faint)]">{t("desktop.launchHelp")}</p>
+                <button
+                  onClick={() => runAction(() => api.saveConfig({ autoStartSider: config.autoStartSider, launchMode: config.launchMode }), t("desktop.launchSaved"))}
+                  className="sk-btn sk-btn-primary mt-4"
+                >{t("desktop.save")}</button>
               </Panel>
+
               <Panel title={t("desktop.dlssTitle")} icon={Sparkles}>
-                <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-black/25 p-4">
+                <div className="flex items-center justify-between gap-4 rounded-[var(--sk-r-md)] border border-white/10 bg-black/25 p-4">
                   <div>
-                    <p className="text-xs font-bold">{t("desktop.dlssNeuralRendering")}</p>
-                    <p className={`mt-1 text-[11px] ${dlss.installed ? "text-emerald-300" : "text-amber-300"}`}>{dlss.installed ? t("desktop.dlssDetected") : t("desktop.dlssIncomplete")}</p>
+                    <p className="sk-display text-sm">{t("desktop.dlssNeuralRendering")}</p>
+                    <p className={`mt-1 text-[11px] ${dlss.installed ? "text-emerald-300" : "text-amber-300"}`}>
+                      {dlss.installed ? t("desktop.dlssDetected") : t("desktop.dlssIncomplete")}
+                    </p>
                   </div>
                   <button
                     type="button"
                     disabled={busy || status.isRunning || !dlss.configurable}
                     aria-pressed={dlss.enabled}
                     onClick={() => runAction(
-                      () => api.saveDlssSettings({ enabled: !dlss.enabled, qualityMode: dlss.qualityMode, autoExposure: dlss.autoExposure }),
+                      () => api.saveDlssSettings({ enabled: !dlss.enabled }),
                       !dlss.enabled ? t("desktop.dlssEnabled") : t("desktop.dlssDisabled"),
                     )}
-                    className={`min-w-24 rounded-full px-4 py-2 text-xs font-black disabled:opacity-35 ${dlss.enabled ? "bg-emerald-400 text-emerald-950" : "bg-white/10 text-white/60"}`}
+                    className={`sk-btn min-w-24 ${dlss.enabled ? "bg-emerald-400 text-emerald-950" : "sk-btn-ghost"}`}
                   >
                     {dlss.enabled ? t("desktop.activeStatus") : t("desktop.disabled")}
                   </button>
                 </div>
-                <label className="mt-4 block text-xs font-semibold" htmlFor="dlss-quality">{t("desktop.dlssQuality")}</label>
-                <select
-                  id="dlss-quality"
-                  value={dlss.qualityMode}
-                  disabled={!dlss.configurable || status.isRunning}
-                  onChange={(event) => setDlss({ ...dlss, qualityMode: Number(event.target.value) })}
-                  className="mt-2 w-full rounded-lg bg-black/35 border border-white/10 px-3 py-2.5 text-xs disabled:opacity-35"
-                >
-                  <option value={0}>{t("desktop.dlssDefault")}</option>
-                  <option value={1}>{t("desktop.dlssPerformance")}</option>
-                  <option value={2}>{t("desktop.dlssBalanced")}</option>
-                  <option value={3}>{t("desktop.dlssQualityMode")}</option>
-                  <option value={4}>{t("desktop.dlssUltraPerformance")}</option>
-                  <option value={5}>{t("desktop.dlssUltraQuality")}</option>
-                  <option value={6}>DLAA</option>
-                </select>
-                <label className="mt-4 flex items-center gap-3 text-xs text-white/65">
-                  <input type="checkbox" checked={dlss.autoExposure} disabled={!dlss.configurable || status.isRunning} onChange={(event) => setDlss({ ...dlss, autoExposure: event.target.checked })} className="accent-[#711361]" />
-                  {t("desktop.dlssAutoExposure")}
-                </label>
+
+                {/* Le réglage fin vit dans sa propre fenêtre : curseurs, préréglages
+                    et panneau F10. On ne garde ici que l'état et l'accès. */}
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[var(--sk-r-md)] border border-white/10 bg-black/25 p-3.5">
+                    <p className="sk-label">{t("desktop.dlssQuality")}</p>
+                    <p className="mt-1.5 text-xs font-black">{dlssQualityLabel}</p>
+                  </div>
+                  <div className="rounded-[var(--sk-r-md)] border border-white/10 bg-black/25 p-3.5">
+                    <p className="sk-label">{dlssCopy.panel}</p>
+                    <p className={`mt-1.5 text-xs font-black ${dlss.overlay.configured ? "text-emerald-300" : "text-amber-300"}`}>
+                      {dlss.overlay.configured ? dlssCopy.panelOn : dlssCopy.panelOff}
+                    </p>
+                  </div>
+                </div>
+
                 {dlss.missingFiles.length > 0 && <p className="mt-3 break-words text-[10px] leading-relaxed text-amber-200/70">{t("desktop.dlssMissing")} {dlss.missingFiles.join(", ")}</p>}
-                <p className="mt-3 text-[11px] leading-relaxed text-white/40">{status.isRunning ? t("desktop.dlssCloseGame") : t("desktop.dlssRestart")}</p>
+                <p className="mt-3 text-[11px] leading-relaxed text-[color:var(--sk-faint)]">{status.isRunning ? t("desktop.dlssCloseGame") : t("desktop.dlssRestart")}</p>
+
                 <button
-                  onClick={() => runAction(
-                    () => api.saveDlssSettings({ enabled: dlss.enabled, qualityMode: dlss.qualityMode, autoExposure: dlss.autoExposure }),
-                    t("desktop.dlssSaved"),
-                  )}
-                  disabled={busy || status.isRunning || !dlss.configurable}
-                  className="mt-4 rounded-lg bg-white text-[#711361] px-4 py-2 text-xs font-black disabled:opacity-35"
-                >
-                  {t("desktop.save")}
-                </button>
-                <div className="mt-5 rounded-xl border border-white/10 bg-black/25 p-4">
+                  onClick={openDlssStudio}
+                  disabled={!dlss.configurable}
+                  className="sk-btn sk-btn-primary mt-4"
+                ><Sparkles className="h-3.5 w-3.5" />{dlssCopy.open}</button>
+
+                <div className="mt-5 rounded-[var(--sk-r-md)] border border-white/10 bg-black/25 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-bold">{t("desktop.dlssCompatibility")}</p>
-                      <p className="mt-1 text-[11px] text-white/55">{dlss.compatibility.gpuName || t("desktop.dlssGpuUnknown")}</p>
+                      <p className="sk-display text-sm">{t("desktop.dlssCompatibility")}</p>
+                      <p className="mt-1 text-[11px] text-[color:var(--sk-muted)]">{dlss.compatibility.gpuName || t("desktop.dlssGpuUnknown")}</p>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-[9px] font-black uppercase ${
-                      dlss.compatibility.gpuGeneration === "rtx50" || dlss.compatibility.patchInstalled
-                        ? "bg-emerald-400 text-emerald-950"
-                        : dlss.compatibility.needsLegacyPatch ? "bg-amber-400 text-amber-950" : "bg-white/10 text-white/55"
-                    }`}>
+                    <span
+                      className="sk-chip"
+                      data-tone={
+                        dlss.compatibility.gpuGeneration === "rtx50" || dlss.compatibility.patchInstalled
+                          ? "ok"
+                          : dlss.compatibility.needsLegacyPatch ? "warn" : undefined
+                      }
+                    >
                       {dlss.compatibility.gpuGeneration === "rtx50"
                         ? t("desktop.dlssNativeBranch")
                         : dlss.compatibility.patchInstalled ? t("desktop.dlssLegacyReady")
@@ -685,29 +1090,82 @@ export function DesktopApp() {
                   </div>
                   {dlss.compatibility.needsLegacyPatch && (
                     <>
-                      <p className="mt-3 text-[11px] leading-relaxed text-white/45">{t("desktop.dlssLegacyHelp")}</p>
-                      <p className="mt-2 break-all font-mono text-[9px] text-white/30">DLSSNR {dlss.compatibility.pinnedVersion} · SHA-256 {dlss.compatibility.pinnedHash}</p>
+                      <p className="mt-3 text-[11px] leading-relaxed text-[color:var(--sk-faint)]">{t("desktop.dlssLegacyHelp")}</p>
+                      <p className="mt-2 break-all font-mono text-[9px] text-[color:var(--sk-ghost)]">DLSSNR {dlss.compatibility.pinnedVersion} · SHA-256 {dlss.compatibility.pinnedHash}</p>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        <button onClick={installLegacyDlss} disabled={busy || status.isRunning} className="rounded-lg bg-[#711361] px-4 py-2 text-xs font-bold disabled:opacity-35">
+                        <button onClick={installLegacyDlss} disabled={busy || status.isRunning} className="sk-btn sk-btn-brand">
                           {dlss.compatibility.patchInstalled ? t("desktop.dlssLegacyVerifyAgain") : t("desktop.dlssLegacyInstall")}
                         </button>
-                        {dlss.compatibility.canRestore && <button onClick={() => runAction(() => api.restoreLegacyDlssPatch(), t("desktop.dlssLegacyRestored"))} disabled={busy || status.isRunning} className="rounded-lg border border-white/10 px-4 py-2 text-xs text-white/65 disabled:opacity-35">{t("desktop.dlssLegacyRestore")}</button>}
-                        {dlss.compatibility.pinnedSourceUrl && <a href={dlss.compatibility.pinnedSourceUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 px-4 py-2 text-xs text-white/65">{t("desktop.dlssOpenPin")}</a>}
+                        {dlss.compatibility.canRestore && (
+                          <button onClick={() => runAction(() => api.restoreLegacyDlssPatch(), t("desktop.dlssLegacyRestored"))} disabled={busy || status.isRunning} className="sk-btn sk-btn-ghost">
+                            {t("desktop.dlssLegacyRestore")}
+                          </button>
+                        )}
+                        {dlss.compatibility.pinnedSourceUrl && (
+                          <a href={dlss.compatibility.pinnedSourceUrl} target="_blank" rel="noreferrer" className="sk-btn sk-btn-ghost">{t("desktop.dlssOpenPin")}</a>
+                        )}
                       </div>
                     </>
                   )}
                   {dlss.compatibility.gpuGeneration === "rtx50" && <p className="mt-3 text-[11px] leading-relaxed text-emerald-200/60">{t("desktop.dlssRtx50NoPatch")}</p>}
                 </div>
               </Panel>
+
               <Panel title={t("desktop.updateTitle")} icon={RefreshCw}>
-                <div className="flex items-start gap-3"><span className={`mt-1 h-2.5 w-2.5 rounded-full ${updateStatus.state === "error" ? "bg-rose-400" : updateStatus.state === "disabled" ? "bg-white/25" : updateStatus.state === "ready" || updateStatus.state === "available" ? "bg-sky-400" : "bg-emerald-400"}`} /><div><p className="text-xs font-bold">STRYKER v{updateStatus.currentVersion}</p><p className="mt-1 text-[11px] text-white/45">{updateStateLabel}{updateStatus.availableVersion ? ` · v${updateStatus.availableVersion}` : ""}</p>{updateStatus.state === "downloading" && <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-sky-400" style={{ width: `${updateStatus.progress}%` }} /></div>}</div></div>
-                <button onClick={updateAction} disabled={busy || updateStatus.state === "checking" || updateStatus.state === "downloading" || !updateStatus.updaterConfigured} className="mt-4 rounded-lg bg-white text-[#711361] px-4 py-2 text-xs font-black disabled:opacity-35">{updateStatus.state === "ready" ? t("desktop.updateInstall") : updateStatus.state === "available" ? t("desktop.updateDownload") : t("desktop.updateCheck")}</button>
+                <div className="flex items-start gap-3">
+                  <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                    updateStatus.state === "error" ? "bg-[color:var(--sk-danger)]"
+                      : updateStatus.state === "disabled" ? "bg-white/25"
+                        : updateStatus.state === "ready" || updateStatus.state === "available" ? "bg-[color:var(--sk-info)]"
+                          : "bg-[color:var(--sk-ok)]"
+                  }`} />
+                  <div>
+                    <p className="sk-display text-sm">STRYKER v{updateStatus.currentVersion}</p>
+                    <p className="mt-1 text-[11px] text-[color:var(--sk-faint)]">
+                      {updateStateLabel}{updateStatus.availableVersion ? ` · v${updateStatus.availableVersion}` : ""}
+                    </p>
+                    {updateStatus.state === "downloading" && (
+                      <div className="mt-3 h-1.5 w-52 overflow-hidden rounded-full bg-white/10">
+                        <div className="h-full bg-[color:var(--sk-info)] transition-[width] duration-500" style={{ width: `${updateStatus.progress}%` }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={updateAction}
+                  disabled={busy || updateStatus.state === "checking" || updateStatus.state === "downloading" || !updateStatus.updaterConfigured}
+                  className="sk-btn sk-btn-primary mt-4"
+                >
+                  {updateStatus.state === "ready" ? t("desktop.updateInstall") : updateStatus.state === "available" ? t("desktop.updateDownload") : t("desktop.updateCheck")}
+                </button>
               </Panel>
-              <Panel title={`${t("desktop.siderBackups")} (${backups.length})`} icon={ArchiveRestore}>
-                <div className="space-y-2 max-h-80 overflow-y-auto">{backups.length === 0 ? <Empty text={t("desktop.noBackup")} /> : backups.map((backup) => <div key={backup.name} className="rounded-lg border border-white/5 bg-black/20 p-3 flex items-center gap-3"><div className="flex-1 min-w-0"><p className="text-[10px] font-mono truncate">{backup.name}</p><p className="text-[10px] text-white/35 mt-1">{formatDate(backup.createdAt, language, t("desktop.never"))} · {(backup.size / 1024).toFixed(1)} KB</p></div><button onClick={() => { if (window.confirm(t("desktop.restoreConfirm"))) runAction(() => api.restoreBackup(backup.name), t("desktop.restored")); }} className="rounded-md border border-white/10 px-2.5 py-1.5 text-[10px]">{t("desktop.restore")}</button></div>)}</div>
+
+              <Panel title={t("desktop.siderBackups")} icon={ArchiveRestore} count={backups.length}>
+                <div className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
+                  {backups.length === 0 ? <Empty text={t("desktop.noBackup")} /> : backups.map((backup) => (
+                    <div key={backup.name} className="sk-row flex items-center gap-3 border border-white/[0.06] bg-black/20 p-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-mono text-[10px]">{backup.name}</p>
+                        <p className="mt-1 text-[10px] text-[color:var(--sk-ghost)]">{formatDate(backup.createdAt, language, t("desktop.never"))} · {(backup.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                      <button
+                        onClick={() => { if (window.confirm(t("desktop.restoreConfirm"))) runAction(() => api.restoreBackup(backup.name), t("desktop.restored")); }}
+                        className="sk-btn sk-btn-ghost shrink-0 px-3 py-1.5"
+                      >{t("desktop.restore")}</button>
+                    </div>
+                  ))}
+                </div>
               </Panel>
+
               <Panel title={t("desktop.security")} icon={ShieldCheck}>
-                <ul className="space-y-3 text-xs text-white/55"><li>• {t("desktop.security1")}</li><li>• {t("desktop.security2")}</li><li>• {t("desktop.security3")}</li><li>• {t("desktop.security4")}</li><li>• {t("desktop.security5")}</li></ul>
+                <ul className="space-y-3 text-xs leading-relaxed text-[color:var(--sk-muted)]">
+                  {[t("desktop.security1"), t("desktop.security2"), t("desktop.security3"), t("desktop.security4"), t("desktop.security5")].map((line) => (
+                    <li key={line} className="flex gap-2.5">
+                      <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0 text-[color:var(--sk-brand-glow)]" />
+                      {line}
+                    </li>
+                  ))}
+                </ul>
               </Panel>
             </div>
           )}
@@ -717,22 +1175,97 @@ export function DesktopApp() {
   );
 }
 
-function Panel({ title, icon: Icon, action, children }: { title: string; icon: React.ElementType; action?: React.ReactNode; children: React.ReactNode }) {
-  return <section className="rounded-xl border border-white/10 bg-[#151015] p-5"><div className="flex items-center justify-between gap-3 mb-4"><h2 className="text-sm font-bold flex items-center gap-2"><Icon className="w-4 h-4 text-[#d870c5]" />{title}</h2>{action}</div>{children}</section>;
+function Panel({ title, icon: Icon, action, count, children }: { title: string; icon: React.ElementType; action?: React.ReactNode; count?: number; children: React.ReactNode }) {
+  return (
+    <section className="sk-panel">
+      <div className="sk-panel-head">
+        <h2 className="sk-display flex items-center gap-2.5 text-base">
+          <Icon className="h-4 w-4 text-[color:var(--sk-brand-glow)]" />
+          {title}
+          {count !== undefined && (
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-black text-[color:var(--sk-faint)]">{count}</span>
+          )}
+        </h2>
+        {action}
+      </div>
+      <div className="sk-panel-body">{children}</div>
+    </section>
+  );
 }
 
-function Metric({ icon: Icon, label, value, detail, warning }: { icon: React.ElementType; label: string; value: string; detail: string; warning?: boolean }) {
-  return <div className={`rounded-xl border p-4 bg-[#151015] ${warning ? "border-amber-500/35" : "border-white/10"}`}><div className="flex items-center justify-between"><span className="text-[10px] uppercase tracking-wider text-white/40">{label}</span><Icon className={`w-4 h-4 ${warning ? "text-amber-400" : "text-[#d870c5]"}`} /></div><p className="text-xl font-black mt-3 truncate">{value}</p><p className="text-[10px] text-white/35 mt-1">{detail}</p></div>;
+function Metric({ index, icon: Icon, label, value, detail, warning }: { index: string; icon: React.ElementType; label: string; value: string; detail: string; warning?: boolean }) {
+  return (
+    <div className="sk-metric" data-tone={warning ? "warn" : undefined}>
+      <div className="flex items-start justify-between gap-2">
+        <span className="sk-label">{label}</span>
+        <Icon className={`h-4 w-4 shrink-0 ${warning ? "text-[color:var(--sk-warn)]" : "text-[color:var(--sk-brand-glow)]"}`} />
+      </div>
+      <p className="sk-metric-value mt-4" data-size={value.length > 6 ? "sm" : undefined} title={value}>{value}</p>
+      <div className="mt-2.5 flex items-end justify-between gap-2">
+        <p className="truncate text-[10px] text-[color:var(--sk-ghost)]">{detail}</p>
+        <span className="sk-rail-index shrink-0">{index}</span>
+      </div>
+    </div>
+  );
+}
+
+function ModCard({ mod, installed, badge, badgeTone, installedLabel, meta, children }: {
+  mod: CatalogMod;
+  installed: boolean;
+  badge: string;
+  badgeTone?: "ok" | "warn" | "brand";
+  installedLabel: string;
+  meta?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <article className={`sk-panel group flex flex-col overflow-hidden ${installed ? "border-emerald-500/35" : ""}`}>
+      <div className="relative h-32 shrink-0 overflow-hidden border-b border-white/[0.07] bg-[radial-gradient(circle_at_75%_20%,rgba(130,27,110,.34),transparent_46%),var(--sk-ink)]">
+        <img
+          src="/stryker-logo.png"
+          alt=""
+          aria-hidden="true"
+          width={1536}
+          height={1024}
+          loading="lazy"
+          decoding="async"
+          className="sk-watermark -right-8 -top-10 w-56 max-w-none opacity-[0.13] transition-transform duration-700 group-hover:scale-105"
+        />
+        <span className="sk-chip absolute left-3 top-3" data-tone={badgeTone}>{badge}</span>
+        {installed && <span className="sk-chip absolute right-3 top-3" data-tone="ok">{installedLabel}</span>}
+      </div>
+      <div className="flex flex-1 flex-col p-4">
+        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[color:var(--sk-brand-glow)]">{mod.author}{mod.version ? ` · ${mod.version}` : ""}</p>
+        <h2 className="sk-display mt-2 text-base">{mod.title}</h2>
+        <p className="mt-2.5 line-clamp-3 flex-1 text-[11px] leading-relaxed text-[color:var(--sk-faint)]">{mod.shortDesc}</p>
+        {meta && <p className="mt-3 truncate font-mono text-[9px] text-[color:var(--sk-ghost)]">{meta}</p>}
+        <div className="mt-4 flex gap-2">{children}</div>
+      </div>
+    </article>
+  );
 }
 
 function IconButton({ label, danger, disabled, onClick, children }: { label: string; danger?: boolean; disabled?: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" aria-label={label} title={label} disabled={disabled} onClick={onClick} className={`p-2 rounded-md border border-white/5 disabled:opacity-20 ${danger ? "text-rose-400 hover:bg-rose-500/10" : "text-white/45 hover:bg-white/5 hover:text-white"}`}>{children}</button>;
+  return (
+    <button type="button" aria-label={label} title={label} disabled={disabled} onClick={onClick} className="sk-icon-btn" data-danger={danger ? "true" : undefined}>
+      {children}
+    </button>
+  );
 }
 
 function Empty({ text }: { text: string }) {
-  return <div className="rounded-lg border border-dashed border-white/10 p-8 text-center text-xs text-white/35">{text}</div>;
+  return (
+    <div className="rounded-[var(--sk-r-md)] border border-dashed border-white/10 p-10 text-center text-xs text-[color:var(--sk-ghost)]">
+      {text}
+    </div>
+  );
 }
 
 function Setting({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return <div><dt className="text-[10px] uppercase tracking-wider text-white/35">{label}</dt><dd className={`mt-1 text-white/75 break-all ${mono ? "font-mono text-[11px]" : "font-semibold"}`}>{value}</dd></div>;
+  return (
+    <div>
+      <dt className="sk-label">{label}</dt>
+      <dd className={`mt-1 break-all text-white/80 ${mono ? "font-mono text-[11px]" : "text-xs font-bold"}`}>{value}</dd>
+    </div>
+  );
 }

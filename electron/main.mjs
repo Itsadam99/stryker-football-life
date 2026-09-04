@@ -8,10 +8,57 @@ let mainWindow = null;
 let localServer = null;
 let allowedOrigin = "";
 let pendingDeepLink = process.argv.find((argument) => /^stryker:\/\//i.test(argument)) || null;
+// Vrai quand l'utilisateur a accepté la mise à jour proposée au démarrage :
+// une fois le téléchargement fini, on installe sans redemander.
+let updateAccepted = false;
+
 const updateManager = createUpdateManager({
   currentVersion: app.getVersion(),
   isPackaged: app.isPackaged,
   resourcesPath: process.resourcesPath,
+
+  // Au lancement, STRYKER cherche une mise à jour et la propose.
+  onAvailable: (version) => {
+    if (!mainWindow) return;
+    void dialog.showMessageBox(mainWindow, {
+      type: "info",
+      title: "STRYKER",
+      message: `La version ${version} est disponible.`,
+      detail: "STRYKER peut la télécharger et l’installer maintenant. L’application redémarrera une fois la mise à jour terminée.",
+      buttons: ["Mettre à jour maintenant", "Plus tard"],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    }).then(({ response }) => {
+      if (response !== 0) return;
+      updateAccepted = true;
+      // Les erreurs de téléchargement remontent déjà dans l'état affiché
+      // par la page Paramètres.
+      void updateManager.download().catch(() => undefined);
+    }).catch(() => undefined);
+  },
+
+  // Téléchargement terminé : on applique tout de suite si l'utilisateur avait
+  // accepté, sinon on lui laisse le choix du moment.
+  onReady: (version) => {
+    if (updateAccepted) {
+      updateManager.install();
+      return;
+    }
+    if (!mainWindow) return;
+    void dialog.showMessageBox(mainWindow, {
+      type: "info",
+      title: "STRYKER",
+      message: `La version ${version} est prête.`,
+      detail: "Elle s’installera au prochain démarrage de STRYKER. Tu peux aussi redémarrer maintenant.",
+      buttons: ["Redémarrer maintenant", "Plus tard"],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    }).then(({ response }) => {
+      if (response === 0) updateManager.install();
+    }).catch(() => undefined);
+  },
 });
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
@@ -136,9 +183,46 @@ async function createWindow() {
     },
   });
 
+  // Les URL locales de confiance (le centre DLSS) ouvrent une vraie fenêtre
+  // Electron ; tout le reste part dans le navigateur par défaut.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void openExternal(url);
-    return { action: "deny" };
+    if (!isTrustedLocalUrl(url)) {
+      void openExternal(url);
+      return { action: "deny" };
+    }
+    return {
+      action: "allow",
+      overrideBrowserWindowOptions: {
+        title: "STRYKER — DLSS",
+        width: 1060,
+        height: 880,
+        minWidth: 720,
+        minHeight: 600,
+        autoHideMenuBar: true,
+        backgroundColor: "#050405",
+        icon: path.join(app.getAppPath(), "dist", "stryker.ico"),
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true,
+          sandbox: true,
+          webSecurity: true,
+          devTools: !app.isPackaged,
+        },
+      },
+    };
+  });
+
+  // La fenêtre enfant hérite des mêmes garde-fous de navigation.
+  mainWindow.webContents.on("did-create-window", (childWindow) => {
+    childWindow.webContents.setWindowOpenHandler(({ url }) => {
+      void openExternal(url);
+      return { action: "deny" };
+    });
+    childWindow.webContents.on("will-navigate", (event, url) => {
+      if (isTrustedLocalUrl(url)) return;
+      event.preventDefault();
+      void openExternal(url);
+    });
   });
 
   mainWindow.webContents.on("will-navigate", (event, url) => {

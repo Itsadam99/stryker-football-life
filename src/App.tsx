@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowUpRight } from "lucide-react";
 import { AllModsPage } from "./components/AllModsPage";
 import { DesktopApp } from "./components/DesktopApp";
+import { DlssStudio } from "./components/DlssStudio";
 import { HomePage } from "./components/HomePage";
 import { ModDetailPage } from "./components/ModDetailPage";
 import { Navbar } from "./components/Navbar";
@@ -17,7 +18,9 @@ import { LanguageSwitcher, useI18n } from "./i18n";
 
 export function App() {
   const { language, t } = useI18n();
-  const isDesktopMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mode") === "desktop";
+  const mode = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("mode") : null;
+  const isDesktopMode = mode === "desktop";
+  const isDlssMode = mode === "dlss";
   const [currentPage, setCurrentPage] = useState<"home" | "all-mods" | "publish">("home");
   const [selectedMod, setSelectedMod] = useState<CatalogMod | null>(null);
   const [sourceMod, setSourceMod] = useState<CatalogMod | null>(null);
@@ -101,6 +104,8 @@ export function App() {
     if (mod) setSelectedMod(mod);
   }, [catalogMods, selectedMod]);
 
+  // Fenêtre dédiée : ouverte par window.open depuis l'application desktop.
+  if (isDlssMode) return <DlssStudio />;
   if (isDesktopMode) return <DesktopApp />;
 
   return (

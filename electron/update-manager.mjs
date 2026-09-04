@@ -18,9 +18,11 @@ function readConfiguredFeed(resourcesPath) {
 }
 
 export class UpdateManager {
-  constructor({ currentVersion, isPackaged, resourcesPath, platform = process.platform, updater } = {}) {
+  constructor({ currentVersion, isPackaged, resourcesPath, platform = process.platform, updater, onAvailable, onReady } = {}) {
     const feed = readConfiguredFeed(resourcesPath);
     this.updater = updater;
+    this.onAvailable = typeof onAvailable === "function" ? onAvailable : null;
+    this.onReady = typeof onReady === "function" ? onReady : null;
     this.configured = Boolean(isPackaged && platform === "win32" && feed.configured);
     this.feedUrl = feed.url;
     this.started = false;
@@ -48,18 +50,25 @@ export class UpdateManager {
   start() {
     if (this.started || !this.configured) return this.status();
     this.started = true;
+    // On demande avant de télécharger 250 Mo : le processus principal propose
+    // la mise à jour dès qu'elle est trouvée, et ne lance le téléchargement
+    // qu'une fois l'utilisateur d'accord.
     this.updater.autoDownload = false;
     this.updater.autoInstallOnAppQuit = true;
     this.updater.allowPrerelease = false;
 
     this.updater.on("checking-for-update", () => this.setStatus({ state: "checking", message: "Recherche d’une mise à jour…" }));
-    this.updater.on("update-available", (info) => this.setStatus({
-      state: "available",
-      availableVersion: info.version,
-      updateAvailable: true,
-      progress: 0,
-      message: `La version ${info.version} est disponible.`,
-    }));
+    this.updater.on("update-available", (info) => {
+      this.setStatus({
+        state: "available",
+        availableVersion: info.version,
+        updateAvailable: true,
+        progress: 0,
+        message: `La version ${info.version} est disponible.`,
+      });
+      // Une boîte de dialogue indisponible ne doit pas casser le suivi.
+      try { this.onAvailable?.(info.version); } catch { /* ignoré */ }
+    });
     this.updater.on("update-not-available", () => this.setStatus({
       state: "upToDate",
       availableVersion: null,
@@ -72,13 +81,18 @@ export class UpdateManager {
       progress: Math.max(0, Math.min(100, Number(progress.percent || 0))),
       message: `Téléchargement de la mise à jour : ${Math.round(Number(progress.percent || 0))} %`,
     }));
-    this.updater.on("update-downloaded", (info) => this.setStatus({
-      state: "ready",
-      availableVersion: info.version,
-      updateAvailable: true,
-      progress: 100,
-      message: `La version ${info.version} est prête. Redémarrez STRYKER pour l’installer.`,
-    }));
+    this.updater.on("update-downloaded", (info) => {
+      this.setStatus({
+        state: "ready",
+        availableVersion: info.version,
+        updateAvailable: true,
+        progress: 100,
+        message: `La version ${info.version} est prête. Redémarrez STRYKER pour l’installer.`,
+      });
+      // Le processus principal propose le redémarrage ; un échec de la boîte de
+      // dialogue ne doit pas casser le suivi de mise à jour.
+      try { this.onReady?.(info.version); } catch { /* ignoré */ }
+    });
     this.updater.on("error", (error) => this.setStatus({
       state: "error",
       progress: 0,

@@ -61,11 +61,16 @@ export const api = {
   saveConfig: (config: Pick<GameConfig, "autoStartSider" | "launchMode">) =>
     request<{ success: boolean; config: GameConfig }>("/config", { method: "POST", body: JSON.stringify(config) }),
   getDlssSettings: () => request<DlssSettings>("/dlss"),
-  saveDlssSettings: (settings: Pick<DlssSettings, "enabled" | "qualityMode" | "autoExposure">) =>
+  saveDlssSettings: (settings: Partial<Pick<DlssSettings,
+    | "enabled" | "qualityMode" | "autoExposure" | "intensity" | "autoMask" | "diffuseWhiteNits"
+    | "uiCorrectionMode" | "globalToneStrength" | "localToneStrength" | "localStructureStrength" | "skinStructureStrength"
+  >>) =>
     request<{ success: boolean; dlss: DlssSettings; requiresRestart: boolean }>("/dlss", {
       method: "POST",
       body: JSON.stringify(settings),
     }),
+  configureDlssOverlay: () => request<{ success: boolean; dlss: DlssSettings }>("/dlss/overlay/configure", { method: "POST" }),
+  restoreDlssOverlay: () => request<{ success: boolean; dlss: DlssSettings }>("/dlss/overlay/restore", { method: "POST" }),
   browseLegacyDlssFile: () => request<{ success: boolean; path?: string; cancelled?: boolean }>("/dlss/legacy/browse", { method: "POST" }),
   installLegacyDlssPatch: (sourcePath: string) => request<{ success: boolean; dlss: DlssSettings; requiresRestart: boolean }>("/dlss/legacy/install", {
     method: "POST",

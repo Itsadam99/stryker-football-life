@@ -54,7 +54,7 @@ export const AllModsPage: React.FC<AllModsPageProps> = ({ mods, onBackToHome, on
             <article key={mod.id} className="brand-mod-card group flex min-h-[27rem] flex-col overflow-hidden rounded-[1.7rem] border border-white/10 transition duration-500 hover:-translate-y-1 hover:border-[#8f277f]/70 hover:shadow-[0_22px_70px_rgba(105,20,88,0.18)]">
               <button type="button" onClick={() => onSelectMod(mod)} className="flex flex-1 flex-col text-left">
                 <div className="relative h-40 overflow-hidden border-b border-white/8 bg-[#100a0e]">
-                  <img src="/stryker-logo.png" alt="" aria-hidden="true" className="absolute -right-12 -top-16 w-80 max-w-none opacity-[0.09] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.14]" />
+                  <img src="/stryker-logo.png" alt="" aria-hidden="true" width={1536} height={1024} loading="lazy" decoding="async" className="absolute -right-12 -top-16 w-80 max-w-none opacity-[0.09] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.14]" />
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(140,35,119,.24),transparent_45%)]" />
                   <span className="absolute left-4 top-4 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.14em] backdrop-blur">{mod.status === "pending_review" ? "Preview" : mod.installationType === "automatic" ? t("home.hosted") : mod.legalStatus === "verified_source" ? t("home.verified") : t("catalog.community")}</span>
                   <span className="absolute right-4 top-4 text-3xl font-black tracking-[-0.08em] text-white/28">{String(index + 1).padStart(2, "0")}</span>

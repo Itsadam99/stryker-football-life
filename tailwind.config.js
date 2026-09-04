@@ -22,7 +22,8 @@ export default {
         }
       },
       fontFamily: {
-        poppins: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        poppins: ["Segoe UI", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["Bahnschrift Condensed", "Bahnschrift SemiCondensed", "Arial Narrow", "Impact", "sans-serif"],
       },
       boxShadow: {
         "brand-glow": "0 0 25px rgba(113, 19, 97, 0.5)",
