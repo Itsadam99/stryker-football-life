@@ -1,40 +1,44 @@
 /* ============================================================================
    STRYKER — Design system
-   Direction artistique : blocs pleins à angles vifs, aucune ombre, deux
+   Direction artistique : blocs pleins à angles vifs, aucune ombre portée, deux
    registres typographiques opposés — titres condensés italiques en capitales,
    libellés larges romains — et CTA en texte souligné plutôt qu'en pilules.
-   Palette violette sur noir.
 
-   Typographie : Bahnschrift Condensed est livré avec Windows 10/11, donc
+   Couleur : le noir porte l'interface, le violet ne sert que d'accent. Les
+   surfaces sont des noirs très légèrement teintés ; la saturation est réservée
+   aux éléments actifs, aux filets et aux survols.
+
+   Typographie : Bahnschrift Condensed est livrée avec Windows 10/11, donc
    disponible hors ligne dans l'application empaquetée. Arial Narrow puis
    Impact prennent le relais si elle manque.
    ========================================================================== */
 
 :root {
-  /* Fonds, du plus profond au plus clair */
-  --sk-void: #08060a;
-  --sk-ink: #0d0912;
-  --sk-surface: #140b1a;
-  --sk-block: #1e0d27;
-  --sk-block-2: #2a1236;
+  /* Fonds : des noirs, à peine teintés de violet */
+  --sk-void: #060507;
+  --sk-ink: #0a080c;
+  --sk-surface: #0e0c11;
+  --sk-block: #121016;
+  --sk-block-2: #191520;
 
   /* Traits */
-  --sk-line: rgba(255, 255, 255, 0.1);
-  --sk-line-strong: rgba(255, 255, 255, 0.22);
-  --sk-line-accent: rgba(199, 60, 176, 0.55);
+  --sk-line: rgba(255, 255, 255, 0.09);
+  --sk-line-strong: rgba(255, 255, 255, 0.2);
+  --sk-line-accent: rgba(192, 38, 168, 0.6);
 
-  /* Marque : le magenta joue le rôle du rouge de la référence */
+  /* Accent : le seul endroit où le violet sature */
   --sk-accent: #c026a8;
   --sk-accent-lift: #e04ac6;
   --sk-accent-soft: #f0a8e2;
+  --sk-accent-dim: rgba(192, 38, 168, 0.16);
   --sk-brand: #7a1468;
   --sk-brand-glow: #d76bc5;
 
   /* Texte */
   --sk-text: #ffffff;
-  --sk-muted: rgba(238, 220, 240, 0.62);
-  --sk-faint: rgba(238, 220, 240, 0.42);
-  --sk-ghost: rgba(238, 220, 240, 0.26);
+  --sk-muted: rgba(236, 226, 240, 0.6);
+  --sk-faint: rgba(236, 226, 240, 0.4);
+  --sk-ghost: rgba(236, 226, 240, 0.24);
 
   /* États */
   --sk-ok: #34d399;
@@ -53,6 +57,7 @@
   /* Courbes */
   --sk-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
   --sk-ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --sk-ease-back: cubic-bezier(0.34, 1.4, 0.64, 1);
 
   /* Typographie */
   --sk-font-display: "Bahnschrift Condensed", "Bahnschrift SemiCondensed", "Arial Narrow", Impact, sans-serif;
@@ -95,11 +100,16 @@
     text-transform: uppercase;
   }
 
-  /* --- Surfaces : aplats pleins, filets fins, aucune ombre --------------- */
+  /* --- Surfaces ---------------------------------------------------------- */
   .sk-panel {
     background: var(--sk-block);
     border: 1px solid var(--sk-line);
     border-radius: var(--sk-r-lg);
+    transition: border-color 300ms var(--sk-ease);
+  }
+
+  .sk-panel:hover {
+    border-color: rgba(255, 255, 255, 0.16);
   }
 
   .sk-panel-head {
@@ -115,7 +125,7 @@
     padding: 20px;
   }
 
-  /* --- Cartes de métrique ------------------------------------------------ */
+  /* --- Cartes de métrique : filet d'accent qui monte au survol ----------- */
   .sk-metric {
     background: var(--sk-block);
     border: 1px solid var(--sk-line);
@@ -123,7 +133,10 @@
     overflow: hidden;
     padding: 18px 20px 20px;
     position: relative;
-    transition: background-color 260ms var(--sk-ease), border-color 260ms var(--sk-ease);
+    transition:
+      background-color 320ms var(--sk-ease),
+      border-color 320ms var(--sk-ease),
+      transform 320ms var(--sk-ease);
   }
 
   .sk-metric::before {
@@ -133,13 +146,14 @@
     position: absolute;
     transform: scaleY(0);
     transform-origin: bottom;
-    transition: transform 320ms var(--sk-ease-expo);
+    transition: transform 380ms var(--sk-ease-expo);
     width: 3px;
   }
 
   .sk-metric:hover {
     background: var(--sk-block-2);
     border-color: var(--sk-line-accent);
+    transform: translateY(-2px);
   }
 
   .sk-metric:hover::before {
@@ -154,6 +168,11 @@
     letter-spacing: 0;
     line-height: 0.9;
     text-transform: uppercase;
+    transition: color 320ms var(--sk-ease);
+  }
+
+  .sk-metric:hover .sk-metric-value {
+    color: var(--sk-accent-soft);
   }
 
   .sk-metric-value[data-size="sm"] {
@@ -166,14 +185,14 @@
   }
 
   .sk-metric[data-tone="warn"] {
-    border-color: rgba(251, 191, 36, 0.4);
+    border-color: rgba(251, 191, 36, 0.34);
   }
 
   .sk-metric[data-tone="warn"]::before {
     background: var(--sk-warn);
   }
 
-  /* --- Rail de navigation : items numérotés, numéro en accent ------------ */
+  /* --- Rail : filet d'accent qui glisse depuis la gauche ----------------- */
   .sk-rail-item {
     align-items: center;
     background: transparent;
@@ -187,15 +206,26 @@
     font-weight: 700;
     gap: 11px;
     letter-spacing: 0;
+    overflow: hidden;
     padding: 9px 12px;
     position: relative;
     text-transform: uppercase;
     transition:
-      background-color 220ms var(--sk-ease),
-      border-color 220ms var(--sk-ease),
-      color 180ms ease,
-      padding-left 220ms var(--sk-ease);
+      background-color 240ms var(--sk-ease),
+      border-color 240ms var(--sk-ease),
+      color 200ms ease,
+      padding-left 260ms var(--sk-ease-back);
     width: 100%;
+  }
+
+  .sk-rail-item::before {
+    background: var(--sk-accent);
+    content: "";
+    inset: 0 auto 0 0;
+    position: absolute;
+    transform: translateX(-100%);
+    transition: transform 300ms var(--sk-ease-expo);
+    width: 3px;
   }
 
   .sk-rail-index {
@@ -205,12 +235,17 @@
     font-style: normal;
     font-weight: 700;
     letter-spacing: 0.1em;
+    transition: color 240ms ease;
   }
 
   .sk-rail-item:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.045);
     color: var(--sk-text);
-    padding-left: 16px;
+    padding-left: 18px;
+  }
+
+  .sk-rail-item:hover::before {
+    transform: translateX(0);
   }
 
   .sk-rail-item[data-active="true"] {
@@ -219,11 +254,15 @@
     color: var(--sk-text);
   }
 
-  .sk-rail-item[data-active="true"] .sk-rail-index {
-    color: rgba(255, 255, 255, 0.72);
+  .sk-rail-item[data-active="true"]::before {
+    transform: translateX(-100%);
   }
 
-  /* --- Boutons : rectangles nets, condensé italique ---------------------- */
+  .sk-rail-item[data-active="true"] .sk-rail-index {
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  /* --- Boutons : balayage de lumière, adapté aux angles vifs ------------- */
   .sk-btn {
     align-items: center;
     border: 1px solid transparent;
@@ -236,13 +275,38 @@
     gap: 8px;
     justify-content: center;
     letter-spacing: 0;
+    overflow: hidden;
     padding: 10px 18px;
+    position: relative;
     text-transform: uppercase;
     transition:
-      background-color 200ms var(--sk-ease),
-      border-color 200ms var(--sk-ease),
-      color 180ms ease;
+      background-color 220ms var(--sk-ease),
+      border-color 220ms var(--sk-ease),
+      color 180ms ease,
+      transform 220ms var(--sk-ease);
     white-space: nowrap;
+  }
+
+  .sk-btn::after {
+    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.26), transparent 70%);
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    transform: translateX(-130%);
+    transition: transform 620ms var(--sk-ease-expo);
+  }
+
+  .sk-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+
+  .sk-btn:hover:not(:disabled)::after {
+    transform: translateX(130%);
+  }
+
+  .sk-btn:active:not(:disabled) {
+    transform: translateY(0);
   }
 
   .sk-btn:disabled {
@@ -273,8 +337,8 @@
   }
 
   .sk-btn-ghost:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: var(--sk-text);
+    background: var(--sk-accent-dim);
+    border-color: var(--sk-accent);
     color: var(--sk-text);
   }
 
@@ -287,7 +351,7 @@
     background: #e11d48;
   }
 
-  /* --- CTA texte : le motif « VOIR TOUT » de la référence ---------------- */
+  /* --- CTA texte --------------------------------------------------------- */
   .sk-cta {
     align-items: center;
     border-bottom: 2px solid var(--sk-accent);
@@ -300,13 +364,13 @@
     gap: 8px;
     padding-bottom: 4px;
     text-transform: uppercase;
-    transition: color 180ms ease, border-color 180ms ease, gap 220ms var(--sk-ease);
+    transition: color 200ms ease, border-color 200ms ease, gap 260ms var(--sk-ease-back);
   }
 
   .sk-cta:hover {
     border-color: var(--sk-text);
     color: var(--sk-accent-soft);
-    gap: 12px;
+    gap: 14px;
   }
 
   /* --- Bouton icône ------------------------------------------------------ */
@@ -318,13 +382,22 @@
     display: inline-flex;
     justify-content: center;
     padding: 8px;
-    transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+    transition:
+      background-color 200ms ease,
+      border-color 200ms ease,
+      color 200ms ease,
+      transform 260ms var(--sk-ease-back);
   }
 
   .sk-icon-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: var(--sk-line-strong);
+    background: var(--sk-accent-dim);
+    border-color: var(--sk-accent);
     color: var(--sk-text);
+    transform: scale(1.08);
+  }
+
+  .sk-icon-btn:active:not(:disabled) {
+    transform: scale(0.96);
   }
 
   .sk-icon-btn:disabled {
@@ -351,7 +424,7 @@
     font-size: 13px;
     outline: none;
     padding: 11px 14px;
-    transition: border-color 180ms ease;
+    transition: border-color 200ms ease, background-color 200ms ease;
     width: 100%;
   }
 
@@ -359,20 +432,29 @@
     color: var(--sk-ghost);
   }
 
+  .sk-input:hover:not(:disabled) {
+    border-color: var(--sk-line-strong);
+  }
+
   .sk-input:focus {
+    background: var(--sk-ink);
     border-color: var(--sk-accent);
   }
 
-  /* --- Interrupteur : seule forme arrondie conservée, c'est une affordance */
+  /* --- Interrupteur : seule forme arrondie, c'est une affordance --------- */
   .sk-switch {
-    background: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.15);
     border-radius: var(--sk-r-pill);
     display: block;
     flex: none;
     height: 22px;
     padding: 3px;
-    transition: background-color 220ms var(--sk-ease);
+    transition: background-color 240ms var(--sk-ease);
     width: 40px;
+  }
+
+  .sk-switch:hover {
+    background: rgba(255, 255, 255, 0.26);
   }
 
   .sk-switch[data-on="on"] {
@@ -388,7 +470,7 @@
     border-radius: var(--sk-r-pill);
     display: block;
     height: 16px;
-    transition: transform 220ms var(--sk-ease);
+    transition: transform 260ms var(--sk-ease-back);
     width: 16px;
   }
 
@@ -407,8 +489,9 @@
   }
 
   .sk-slider::-webkit-slider-runnable-track {
-    background: linear-gradient(90deg, var(--sk-accent) 0%, var(--sk-accent) var(--sk-fill, 50%), rgba(255, 255, 255, 0.12) var(--sk-fill, 50%));
+    background: linear-gradient(90deg, var(--sk-accent) 0%, var(--sk-accent) var(--sk-fill, 50%), rgba(255, 255, 255, 0.11) var(--sk-fill, 50%));
     height: 4px;
+    transition: height 200ms var(--sk-ease);
   }
 
   .sk-slider::-webkit-slider-thumb {
@@ -419,12 +502,14 @@
     border-radius: 0;
     height: 18px;
     margin-top: -7px;
-    transition: background-color 180ms ease;
+    transition: background-color 200ms ease, height 200ms var(--sk-ease), margin-top 200ms var(--sk-ease);
     width: 6px;
   }
 
-  .sk-slider:hover::-webkit-slider-thumb {
+  .sk-slider:hover:not(:disabled)::-webkit-slider-thumb {
     background: var(--sk-accent-soft);
+    height: 22px;
+    margin-top: -9px;
   }
 
   .sk-slider:focus-visible::-webkit-slider-thumb {
@@ -436,7 +521,7 @@
     opacity: 0.35;
   }
 
-  /* --- Contrôle segmenté ------------------------------------------------- */
+  /* --- Contrôle segmenté : filet qui pousse depuis le centre ------------- */
   .sk-segment {
     border: 1px solid var(--sk-line);
     border-radius: var(--sk-r-sm);
@@ -453,20 +538,42 @@
     font-size: 13px;
     font-style: italic;
     font-weight: 700;
+    overflow: hidden;
     padding: 10px 14px;
+    position: relative;
     text-transform: uppercase;
-    transition: background-color 180ms var(--sk-ease), color 160ms ease;
+    transition: background-color 200ms var(--sk-ease), color 180ms ease;
     white-space: nowrap;
   }
 
+  .sk-segment-item::after {
+    background: var(--sk-accent);
+    bottom: 0;
+    content: "";
+    height: 2px;
+    left: 0;
+    position: absolute;
+    right: 0;
+    transform: scaleX(0);
+    transition: transform 280ms var(--sk-ease-expo);
+  }
+
   .sk-segment-item:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.045);
     color: var(--sk-text);
+  }
+
+  .sk-segment-item:hover:not(:disabled)::after {
+    transform: scaleX(1);
   }
 
   .sk-segment-item[data-active="true"] {
     background: var(--sk-accent);
     color: var(--sk-text);
+  }
+
+  .sk-segment-item[data-active="true"]::after {
+    transform: scaleX(0);
   }
 
   /* --- Pastilles --------------------------------------------------------- */
@@ -482,24 +589,25 @@
     letter-spacing: 0.14em;
     padding: 5px 10px;
     text-transform: uppercase;
+    transition: border-color 200ms ease, background-color 200ms ease;
     white-space: nowrap;
   }
 
   .sk-chip[data-tone="ok"] {
-    background: rgba(52, 211, 153, 0.14);
-    border-color: rgba(52, 211, 153, 0.4);
+    background: rgba(52, 211, 153, 0.13);
+    border-color: rgba(52, 211, 153, 0.38);
     color: #a7f3d0;
   }
 
   .sk-chip[data-tone="warn"] {
-    background: rgba(251, 191, 36, 0.14);
-    border-color: rgba(251, 191, 36, 0.4);
+    background: rgba(251, 191, 36, 0.13);
+    border-color: rgba(251, 191, 36, 0.38);
     color: #fde68a;
   }
 
   .sk-chip[data-tone="danger"] {
-    background: rgba(244, 63, 94, 0.16);
-    border-color: rgba(244, 63, 94, 0.42);
+    background: rgba(244, 63, 94, 0.15);
+    border-color: rgba(244, 63, 94, 0.4);
     color: #fecdd3;
   }
 
@@ -509,26 +617,28 @@
     color: var(--sk-text);
   }
 
-  /* --- Lignes de liste --------------------------------------------------- */
+  /* --- Lignes de liste : filet d'accent au survol ------------------------ */
   .sk-row {
     border-radius: var(--sk-r-xs);
-    transition: background-color 160ms ease;
+    box-shadow: inset 0 0 0 0 var(--sk-accent);
+    transition: background-color 200ms ease, box-shadow 240ms var(--sk-ease);
   }
 
   .sk-row:hover {
-    background: rgba(255, 255, 255, 0.045);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 2px 0 0 0 var(--sk-accent);
   }
 
   /* --- Toast ------------------------------------------------------------- */
   .sk-toast {
-    animation: sk-toast-in 320ms var(--sk-ease-expo) both;
+    animation: sk-toast-in 340ms var(--sk-ease-back) both;
     border-radius: var(--sk-r-sm);
     border-style: solid;
     border-width: 1px;
     font-family: var(--sk-font-body);
   }
 
-  /* --- Bande d'état : bloc plein, filet d'accent à gauche ---------------- */
+  /* --- Bande d'état ------------------------------------------------------ */
   .sk-statusband {
     background: var(--sk-block);
     border: 1px solid var(--sk-line);
@@ -536,25 +646,41 @@
     border-radius: var(--sk-r-xl);
     overflow: hidden;
     position: relative;
+    transition: background-color 320ms var(--sk-ease), border-color 320ms var(--sk-ease);
   }
 
-  /* --- Filigrane de marque ---------------------------------------------- */
+  .sk-statusband:hover {
+    background: var(--sk-block-2);
+  }
+
+  /* --- Filigrane de marque : réagit au survol du bloc parent ------------- */
   .sk-watermark {
     mix-blend-mode: screen;
-    opacity: 0.06;
+    opacity: 0.05;
     pointer-events: none;
     position: absolute;
+    transition: opacity 520ms var(--sk-ease), transform 700ms var(--sk-ease-expo);
     user-select: none;
+  }
+
+  .sk-statusband:hover .sk-watermark,
+  .group:hover .sk-watermark {
+    opacity: 0.1;
+    transform: scale(1.06);
   }
 }
 
 @keyframes sk-toast-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .sk-toast { animation: none; }
+  .sk-btn:hover:not(:disabled),
+  .sk-metric:hover,
+  .sk-icon-btn:hover:not(:disabled) { transform: none; }
   .sk-rail-item:hover { padding-left: 12px; }
   .sk-cta:hover { gap: 8px; }
+  .sk-watermark { transition: none; }
 }
