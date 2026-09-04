@@ -16,7 +16,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const RELEASE_DIR = path.join(ROOT, "release");
+// Doit suivre electron-builder.config.cjs : sur un dépôt synchronisé, la sortie
+// de build est déplacée hors du dossier surveillé par le client de sync.
+const RELEASE_DIR = process.env.STRYKER_BUILD_DIR
+  ? path.resolve(process.env.STRYKER_BUILD_DIR)
+  : path.join(ROOT, "release");
 const dryRun = process.argv.includes("--dry");
 
 function fail(message) {
