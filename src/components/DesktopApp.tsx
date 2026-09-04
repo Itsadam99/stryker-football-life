@@ -75,7 +75,7 @@ const EMPTY_DLSS: DlssSettings = {
   },
 };
 
-const APP_VERSION = "3.8.1";
+const APP_VERSION = "3.9.0";
 
 const EMPTY_UPDATE: UpdateStatus = {
   currentVersion: APP_VERSION,
