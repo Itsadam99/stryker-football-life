@@ -128,9 +128,14 @@ export function createRuntime({
   const existingSettings = store.snapshot().settings;
   let siderInstallationChanged = false;
   let facepackDeploymentChanged = false;
+  let dlssControllerMigrated = false;
   const migratedFaceComponents = [];
   store.update((draft) => {
     for (const [modId, mod] of Object.entries(draft.mods || {})) {
+      if (mod.packageId === "stryker-dlss5-controller" && mod.siderOverlay) {
+        mod.siderOverlay = null;
+        dlssControllerMigrated = true;
+      }
       for (const [componentIndex, component] of (mod.components || []).entries()) {
         const componentFiles = component.files || [];
         const hasFaceFiles = component.type === "livecpk"
@@ -166,12 +171,14 @@ export function createRuntime({
   const siderManager = new SiderManager({ dataDirectories });
   const modEngine = new ModEngine({ store, siderManager, dataDirectories });
   const dlssManager = new DlssManager();
-  if ((siderInstallationChanged || facepackDeploymentChanged) && Object.keys(store.snapshot().mods).length > 0) {
+  if ((siderInstallationChanged || facepackDeploymentChanged || dlssControllerMigrated) && Object.keys(store.snapshot().mods).length > 0) {
     try {
       modEngine.deployCurrentProfile();
       store.addActivity("migration", facepackDeploymentChanged
         ? "Facepacks déplacés dans le dossier LiveCPK de Football Life"
-        : "Mods redéployés vers l’installation Sider réellement utilisée par Football Life", {
+        : dlssControllerMigrated
+          ? "Contrôleur DLSS migré vers le panneau RenoDX instantané sur F10"
+          : "Mods redéployés vers l’installation Sider réellement utilisée par Football Life", {
         previousSiderPath: existingSettings.siderPath,
         siderPath: store.snapshot().settings.siderPath,
       });
@@ -191,6 +198,14 @@ export function createRuntime({
         : "Le redéploiement automatique vers Sider a échoué", { message: error.message });
     }
   }
+  if (store.snapshot().settings.isLinked
+    && Object.values(store.snapshot().mods || {}).some((mod) => mod.packageId === "stryker-dlss5-controller")) {
+    try {
+      dlssManager.configureOverlay(store.snapshot().settings);
+    } catch (error) {
+      store.addActivity("error", "La configuration du panneau DLSS F10 sera retentée", { message: error.message });
+    }
+  }
   const repositoryManager = new RepositoryManager({ dataDirectories, bundledDirectory: path.join(rootDir, "bundled-mods") });
   const remoteInstaller = new RemoteInstaller({ modEngine, dataDirectories });
   const processManager = new ProcessManager({
@@ -203,6 +218,16 @@ export function createRuntime({
 export function createApp(runtime = createRuntime()) {
   const { rootDir, store, siderManager, modEngine, dlssManager, repositoryManager, remoteInstaller, processManager, updateManager, sessionToken, nativeDialogs, publicHub, adminToken } = runtime;
   const app = express();
+
+  function syncDlssController(mod = null) {
+    const isController = mod?.packageId === "stryker-dlss5-controller";
+    const isInstalled = modEngine.list().some((item) => item.packageId === "stryker-dlss5-controller");
+    if ((isController || isInstalled) && store.snapshot().settings.isLinked) {
+      const current = dlssManager.status(store.snapshot().settings);
+      return current.configurable ? dlssManager.configureOverlay(store.snapshot().settings) : current;
+    }
+    return null;
+  }
 
   app.disable("x-powered-by");
   app.use(helmet({
@@ -294,6 +319,7 @@ export function createApp(runtime = createRuntime()) {
     });
     try {
       modEngine.deployCurrentProfile();
+      syncDlssController();
     } catch (error) {
       store.replace(previous);
       throw error;
@@ -332,6 +358,17 @@ export function createApp(runtime = createRuntime()) {
         autoExposure: dlss.autoExposure,
       });
       res.json({ success: true, dlss, requiresRestart: true });
+    } catch (error) { next(error); }
+  });
+
+  app.post("/api/dlss/overlay/configure", (req, res, next) => {
+    try {
+      if (processManager.status().isRunning) {
+        return res.status(409).json({ success: false, error: "Fermez Football Life une seule fois pour installer le nouveau panneau F10." });
+      }
+      const dlss = dlssManager.configureOverlay(store.snapshot().settings);
+      store.addActivity("dlss", "Panneau DLSS instantané configuré sur F10");
+      res.json({ success: true, dlss });
     } catch (error) { next(error); }
   });
 
@@ -425,6 +462,7 @@ export function createApp(runtime = createRuntime()) {
   app.post("/api/mods/install-archive", async (req, res, next) => {
     try {
       const mod = await modEngine.installArchive(req.body?.archivePath, req.body?.metadata || {});
+      syncDlssController(mod);
       const linked = store.snapshot().settings.isLinked;
       const action = mod.installCount > 1 ? "reinstalled" : "installed";
       res.status(201).json({ success: true, mod, action, message: linked
@@ -460,6 +498,7 @@ export function createApp(runtime = createRuntime()) {
         name: path.basename(safeName, path.extname(safeName)),
         sourceType: "drag-drop",
       });
+      syncDlssController(mod);
       const linked = store.snapshot().settings.isLinked;
       const action = mod.installCount > 1 ? "reinstalled" : "installed";
       res.status(201).json({ success: true, mod, action, message: linked
@@ -472,7 +511,11 @@ export function createApp(runtime = createRuntime()) {
     }
   });
   app.post("/api/mods/:id/toggle", (req, res, next) => {
-    try { res.json({ success: true, mod: modEngine.toggle(req.params.id, Boolean(req.body?.enabled)) }); }
+    try {
+      const mod = modEngine.toggle(req.params.id, Boolean(req.body?.enabled));
+      syncDlssController(mod);
+      res.json({ success: true, mod });
+    }
     catch (error) { next(error); }
   });
   app.post("/api/mods/reorder", (req, res, next) => {
@@ -509,6 +552,7 @@ export function createApp(runtime = createRuntime()) {
     try {
       const { record, archivePath } = repositoryManager.getArchive(req.params.id);
       const mod = await modEngine.installArchive(archivePath, repositoryManager.installMetadata(record));
+      syncDlssController(mod);
       repositoryManager.incrementDownloads(record.id);
       const action = mod.installCount > 1 ? "reinstalled" : "installed";
       res.status(201).json({ success: true, mod, action, message: store.snapshot().settings.isLinked
@@ -550,6 +594,7 @@ export function createApp(runtime = createRuntime()) {
     try {
       const { record, archivePath } = repositoryManager.getArchive(req.params.id, { allowPending: true });
       const mod = await modEngine.installArchive(archivePath, repositoryManager.installMetadata(record));
+      syncDlssController(mod);
       res.status(201).json({ success: true, mod });
     } catch (error) { next(error); }
   });

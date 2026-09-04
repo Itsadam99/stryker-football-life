@@ -28,6 +28,71 @@ const REQUIRED_FILES = [
   "sl.interposer.dll",
 ];
 
+const STRYKER_OVERLAY_KEY = "121,0,0,0"; // F10
+const STRYKER_STYLE = {
+  StyleIndex: 3,
+  FontSize: 16,
+  Alpha: 1,
+  FrameRounding: 7,
+  GrabRounding: 7,
+  PopupRounding: 8,
+  ScrollbarRounding: 8,
+  TabRounding: 7,
+  WindowRounding: 10,
+  WindowBg: "0.025,0.018,0.027,0.97",
+  ChildBg: "0.055,0.035,0.060,0.94",
+  PopupBg: "0.045,0.025,0.050,0.98",
+  Border: "0.443,0.075,0.380,0.72",
+  Text: "0.960,0.940,0.960,1.000",
+  TextDisabled: "0.500,0.430,0.500,1.000",
+  FrameBg: "0.090,0.055,0.100,1.000",
+  FrameBgHovered: "0.240,0.065,0.220,1.000",
+  FrameBgActive: "0.443,0.075,0.380,1.000",
+  TitleBg: "0.040,0.025,0.045,1.000",
+  TitleBgActive: "0.270,0.045,0.235,1.000",
+  CheckMark: "0.850,0.310,0.760,1.000",
+  SliderGrab: "0.710,0.150,0.620,1.000",
+  SliderGrabActive: "0.940,0.420,0.850,1.000",
+  Button: "0.443,0.075,0.380,0.88",
+  ButtonHovered: "0.650,0.120,0.560,1.000",
+  ButtonActive: "0.820,0.210,0.710,1.000",
+  Header: "0.443,0.075,0.380,0.72",
+  HeaderHovered: "0.650,0.120,0.560,0.88",
+  HeaderActive: "0.820,0.210,0.710,1.000",
+  Tab: "0.160,0.045,0.145,1.000",
+  TabHovered: "0.650,0.120,0.560,1.000",
+  TabSelected: "0.443,0.075,0.380,1.000",
+};
+
+const DLSS_DEFAULTS = {
+  intensity: 1,
+  autoMask: true,
+  diffuseWhiteNits: 500,
+  uiCorrectionMode: 2,
+  globalToneStrength: 1,
+  localToneStrength: 1,
+  localStructureStrength: 1,
+  skinStructureStrength: 1,
+};
+
+function readBoolean(content, section, key, fallback = false) {
+  const value = readIniValue(content, section, key);
+  return value === undefined ? fallback : value === "1";
+}
+
+function readNumber(content, section, key, fallback) {
+  const value = Number(readIniValue(content, section, key));
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function boundedNumber(value, minimum, maximum, label) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < minimum || parsed > maximum) {
+    throw new Error(`${label} doit être compris entre ${minimum} et ${maximum}.`);
+  }
+  return parsed;
+}
+
 function sectionBounds(lines, sectionName) {
   const wanted = sectionName.toLowerCase();
   let start = -1;
@@ -166,6 +231,8 @@ export class DlssManager {
       return {
         linked: false, installed: false, configurable: false, enabled: false,
         qualityMode: 0, qualityId: "default", autoExposure: false,
+        ...DLSS_DEFAULTS,
+        overlay: { configured: false, shortcut: "F10", hotReload: true, nativePanelDetected: false },
         missingFiles: REQUIRED_FILES, configPath: "", backupPath: "",
         compatibility: this.compatibilityStatus("", gpu),
       };
@@ -186,6 +253,21 @@ export class DlssManager {
       qualityMode: mode.value,
       qualityId: mode.id,
       autoExposure: readIniValue(content, "RENODX-DLSS", "DLSSAutoExposure") === "1",
+      intensity: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingIntensity", DLSS_DEFAULTS.intensity),
+      autoMask: readBoolean(content, "RENODX-DLSS", "DirectNeuralRenderingAutoMask", DLSS_DEFAULTS.autoMask),
+      diffuseWhiteNits: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingDiffuseWhiteNits", DLSS_DEFAULTS.diffuseWhiteNits),
+      uiCorrectionMode: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingUICorrectionMode", DLSS_DEFAULTS.uiCorrectionMode),
+      globalToneStrength: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingGlobalToneStrength", DLSS_DEFAULTS.globalToneStrength),
+      localToneStrength: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingLocalToneStrength", DLSS_DEFAULTS.localToneStrength),
+      localStructureStrength: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingLocalStructureStrength", DLSS_DEFAULTS.localStructureStrength),
+      skinStructureStrength: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingSkinStructureStrength", DLSS_DEFAULTS.skinStructureStrength),
+      overlay: {
+        configured: readIniValue(content, "INPUT", "KeyOverlay") === STRYKER_OVERLAY_KEY
+          && ["3", "4"].includes(readIniValue(content, "STYLE", "StyleIndex")),
+        shortcut: "F10",
+        hotReload: true,
+        nativePanelDetected: String(readIniValue(content, "OVERLAY", "Window") || "").includes("RenoDX DLSS"),
+      },
       missingFiles,
       configPath,
       backupPath: `${configPath}.stryker-dlss.bak`,
@@ -269,7 +351,10 @@ export class DlssManager {
     const current = this.status(settings);
     if (!current.linked) throw new Error("Liez Football Life avant de configurer DLSS.");
     if (!current.configurable) throw new Error("ReShade.ini est introuvable. Installez d’abord ReShade et RenoDX DLSS.");
-    const allowedKeys = new Set(["enabled", "qualityMode", "autoExposure"]);
+    const allowedKeys = new Set([
+      "enabled", "qualityMode", "autoExposure", "intensity", "autoMask", "diffuseWhiteNits",
+      "uiCorrectionMode", "globalToneStrength", "localToneStrength", "localStructureStrength", "skinStructureStrength",
+    ]);
     if (Object.keys(input).some((key) => !allowedKeys.has(key))) throw new Error("Paramètre DLSS non autorisé.");
 
     const qualityMode = input.qualityMode === undefined ? current.qualityMode : Number(input.qualityMode);
@@ -278,7 +363,16 @@ export class DlssManager {
     }
     const enabled = input.enabled === undefined ? current.enabled : input.enabled;
     const autoExposure = input.autoExposure === undefined ? current.autoExposure : input.autoExposure;
-    if (typeof enabled !== "boolean" || typeof autoExposure !== "boolean") throw new Error("Réglage DLSS invalide.");
+    const autoMask = input.autoMask === undefined ? current.autoMask : input.autoMask;
+    if (typeof enabled !== "boolean" || typeof autoExposure !== "boolean" || typeof autoMask !== "boolean") throw new Error("Réglage DLSS invalide.");
+    const intensity = boundedNumber(input.intensity ?? current.intensity, 0, 1, "L’intensité Neural Rendering");
+    const diffuseWhiteNits = boundedNumber(input.diffuseWhiteNits ?? current.diffuseWhiteNits, 80, 1000, "Le blanc diffus");
+    const uiCorrectionMode = Number(input.uiCorrectionMode ?? current.uiCorrectionMode);
+    if (![0, 1, 2].includes(uiCorrectionMode)) throw new Error("Mode de correction de l’interface invalide.");
+    const globalToneStrength = boundedNumber(input.globalToneStrength ?? current.globalToneStrength, 0, 1, "La force tonale globale");
+    const localToneStrength = boundedNumber(input.localToneStrength ?? current.localToneStrength, 0, 1, "La force tonale locale");
+    const localStructureStrength = boundedNumber(input.localStructureStrength ?? current.localStructureStrength, 0, 1, "La structure locale");
+    const skinStructureStrength = boundedNumber(input.skinStructureStrength ?? current.skinStructureStrength, 0, 1, "La structure des visages");
 
     const configPath = this.configPath(settings);
     const original = fs.readFileSync(configPath, "utf-8");
@@ -287,13 +381,33 @@ export class DlssManager {
     updated = updateIniSection(updated, "RENODX-DLSS", {
       DirectNeuralRenderingEnabled: enabled ? 1 : 0,
       DirectNeuralRenderingForceNgxCore: 1,
-      DirectNeuralRenderingHookPoint: 2,
-      DirectNeuralRenderingHookPointOrder: 2,
+      DirectNeuralRenderingIntensity: intensity,
+      DirectNeuralRenderingAutoMask: autoMask ? 1 : 0,
+      DirectNeuralRenderingDiffuseWhiteNits: diffuseWhiteNits,
+      DirectNeuralRenderingUICorrectionMode: uiCorrectionMode,
+      DirectNeuralRenderingGlobalToneStrength: globalToneStrength,
+      DirectNeuralRenderingLocalToneStrength: localToneStrength,
+      DirectNeuralRenderingLocalStructureStrength: localStructureStrength,
+      DirectNeuralRenderingSkinStructureStrength: skinStructureStrength,
       DLSSAutoExposure: autoExposure ? 1 : 0,
       DLSSPath: "nvngx_dlss.dll",
       DLSSQualityMode: qualityMode,
       StreamlinePath: "sl.interposer.dll",
     });
+    atomicWrite(configPath, updated);
+    return this.status(settings);
+  }
+
+  configureOverlay(settings) {
+    const current = this.status(settings);
+    if (!current.linked) throw new Error("Liez Football Life avant de configurer le panneau DLSS.");
+    if (!current.configurable) throw new Error("ReShade.ini est introuvable. Installez d’abord RenoDX DLSS.");
+    const configPath = this.configPath(settings);
+    let updated = fs.readFileSync(configPath, "utf-8");
+    fs.copyFileSync(configPath, `${configPath}.stryker-ui.bak`);
+    updated = updateIniSection(updated, "INPUT", { KeyOverlay: STRYKER_OVERLAY_KEY });
+    updated = updateIniSection(updated, "ADDON", { LoadFromDllMain: "renodx-dlss.addon64" });
+    updated = updateIniSection(updated, "STYLE", STRYKER_STYLE);
     atomicWrite(configPath, updated);
     return this.status(settings);
   }
