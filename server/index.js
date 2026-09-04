@@ -495,7 +495,7 @@ export function createApp(runtime = createRuntime()) {
       let originalName = encodedName;
       try { originalName = decodeURIComponent(encodedName); } catch { /* Keep the sanitized raw value. */ }
       const safeName = sanitizeSegment(path.basename(originalName), "mod.zip");
-      if (path.extname(safeName).toLowerCase() !== ".zip") throw new Error("Déposez une archive ZIP valide.");
+      if (![".zip", ".rar"].includes(path.extname(safeName).toLowerCase())) throw new Error("Déposez une archive ZIP ou RAR valide.");
       const declaredLength = Number(req.get("Content-Length") || 0);
       if (declaredLength > MAX_LOCAL_ARCHIVE_BYTES) throw new Error("Archive supérieure à la limite de sécurité de 20 Go.");
 

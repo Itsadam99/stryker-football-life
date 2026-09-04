@@ -368,7 +368,7 @@ export function DesktopApp() {
 
   const installDroppedArchive = (file: File) => {
     if (busy) return;
-    if (!file.name.toLowerCase().endsWith(".zip")) {
+    if (!/\.(zip|rar)$/i.test(file.name)) {
       announce(t("desktop.dropOnlyZip"), "error");
       return;
     }

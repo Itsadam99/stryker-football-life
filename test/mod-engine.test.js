@@ -239,3 +239,30 @@ test("clone et active des profils sans dupliquer les fichiers", async (t) => {
   assert.equal(service.runtime.modEngine.profiles().filter((profile) => profile.active)[0].id, clone.id);
   assert.equal(fs.readdirSync(service.runtime.dataDirectories.mods).length, 1);
 });
+
+test("accepte le format RAR et refuse toujours les autres extensions", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-rar-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const service = await startServer({ port: 0, rootDir: root, dataRoot: path.join(root, "data") });
+  t.after(() => service.close());
+
+  // Un .7z doit encore etre rejete sur son extension, avant toute lecture.
+  const unsupported = path.join(root, "mod.7z");
+  fs.writeFileSync(unsupported, "peu importe");
+  await assert.rejects(
+    () => service.runtime.modEngine.installArchive(unsupported),
+    /ZIP et RAR/,
+  );
+
+  // Un .rar franchit desormais le controle d'extension : l'erreur doit porter
+  // sur le contenu illisible, pas sur le format refuse.
+  const brokenRar = path.join(root, "mod.rar");
+  fs.writeFileSync(brokenRar, "ceci n'est pas une archive RAR");
+  await assert.rejects(
+    () => service.runtime.modEngine.installArchive(brokenRar),
+    (error) => {
+      assert.doesNotMatch(error.message, /ZIP et RAR/);
+      return true;
+    },
+  );
+});
