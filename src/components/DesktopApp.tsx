@@ -572,7 +572,7 @@ export function DesktopApp() {
                   <div className="flex gap-3.5">
                     <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
                     <div>
-                      <h2 className="text-sm font-black uppercase tracking-tight text-amber-100">{t("desktop.linkTitle")}</h2>
+                      <h2 className="sk-display text-base text-amber-100">{t("desktop.linkTitle")}</h2>
                       <p className="mt-1.5 text-xs leading-relaxed text-amber-100/60">{t("desktop.linkDescription")}</p>
                     </div>
                   </div>
@@ -586,7 +586,7 @@ export function DesktopApp() {
                 <Panel
                   title={t("desktop.health")}
                   icon={HeartPulse}
-                  action={<button onClick={() => setPage("settings")} className="sk-label text-[color:var(--sk-brand-glow)] hover:text-white">{t("desktop.settings")}</button>}
+                  action={<button onClick={() => setPage("settings")} className="sk-cta text-xs">{t("desktop.settings")}</button>}
                 >
                   <div className="divide-y divide-white/[0.06]">
                     {health?.checks.map((check) => {
@@ -819,7 +819,7 @@ export function DesktopApp() {
                       <article key={submission.id} className="sk-panel gap-4 p-4 md:flex md:items-center">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-sm font-black tracking-tight">{submission.title}</h3>
+                            <h3 className="sk-display text-base">{submission.title}</h3>
                             <span className="sk-chip" data-tone={submission.status === "pending_review" ? "warn" : submission.status === "rejected" ? "danger" : undefined}>
                               {submission.status === "pending_review" ? t("desktop.pendingReview") : submission.status === "awaiting_archive" ? t("desktop.archiveMissing") : t("desktop.rejected")}
                             </span>
@@ -1025,7 +1025,7 @@ export function DesktopApp() {
               <Panel title={t("desktop.dlssTitle")} icon={Sparkles}>
                 <div className="flex items-center justify-between gap-4 rounded-[var(--sk-r-md)] border border-white/10 bg-black/25 p-4">
                   <div>
-                    <p className="text-xs font-black tracking-tight">{t("desktop.dlssNeuralRendering")}</p>
+                    <p className="sk-display text-sm">{t("desktop.dlssNeuralRendering")}</p>
                     <p className={`mt-1 text-[11px] ${dlss.installed ? "text-emerald-300" : "text-amber-300"}`}>
                       {dlss.installed ? t("desktop.dlssDetected") : t("desktop.dlssIncomplete")}
                     </p>
@@ -1071,7 +1071,7 @@ export function DesktopApp() {
                 <div className="mt-5 rounded-[var(--sk-r-md)] border border-white/10 bg-black/25 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-black tracking-tight">{t("desktop.dlssCompatibility")}</p>
+                      <p className="sk-display text-sm">{t("desktop.dlssCompatibility")}</p>
                       <p className="mt-1 text-[11px] text-[color:var(--sk-muted)]">{dlss.compatibility.gpuName || t("desktop.dlssGpuUnknown")}</p>
                     </div>
                     <span
@@ -1120,7 +1120,7 @@ export function DesktopApp() {
                           : "bg-[color:var(--sk-ok)]"
                   }`} />
                   <div>
-                    <p className="text-xs font-black tracking-tight">STRYKER v{updateStatus.currentVersion}</p>
+                    <p className="sk-display text-sm">STRYKER v{updateStatus.currentVersion}</p>
                     <p className="mt-1 text-[11px] text-[color:var(--sk-faint)]">
                       {updateStateLabel}{updateStatus.availableVersion ? ` · v${updateStatus.availableVersion}` : ""}
                     </p>
@@ -1179,7 +1179,7 @@ function Panel({ title, icon: Icon, action, count, children }: { title: string; 
   return (
     <section className="sk-panel">
       <div className="sk-panel-head">
-        <h2 className="flex items-center gap-2.5 text-xs font-black uppercase tracking-[0.08em]">
+        <h2 className="sk-display flex items-center gap-2.5 text-base">
           <Icon className="h-4 w-4 text-[color:var(--sk-brand-glow)]" />
           {title}
           {count !== undefined && (

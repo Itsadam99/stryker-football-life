@@ -1,34 +1,40 @@
 /* ============================================================================
    STRYKER — Design system
-   Jetons partagés par le site vitrine et l'application desktop.
-   Direction : graffiti magenta sur noir encre, typographie condensée
-   éditoriale, rythme de sections emprunté aux hubs de club.
+   Direction artistique : blocs pleins à angles vifs, aucune ombre, deux
+   registres typographiques opposés — titres condensés italiques en capitales,
+   libellés larges romains — et CTA en texte souligné plutôt qu'en pilules.
+   Palette violette sur noir.
+
+   Typographie : Bahnschrift Condensed est livré avec Windows 10/11, donc
+   disponible hors ligne dans l'application empaquetée. Arial Narrow puis
+   Impact prennent le relais si elle manque.
    ========================================================================== */
 
 :root {
   /* Fonds, du plus profond au plus clair */
-  --sk-void: #050405;
-  --sk-ink: #080608;
-  --sk-surface: #0e0a0d;
-  --sk-surface-2: #150e14;
-  --sk-surface-3: #1d141b;
+  --sk-void: #08060a;
+  --sk-ink: #0d0912;
+  --sk-surface: #140b1a;
+  --sk-block: #1e0d27;
+  --sk-block-2: #2a1236;
 
   /* Traits */
-  --sk-line: rgba(255, 255, 255, 0.085);
-  --sk-line-strong: rgba(255, 255, 255, 0.16);
-  --sk-line-brand: rgba(199, 90, 181, 0.42);
+  --sk-line: rgba(255, 255, 255, 0.1);
+  --sk-line-strong: rgba(255, 255, 255, 0.22);
+  --sk-line-accent: rgba(199, 60, 176, 0.55);
 
-  /* Marque */
-  --sk-brand: #711361;
-  --sk-brand-lift: #9c1f87;
+  /* Marque : le magenta joue le rôle du rouge de la référence */
+  --sk-accent: #c026a8;
+  --sk-accent-lift: #e04ac6;
+  --sk-accent-soft: #f0a8e2;
+  --sk-brand: #7a1468;
   --sk-brand-glow: #d76bc5;
-  --sk-accent: #e6a6d9;
 
   /* Texte */
   --sk-text: #ffffff;
-  --sk-muted: rgba(255, 255, 255, 0.54);
-  --sk-faint: rgba(255, 255, 255, 0.34);
-  --sk-ghost: rgba(255, 255, 255, 0.2);
+  --sk-muted: rgba(238, 220, 240, 0.62);
+  --sk-faint: rgba(238, 220, 240, 0.42);
+  --sk-ghost: rgba(238, 220, 240, 0.26);
 
   /* États */
   --sk-ok: #34d399;
@@ -36,16 +42,22 @@
   --sk-danger: #fb7185;
   --sk-info: #38bdf8;
 
-  /* Rayons */
-  --sk-r-xs: 8px;
-  --sk-r-sm: 12px;
-  --sk-r-md: 16px;
-  --sk-r-lg: 22px;
-  --sk-r-xl: 28px;
+  /* Formes : la direction artistique est à angles vifs. */
+  --sk-r-xs: 0px;
+  --sk-r-sm: 0px;
+  --sk-r-md: 0px;
+  --sk-r-lg: 0px;
+  --sk-r-xl: 0px;
+  --sk-r-pill: 999px;
 
   /* Courbes */
   --sk-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
   --sk-ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Typographie */
+  --sk-font-display: "Bahnschrift Condensed", "Bahnschrift SemiCondensed", "Arial Narrow", Impact, sans-serif;
+  --sk-font-label: Bahnschrift, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --sk-font-body: "Segoe UI", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   /* Gabarit de l'application */
   --sk-rail: 258px;
@@ -53,36 +65,39 @@
 }
 
 @layer components {
-  /* --- Typographie éditoriale ------------------------------------------- */
+  /* --- Registre display : condensé, italique, capitales ------------------ */
   .sk-display {
-    font-weight: 900;
-    letter-spacing: -0.055em;
+    font-family: var(--sk-font-display);
+    font-style: italic;
+    font-weight: 700;
+    letter-spacing: 0;
     line-height: 0.88;
     text-transform: uppercase;
   }
 
+  /* --- Registre libellé : large, romain, très espacé --------------------- */
   .sk-eyebrow {
-    color: var(--sk-brand-glow);
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: 0.22em;
+    color: var(--sk-accent-soft);
+    font-family: var(--sk-font-label);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
     line-height: 1.4;
     text-transform: uppercase;
   }
 
   .sk-label {
     color: var(--sk-faint);
-    font-size: 9px;
-    font-weight: 800;
+    font-family: var(--sk-font-label);
+    font-size: 10px;
+    font-weight: 600;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
 
-  /* --- Surfaces ---------------------------------------------------------- */
+  /* --- Surfaces : aplats pleins, filets fins, aucune ombre --------------- */
   .sk-panel {
-    background:
-      radial-gradient(circle at 88% -10%, rgba(137, 30, 116, 0.14), transparent 46%),
-      linear-gradient(158deg, var(--sk-surface-2) 0%, var(--sk-surface) 62%, var(--sk-ink) 100%);
+    background: var(--sk-block);
     border: 1px solid var(--sk-line);
     border-radius: var(--sk-r-lg);
   }
@@ -93,7 +108,7 @@
     display: flex;
     gap: 12px;
     justify-content: space-between;
-    padding: 15px 20px;
+    padding: 14px 20px;
   }
 
   .sk-panel-body {
@@ -102,162 +117,154 @@
 
   /* --- Cartes de métrique ------------------------------------------------ */
   .sk-metric {
-    background:
-      radial-gradient(circle at 100% 0%, rgba(137, 30, 116, 0.2), transparent 55%),
-      linear-gradient(160deg, var(--sk-surface-2), var(--sk-ink));
+    background: var(--sk-block);
     border: 1px solid var(--sk-line);
     border-radius: var(--sk-r-lg);
     overflow: hidden;
     padding: 18px 20px 20px;
     position: relative;
-    transition: border-color 300ms var(--sk-ease), transform 300ms var(--sk-ease);
+    transition: background-color 260ms var(--sk-ease), border-color 260ms var(--sk-ease);
   }
 
-  .sk-metric::after {
-    background: linear-gradient(90deg, transparent, var(--sk-brand-glow), transparent);
+  .sk-metric::before {
+    background: var(--sk-accent);
     content: "";
-    height: 1px;
-    left: 0;
-    opacity: 0;
+    inset: 0 auto 0 0;
     position: absolute;
-    right: 0;
-    top: 0;
-    transition: opacity 320ms var(--sk-ease);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 320ms var(--sk-ease-expo);
+    width: 3px;
   }
 
   .sk-metric:hover {
-    border-color: var(--sk-line-brand);
-    transform: translateY(-2px);
+    background: var(--sk-block-2);
+    border-color: var(--sk-line-accent);
   }
 
-  .sk-metric:hover::after {
-    opacity: 1;
+  .sk-metric:hover::before {
+    transform: scaleY(1);
   }
 
   .sk-metric-value {
-    font-size: clamp(1.7rem, 2.9vw, 2.3rem);
-    font-weight: 900;
-    letter-spacing: -0.05em;
-    line-height: 1;
+    font-family: var(--sk-font-display);
+    font-size: clamp(2rem, 3.4vw, 2.75rem);
+    font-style: italic;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 0.9;
+    text-transform: uppercase;
   }
 
-  /* Les valeurs textuelles (nom de profil, version) sont trop longues pour le
-     corps des chiffres : on descend d'un cran et on autorise deux lignes. */
   .sk-metric-value[data-size="sm"] {
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     display: -webkit-box;
-    font-size: clamp(0.95rem, 1.5vw, 1.2rem);
-    letter-spacing: -0.03em;
-    line-height: 1.15;
+    font-size: clamp(1.15rem, 1.8vw, 1.45rem);
+    line-height: 1.05;
     overflow: hidden;
   }
 
   .sk-metric[data-tone="warn"] {
-    border-color: rgba(251, 191, 36, 0.34);
+    border-color: rgba(251, 191, 36, 0.4);
   }
 
-  /* --- Rail de navigation (items numérotés, à la manière des hubs) ------- */
+  .sk-metric[data-tone="warn"]::before {
+    background: var(--sk-warn);
+  }
+
+  /* --- Rail de navigation : items numérotés, numéro en accent ------------ */
   .sk-rail-item {
     align-items: center;
+    background: transparent;
     border: 1px solid transparent;
     border-radius: var(--sk-r-sm);
     color: var(--sk-muted);
     display: flex;
-    font-size: 11px;
-    font-weight: 800;
+    font-family: var(--sk-font-display);
+    font-size: 15px;
+    font-style: italic;
+    font-weight: 700;
     gap: 11px;
-    letter-spacing: 0.05em;
-    padding: 10px 12px;
+    letter-spacing: 0;
+    padding: 9px 12px;
     position: relative;
     text-transform: uppercase;
     transition:
-      background-color 260ms var(--sk-ease),
-      border-color 260ms var(--sk-ease),
-      color 200ms ease,
-      transform 260ms var(--sk-ease);
+      background-color 220ms var(--sk-ease),
+      border-color 220ms var(--sk-ease),
+      color 180ms ease,
+      padding-left 220ms var(--sk-ease);
     width: 100%;
   }
 
   .sk-rail-index {
-    color: var(--sk-ghost);
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    transition: color 260ms ease;
+    color: var(--sk-accent);
+    font-family: var(--sk-font-label);
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: 0.1em;
   }
 
   .sk-rail-item:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--sk-text);
-    transform: translateX(2px);
-  }
-
-  .sk-rail-item:hover .sk-rail-index {
-    color: var(--sk-brand-glow);
+    padding-left: 16px;
   }
 
   .sk-rail-item[data-active="true"] {
-    background: linear-gradient(100deg, var(--sk-brand) 0%, rgba(113, 19, 97, 0.32) 100%);
-    border-color: var(--sk-line-brand);
-    box-shadow: 0 10px 26px rgba(113, 19, 97, 0.3);
+    background: var(--sk-accent);
+    border-color: var(--sk-accent);
     color: var(--sk-text);
   }
 
   .sk-rail-item[data-active="true"] .sk-rail-index {
-    color: var(--sk-accent);
+    color: rgba(255, 255, 255, 0.72);
   }
 
-  /* --- Boutons ----------------------------------------------------------- */
+  /* --- Boutons : rectangles nets, condensé italique ---------------------- */
   .sk-btn {
     align-items: center;
     border: 1px solid transparent;
-    border-radius: 999px;
+    border-radius: var(--sk-r-sm);
     display: inline-flex;
-    font-size: 10px;
-    font-weight: 900;
+    font-family: var(--sk-font-display);
+    font-size: 14px;
+    font-style: italic;
+    font-weight: 700;
     gap: 8px;
     justify-content: center;
-    letter-spacing: 0.12em;
+    letter-spacing: 0;
     padding: 10px 18px;
     text-transform: uppercase;
     transition:
-      background-color 240ms var(--sk-ease),
-      border-color 240ms var(--sk-ease),
-      box-shadow 240ms var(--sk-ease),
-      transform 240ms var(--sk-ease);
+      background-color 200ms var(--sk-ease),
+      border-color 200ms var(--sk-ease),
+      color 180ms ease;
     white-space: nowrap;
   }
 
-  .sk-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-  }
-
-  .sk-btn:active:not(:disabled) {
-    transform: translateY(0);
-  }
-
   .sk-btn:disabled {
-    opacity: 0.38;
+    opacity: 0.36;
   }
 
   .sk-btn-primary {
     background: var(--sk-text);
-    color: var(--sk-brand);
+    color: var(--sk-void);
   }
 
   .sk-btn-primary:hover:not(:disabled) {
-    box-shadow: 0 12px 30px rgba(255, 255, 255, 0.16);
+    background: var(--sk-accent-soft);
   }
 
   .sk-btn-brand {
-    background: var(--sk-brand);
+    background: var(--sk-accent);
     color: var(--sk-text);
   }
 
   .sk-btn-brand:hover:not(:disabled) {
-    background: var(--sk-brand-lift);
-    box-shadow: 0 12px 32px rgba(113, 19, 97, 0.45);
+    background: var(--sk-accent-lift);
   }
 
   .sk-btn-ghost {
@@ -266,18 +273,40 @@
   }
 
   .sk-btn-ghost:hover:not(:disabled) {
-    border-color: var(--sk-line-brand);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--sk-text);
     color: var(--sk-text);
   }
 
   .sk-btn-danger {
-    background: rgba(190, 24, 63, 0.9);
+    background: #be123c;
     color: #ffe4e6;
   }
 
   .sk-btn-danger:hover:not(:disabled) {
-    background: #be123c;
-    box-shadow: 0 12px 30px rgba(190, 24, 63, 0.4);
+    background: #e11d48;
+  }
+
+  /* --- CTA texte : le motif « VOIR TOUT » de la référence ---------------- */
+  .sk-cta {
+    align-items: center;
+    border-bottom: 2px solid var(--sk-accent);
+    color: var(--sk-text);
+    display: inline-flex;
+    font-family: var(--sk-font-display);
+    font-size: 14px;
+    font-style: italic;
+    font-weight: 700;
+    gap: 8px;
+    padding-bottom: 4px;
+    text-transform: uppercase;
+    transition: color 180ms ease, border-color 180ms ease, gap 220ms var(--sk-ease);
+  }
+
+  .sk-cta:hover {
+    border-color: var(--sk-text);
+    color: var(--sk-accent-soft);
+    gap: 12px;
   }
 
   /* --- Bouton icône ------------------------------------------------------ */
@@ -288,18 +317,18 @@
     color: var(--sk-faint);
     display: inline-flex;
     justify-content: center;
-    padding: 7px;
-    transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+    padding: 8px;
+    transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
   }
 
   .sk-icon-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.07);
     border-color: var(--sk-line-strong);
     color: var(--sk-text);
   }
 
   .sk-icon-btn:disabled {
-    opacity: 0.2;
+    opacity: 0.22;
   }
 
   .sk-icon-btn[data-danger="true"] {
@@ -307,21 +336,22 @@
   }
 
   .sk-icon-btn[data-danger="true"]:hover:not(:disabled) {
-    background: rgba(244, 63, 94, 0.12);
-    border-color: rgba(244, 63, 94, 0.4);
+    background: rgba(244, 63, 94, 0.14);
+    border-color: rgba(244, 63, 94, 0.45);
     color: #fecdd3;
   }
 
   /* --- Champs ------------------------------------------------------------ */
   .sk-input {
-    background: rgba(0, 0, 0, 0.35);
+    background: var(--sk-void);
     border: 1px solid var(--sk-line);
     border-radius: var(--sk-r-sm);
     color: var(--sk-text);
-    font-size: 12px;
+    font-family: var(--sk-font-body);
+    font-size: 13px;
     outline: none;
     padding: 11px 14px;
-    transition: border-color 220ms ease, box-shadow 220ms ease;
+    transition: border-color 180ms ease;
     width: 100%;
   }
 
@@ -330,19 +360,18 @@
   }
 
   .sk-input:focus {
-    border-color: var(--sk-line-brand);
-    box-shadow: 0 0 0 3px rgba(113, 19, 97, 0.22);
+    border-color: var(--sk-accent);
   }
 
-  /* --- Interrupteur ------------------------------------------------------ */
+  /* --- Interrupteur : seule forme arrondie conservée, c'est une affordance */
   .sk-switch {
-    background: rgba(255, 255, 255, 0.14);
-    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: var(--sk-r-pill);
     display: block;
     flex: none;
     height: 22px;
     padding: 3px;
-    transition: background-color 260ms var(--sk-ease);
+    transition: background-color 220ms var(--sk-ease);
     width: 40px;
   }
 
@@ -351,15 +380,15 @@
   }
 
   .sk-switch[data-on="brand"] {
-    background: var(--sk-brand);
+    background: var(--sk-accent);
   }
 
   .sk-switch span {
     background: #fff;
-    border-radius: 999px;
+    border-radius: var(--sk-r-pill);
     display: block;
     height: 16px;
-    transition: transform 260ms var(--sk-ease);
+    transition: transform 220ms var(--sk-ease);
     width: 16px;
   }
 
@@ -378,31 +407,28 @@
   }
 
   .sk-slider::-webkit-slider-runnable-track {
-    background: linear-gradient(90deg, var(--sk-brand) 0%, var(--sk-brand-glow) var(--sk-fill, 50%), rgba(255, 255, 255, 0.1) var(--sk-fill, 50%));
-    border-radius: 999px;
-    height: 5px;
+    background: linear-gradient(90deg, var(--sk-accent) 0%, var(--sk-accent) var(--sk-fill, 50%), rgba(255, 255, 255, 0.12) var(--sk-fill, 50%));
+    height: 4px;
   }
 
   .sk-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    background: #fff;
+    background: var(--sk-text);
     border: none;
-    border-radius: 999px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(199, 90, 181, 0.28);
-    height: 15px;
-    margin-top: -5px;
-    transition: transform 180ms var(--sk-ease), box-shadow 180ms var(--sk-ease);
-    width: 15px;
+    border-radius: 0;
+    height: 18px;
+    margin-top: -7px;
+    transition: background-color 180ms ease;
+    width: 6px;
   }
 
   .sk-slider:hover::-webkit-slider-thumb {
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6), 0 0 0 5px rgba(199, 90, 181, 0.4);
-    transform: scale(1.12);
+    background: var(--sk-accent-soft);
   }
 
   .sk-slider:focus-visible::-webkit-slider-thumb {
-    box-shadow: 0 0 0 3px var(--sk-accent);
+    background: var(--sk-accent-lift);
   }
 
   .sk-slider:disabled {
@@ -412,35 +438,34 @@
 
   /* --- Contrôle segmenté ------------------------------------------------- */
   .sk-segment {
-    background: rgba(0, 0, 0, 0.32);
     border: 1px solid var(--sk-line);
-    border-radius: 999px;
+    border-radius: var(--sk-r-sm);
     display: flex;
     flex-wrap: wrap;
-    gap: 3px;
-    padding: 4px;
+    gap: 0;
   }
 
   .sk-segment-item {
-    border-radius: 999px;
+    border-radius: 0;
     color: var(--sk-faint);
     flex: 1 1 auto;
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: 0.1em;
-    padding: 8px 12px;
+    font-family: var(--sk-font-display);
+    font-size: 13px;
+    font-style: italic;
+    font-weight: 700;
+    padding: 10px 14px;
     text-transform: uppercase;
-    transition: background-color 220ms var(--sk-ease), color 200ms ease;
+    transition: background-color 180ms var(--sk-ease), color 160ms ease;
     white-space: nowrap;
   }
 
   .sk-segment-item:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
     color: var(--sk-text);
   }
 
   .sk-segment-item[data-active="true"] {
-    background: var(--sk-brand);
-    box-shadow: 0 6px 18px rgba(113, 19, 97, 0.4);
+    background: var(--sk-accent);
     color: var(--sk-text);
   }
 
@@ -448,10 +473,11 @@
   .sk-chip {
     align-items: center;
     border: 1px solid var(--sk-line);
-    border-radius: 999px;
+    border-radius: var(--sk-r-xs);
     display: inline-flex;
-    font-size: 8px;
-    font-weight: 900;
+    font-family: var(--sk-font-label);
+    font-size: 10px;
+    font-weight: 600;
     gap: 6px;
     letter-spacing: 0.14em;
     padding: 5px 10px;
@@ -460,74 +486,62 @@
   }
 
   .sk-chip[data-tone="ok"] {
-    background: rgba(52, 211, 153, 0.12);
-    border-color: rgba(52, 211, 153, 0.36);
+    background: rgba(52, 211, 153, 0.14);
+    border-color: rgba(52, 211, 153, 0.4);
     color: #a7f3d0;
   }
 
   .sk-chip[data-tone="warn"] {
-    background: rgba(251, 191, 36, 0.12);
-    border-color: rgba(251, 191, 36, 0.36);
+    background: rgba(251, 191, 36, 0.14);
+    border-color: rgba(251, 191, 36, 0.4);
     color: #fde68a;
   }
 
   .sk-chip[data-tone="danger"] {
-    background: rgba(244, 63, 94, 0.14);
-    border-color: rgba(244, 63, 94, 0.38);
+    background: rgba(244, 63, 94, 0.16);
+    border-color: rgba(244, 63, 94, 0.42);
     color: #fecdd3;
   }
 
   .sk-chip[data-tone="brand"] {
-    background: rgba(113, 19, 97, 0.34);
-    border-color: var(--sk-line-brand);
-    color: var(--sk-accent);
+    background: var(--sk-accent);
+    border-color: var(--sk-accent);
+    color: var(--sk-text);
   }
 
   /* --- Lignes de liste --------------------------------------------------- */
   .sk-row {
-    border-radius: var(--sk-r-sm);
-    transition: background-color 200ms ease;
+    border-radius: var(--sk-r-xs);
+    transition: background-color 160ms ease;
   }
 
   .sk-row:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.045);
   }
 
   /* --- Toast ------------------------------------------------------------- */
   .sk-toast {
-    animation: sk-toast-in 420ms var(--sk-ease-expo) both;
-    backdrop-filter: blur(18px);
-    border-radius: var(--sk-r-md);
+    animation: sk-toast-in 320ms var(--sk-ease-expo) both;
+    border-radius: var(--sk-r-sm);
     border-style: solid;
     border-width: 1px;
-    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+    font-family: var(--sk-font-body);
   }
 
-  /* --- Bande d'état (rythme du bandeau « prochain match » d'un hub) ------ */
+  /* --- Bande d'état : bloc plein, filet d'accent à gauche ---------------- */
   .sk-statusband {
-    background:
-      radial-gradient(circle at 12% 50%, rgba(137, 30, 116, 0.3), transparent 48%),
-      linear-gradient(120deg, var(--sk-surface-3) 0%, var(--sk-surface) 55%, var(--sk-ink) 100%);
+    background: var(--sk-block);
     border: 1px solid var(--sk-line);
+    border-left: 4px solid var(--sk-accent);
     border-radius: var(--sk-r-xl);
     overflow: hidden;
     position: relative;
   }
 
-  .sk-statusband::before {
-    background: linear-gradient(180deg, var(--sk-brand-glow), transparent);
-    bottom: 0;
-    content: "";
-    left: 0;
-    position: absolute;
-    top: 0;
-    width: 2px;
-  }
-
   /* --- Filigrane de marque ---------------------------------------------- */
   .sk-watermark {
     mix-blend-mode: screen;
-    opacity: 0.07;
+    opacity: 0.06;
     pointer-events: none;
     position: absolute;
     user-select: none;
@@ -535,13 +549,12 @@
 }
 
 @keyframes sk-toast-in {
-  from { opacity: 0; transform: translateY(14px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .sk-toast { animation: none; }
-  .sk-btn:hover:not(:disabled),
-  .sk-metric:hover,
-  .sk-rail-item:hover { transform: none; }
+  .sk-rail-item:hover { padding-left: 12px; }
+  .sk-cta:hover { gap: 8px; }
 }

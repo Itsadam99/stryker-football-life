@@ -189,7 +189,7 @@ export function DlssStudio() {
           <section className="flex gap-3.5 rounded-[var(--sk-r-lg)] border border-amber-400/30 bg-amber-400/[0.07] p-5">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
             <div>
-              <h2 className="text-sm font-black uppercase tracking-tight text-amber-100">{copy.notReady}</h2>
+              <h2 className="sk-display text-base text-amber-100">{copy.notReady}</h2>
               <p className="mt-1.5 text-xs leading-relaxed text-amber-100/65">{copy.notReadyHint}</p>
               {settings.missingFiles.length > 0 && (
                 <p className="mt-2 break-words font-mono text-[10px] text-amber-200/60">
@@ -236,7 +236,7 @@ export function DlssStudio() {
         {/* ----------------------------------------------------- QUALITÉ */}
         <section className="sk-panel">
           <div className="sk-panel-head">
-            <h2 className="flex items-center gap-2.5 text-xs font-black uppercase tracking-[0.08em]">
+            <h2 className="sk-display flex items-center gap-2.5 text-base">
               <Gauge className="h-4 w-4 text-[color:var(--sk-brand-glow)]" />{copy.quality}
             </h2>
           </div>
@@ -262,7 +262,7 @@ export function DlssStudio() {
         {/* --------------------------------------------------- PRÉRÉGLAGES */}
         <section className="sk-panel">
           <div className="sk-panel-head">
-            <h2 className="flex items-center gap-2.5 text-xs font-black uppercase tracking-[0.08em]">
+            <h2 className="sk-display flex items-center gap-2.5 text-base">
               <Sparkles className="h-4 w-4 text-[color:var(--sk-brand-glow)]" />{copy.presets}
             </h2>
           </div>
@@ -287,7 +287,7 @@ export function DlssStudio() {
           {/* ------------------------------------------------ RENDU NEURONAL */}
           <section className="sk-panel">
             <div className="sk-panel-head">
-              <h2 className="flex items-center gap-2.5 text-xs font-black uppercase tracking-[0.08em]">
+              <h2 className="sk-display flex items-center gap-2.5 text-base">
                 <Sparkles className="h-4 w-4 text-[color:var(--sk-brand-glow)]" />{copy.rendering}
               </h2>
             </div>
@@ -318,7 +318,7 @@ export function DlssStudio() {
             {/* ------------------------------------------------------ TONALITÉ */}
             <section className="sk-panel">
               <div className="sk-panel-head">
-                <h2 className="flex items-center gap-2.5 text-xs font-black uppercase tracking-[0.08em]">
+                <h2 className="sk-display flex items-center gap-2.5 text-base">
                   <Sun className="h-4 w-4 text-[color:var(--sk-brand-glow)]" />{copy.tone}
                 </h2>
               </div>
@@ -331,7 +331,7 @@ export function DlssStudio() {
             {/* ----------------------------------------------------- STRUCTURE */}
             <section className="sk-panel">
               <div className="sk-panel-head">
-                <h2 className="flex items-center gap-2.5 text-xs font-black uppercase tracking-[0.08em]">
+                <h2 className="sk-display flex items-center gap-2.5 text-base">
                   <Layers className="h-4 w-4 text-[color:var(--sk-brand-glow)]" />{copy.structure}
                 </h2>
               </div>
@@ -346,7 +346,7 @@ export function DlssStudio() {
         {/* ----------------------------------------------------- PANNEAU F10 */}
         <section className="sk-panel">
           <div className="sk-panel-head">
-            <h2 className="flex items-center gap-2.5 text-xs font-black uppercase tracking-[0.08em]">
+            <h2 className="sk-display flex items-center gap-2.5 text-base">
               <Gauge className="h-4 w-4 text-[color:var(--sk-brand-glow)]" />{copy.panel}
             </h2>
             <span className="sk-chip" data-tone={settings.overlay.configured ? "ok" : "warn"}>
