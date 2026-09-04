@@ -4,6 +4,7 @@ import path from "path";
 import { assertPathInside, sanitizeSegment } from "./paths.js";
 import { inferCategory } from "./sider-manager.js";
 import { extractZipSafely } from "./zip-extractor.js";
+import { extractRarSafely } from "./rar-extractor.js";
 import { expandPackedPayload } from "./packed-payload.js";
 
 const MAX_ARCHIVE_BYTES = 20 * 1024 * 1024 * 1024;
@@ -260,8 +261,9 @@ export class ModEngine {
     if (!archivePath || typeof archivePath !== "string") throw new Error("Sélectionnez une archive ZIP.");
     const resolvedArchive = path.resolve(archivePath);
     if (!fs.existsSync(resolvedArchive) || !fs.statSync(resolvedArchive).isFile()) throw new Error("Archive introuvable.");
-    if (path.extname(resolvedArchive).toLowerCase() !== ".zip") {
-      throw new Error("Seules les archives ZIP sont installées automatiquement. Extrayez les archives RAR/7z puis créez un ZIP ou utilisez les instructions de l’auteur.");
+    const archiveKind = path.extname(resolvedArchive).toLowerCase();
+    if (archiveKind !== ".zip" && archiveKind !== ".rar") {
+      throw new Error("Seules les archives ZIP et RAR sont installées automatiquement. Extrayez les autres formats puis créez un ZIP.");
     }
     if (fs.statSync(resolvedArchive).size > MAX_ARCHIVE_BYTES) throw new Error("Archive supérieure à la limite de sécurité de 20 Go.");
 
@@ -273,7 +275,10 @@ export class ModEngine {
     let totalBytes = 0;
 
     try {
-      await extractZipSafely(resolvedArchive, tempRoot, {
+      // Les deux extracteurs partagent le même contrat : chemins validés en
+      // amont, et onEntry reçoit la taille décompressée pour les limites.
+      const extractArchive = archiveKind === ".rar" ? extractRarSafely : extractZipSafely;
+      await extractArchive(resolvedArchive, tempRoot, {
         onEntry: (entry) => {
           totalFiles += 1;
           totalBytes += Number(entry.uncompressedSize || 0);

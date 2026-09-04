@@ -1,7 +1,7 @@
 Add-Type -AssemblyName System.Windows.Forms
 $dialog = New-Object System.Windows.Forms.OpenFileDialog
-$dialog.Title = "STRYKER - Sélectionnez une archive de mod ZIP"
-$dialog.Filter = "Archives ZIP prises en charge (*.zip)|*.zip"
+$dialog.Title = "STRYKER - Sélectionnez une archive de mod (ZIP ou RAR)"
+$dialog.Filter = "Archives prises en charge (*.zip;*.rar)|*.zip;*.rar"
 $dialog.CheckFileExists = $true
 $dialog.Multiselect = $false
 $top = New-Object System.Windows.Forms.Form

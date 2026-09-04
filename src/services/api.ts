@@ -8,6 +8,8 @@ import {
   HealthReport,
   HubSubmission,
   HubSubmissionInput,
+  LogContent,
+  LogSource,
   ManagedMod,
   ModItem,
   Profile,
@@ -54,6 +56,39 @@ async function request<T>(route: string, options: RequestInit = {}): Promise<T> 
     throw new Error(data.error || data.message || `Erreur STRYKER (${response.status})`);
   }
   return data as T;
+}
+
+/**
+ * Envoi d'archive avec progression réelle. `fetch` ne rapporte pas l'avancement
+ * de l'upload : pour un ZIP qui peut peser plusieurs gigaoctets, on repasse par
+ * XMLHttpRequest afin d'afficher un vrai pourcentage.
+ */
+async function uploadWithProgress<T>(route: string, file: File, onProgress?: (percent: number) => void): Promise<T> {
+  const token = await getSessionToken();
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", `${BASE_URL}${route}`);
+    xhr.setRequestHeader("Content-Type", "application/zip");
+    xhr.setRequestHeader("X-STRYKER-File-Name", encodeURIComponent(file.name));
+    xhr.setRequestHeader("X-STRYKER-Token", token);
+    xhr.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) onProgress?.((event.loaded / event.total) * 100);
+    });
+    xhr.addEventListener("load", () => {
+      let data: any = {};
+      if (xhr.responseText) {
+        try { data = JSON.parse(xhr.responseText); }
+        catch { return reject(new Error("Réponse invalide du moteur local STRYKER.")); }
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        if (xhr.status === 403) sessionTokenPromise = null;
+        return reject(new Error(data.error || data.message || `Erreur STRYKER (${xhr.status})`));
+      }
+      resolve(data as T);
+    });
+    xhr.addEventListener("error", () => reject(new Error("Le moteur local STRYKER est indisponible. Relancez l’application desktop.")));
+    xhr.send(file);
+  });
 }
 
 export const api = {
@@ -106,14 +141,12 @@ export const api = {
     method: "POST",
     body: JSON.stringify({ archivePath, metadata }),
   }),
-  installUploadedArchive: (file: File) => request<{ success: boolean; mod: ManagedMod; action: "installed" | "reinstalled"; message: string }>("/mods/install-upload", {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/zip",
-      "X-STRYKER-File-Name": encodeURIComponent(file.name),
-    },
-    body: file,
-  }),
+  installUploadedArchive: (file: File, onProgress?: (percent: number) => void) =>
+    uploadWithProgress<{ success: boolean; mod: ManagedMod; action: "installed" | "reinstalled"; message: string }>(
+      "/mods/install-upload",
+      file,
+      onProgress,
+    ),
 
   getCatalog: async () => (await request<{ mods: CatalogMod[] }>("/catalog")).mods,
   installCatalogMod: (modId: string) => request<{ success: boolean; mod: ManagedMod; action: "installed" | "reinstalled"; message: string }>(`/catalog/${encodeURIComponent(modId)}/install`, { method: "POST" }),
@@ -156,6 +189,8 @@ export const api = {
   getBackups: async () => (await request<{ backups: BackupItem[] }>("/backups")).backups,
   restoreBackup: (name: string) => request<{ success: boolean }>(`/backups/${encodeURIComponent(name)}/restore`, { method: "POST" }),
   getActivity: async () => (await request<{ activity: ActivityItem[] }>("/activity")).activity,
+  getLogs: async () => (await request<{ logs: LogSource[] }>("/logs")).logs,
+  readLog: (id: string, lines = 400) => request<LogContent>(`/logs/${encodeURIComponent(id)}?lines=${lines}`),
 
   getLauncherStatus: () => request<GameProcessStatus>("/launcher/status"),
   launchGame: () => request<{ success: boolean; message: string } & GameProcessStatus>("/launcher/launch", { method: "POST" }),
