@@ -368,6 +368,82 @@
     transform: translateX(18px);
   }
 
+  /* --- Curseurs ---------------------------------------------------------- */
+  .sk-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .sk-slider::-webkit-slider-runnable-track {
+    background: linear-gradient(90deg, var(--sk-brand) 0%, var(--sk-brand-glow) var(--sk-fill, 50%), rgba(255, 255, 255, 0.1) var(--sk-fill, 50%));
+    border-radius: 999px;
+    height: 5px;
+  }
+
+  .sk-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #fff;
+    border: none;
+    border-radius: 999px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(199, 90, 181, 0.28);
+    height: 15px;
+    margin-top: -5px;
+    transition: transform 180ms var(--sk-ease), box-shadow 180ms var(--sk-ease);
+    width: 15px;
+  }
+
+  .sk-slider:hover::-webkit-slider-thumb {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6), 0 0 0 5px rgba(199, 90, 181, 0.4);
+    transform: scale(1.12);
+  }
+
+  .sk-slider:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px var(--sk-accent);
+  }
+
+  .sk-slider:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+  }
+
+  /* --- Contrôle segmenté ------------------------------------------------- */
+  .sk-segment {
+    background: rgba(0, 0, 0, 0.32);
+    border: 1px solid var(--sk-line);
+    border-radius: 999px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .sk-segment-item {
+    border-radius: 999px;
+    color: var(--sk-faint);
+    flex: 1 1 auto;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    padding: 8px 12px;
+    text-transform: uppercase;
+    transition: background-color 220ms var(--sk-ease), color 200ms ease;
+    white-space: nowrap;
+  }
+
+  .sk-segment-item:hover:not(:disabled) {
+    color: var(--sk-text);
+  }
+
+  .sk-segment-item[data-active="true"] {
+    background: var(--sk-brand);
+    box-shadow: 0 6px 18px rgba(113, 19, 97, 0.4);
+    color: var(--sk-text);
+  }
+
   /* --- Pastilles --------------------------------------------------------- */
   .sk-chip {
     align-items: center;

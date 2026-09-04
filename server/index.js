@@ -219,14 +219,19 @@ export function createApp(runtime = createRuntime()) {
   const { rootDir, store, siderManager, modEngine, dlssManager, repositoryManager, remoteInstaller, processManager, updateManager, sessionToken, nativeDialogs, publicHub, adminToken } = runtime;
   const app = express();
 
+  // Effet de bord d'une installation de mod : un panneau non configurable ne
+  // doit jamais faire échouer l'installation elle-même, qui a réussi.
   function syncDlssController(mod = null) {
     const isController = mod?.packageId === "stryker-dlss5-controller";
     const isInstalled = modEngine.list().some((item) => item.packageId === "stryker-dlss5-controller");
-    if ((isController || isInstalled) && store.snapshot().settings.isLinked) {
+    if (!(isController || isInstalled) || !store.snapshot().settings.isLinked) return null;
+    try {
       const current = dlssManager.status(store.snapshot().settings);
       return current.configurable ? dlssManager.configureOverlay(store.snapshot().settings) : current;
+    } catch (error) {
+      store.addActivity("error", "La configuration du panneau DLSS F10 sera retentée", { message: error.message });
+      return null;
     }
-    return null;
   }
 
   app.disable("x-powered-by");
@@ -366,8 +371,20 @@ export function createApp(runtime = createRuntime()) {
       if (processManager.status().isRunning) {
         return res.status(409).json({ success: false, error: "Fermez Football Life une seule fois pour installer le nouveau panneau F10." });
       }
-      const dlss = dlssManager.configureOverlay(store.snapshot().settings);
+      // force : un clic explicite réapplique le thème même s'il est déjà en place.
+      const dlss = dlssManager.configureOverlay(store.snapshot().settings, { force: true });
       store.addActivity("dlss", "Panneau DLSS instantané configuré sur F10");
+      res.json({ success: true, dlss });
+    } catch (error) { next(error); }
+  });
+
+  app.post("/api/dlss/overlay/restore", (req, res, next) => {
+    try {
+      if (processManager.status().isRunning) {
+        return res.status(409).json({ success: false, error: "Fermez Football Life avant de restaurer le panneau d’origine." });
+      }
+      const dlss = dlssManager.restoreOverlay(store.snapshot().settings);
+      store.addActivity("dlss", "Panneau RenoDX d’origine restauré");
       res.json({ success: true, dlss });
     } catch (error) { next(error); }
   });

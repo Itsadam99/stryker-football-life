@@ -13,6 +13,7 @@ import {
 } from "../types";
 import { StrykerLogo } from "./StrykerLogo";
 import { Language, LanguageSwitcher, useI18n } from "../i18n";
+import { DLSS_COPY } from "../services/dlssCopy";
 
 type DesktopPage = "dashboard" | "mods" | "catalog" | "profiles" | "conflicts" | "settings";
 
@@ -45,6 +46,15 @@ const EMPTY_DLSS: DlssSettings = {
   qualityMode: 0,
   qualityId: "default",
   autoExposure: false,
+  intensity: 1,
+  autoMask: true,
+  diffuseWhiteNits: 500,
+  uiCorrectionMode: 2,
+  globalToneStrength: 1,
+  localToneStrength: 1,
+  localStructureStrength: 1,
+  skinStructureStrength: 1,
+  overlay: { configured: false, shortcut: "F10", hotReload: true, nativePanelDetected: false },
   missingFiles: [],
   configPath: "",
   backupPath: "",
@@ -132,6 +142,21 @@ export function DesktopApp() {
   const activeProfile = profiles.find((profile) => profile.active);
   const activeProfileLabel = activeProfile?.id === "default" ? t("desktop.mainProfile") : activeProfile?.name || "—";
   const conflictBadge = conflicts ? conflicts.total + conflicts.dependencyIssues.length : 0;
+  const dlssCopy = DLSS_COPY[language];
+  const dlssQualityLabel = [
+    t("desktop.dlssDefault"), t("desktop.dlssPerformance"), t("desktop.dlssBalanced"), t("desktop.dlssQualityMode"),
+    t("desktop.dlssUltraPerformance"), t("desktop.dlssUltraQuality"), "DLAA",
+  ][dlss.qualityMode] || t("desktop.dlssDefault");
+
+  /** Ouvre le centre DLSS dans sa propre fenêtre (BrowserWindow sous Electron). */
+  const openDlssStudio = () => {
+    const target = new URL(window.location.href);
+    target.searchParams.set("mode", "dlss");
+    target.searchParams.delete("installMod");
+    target.searchParams.delete("repository");
+    target.hash = "";
+    window.open(target.href, "stryker-dlss", "width=1060,height=880");
+  };
   const localizeHealthCheck = (check: HealthCheck) => {
     const labels: Record<string, string> = {
       linked: t("desktop.gameLinked"),
@@ -1010,7 +1035,7 @@ export function DesktopApp() {
                     disabled={busy || status.isRunning || !dlss.configurable}
                     aria-pressed={dlss.enabled}
                     onClick={() => runAction(
-                      () => api.saveDlssSettings({ enabled: !dlss.enabled, qualityMode: dlss.qualityMode, autoExposure: dlss.autoExposure }),
+                      () => api.saveDlssSettings({ enabled: !dlss.enabled }),
                       !dlss.enabled ? t("desktop.dlssEnabled") : t("desktop.dlssDisabled"),
                     )}
                     className={`sk-btn min-w-24 ${dlss.enabled ? "bg-emerald-400 text-emerald-950" : "sk-btn-ghost"}`}
@@ -1019,39 +1044,29 @@ export function DesktopApp() {
                   </button>
                 </div>
 
-                <label className="sk-label mt-4 block" htmlFor="dlss-quality">{t("desktop.dlssQuality")}</label>
-                <select
-                  id="dlss-quality"
-                  value={dlss.qualityMode}
-                  disabled={!dlss.configurable || status.isRunning}
-                  onChange={(event) => setDlss({ ...dlss, qualityMode: Number(event.target.value) })}
-                  className="sk-input mt-2 disabled:opacity-35"
-                >
-                  <option value={0}>{t("desktop.dlssDefault")}</option>
-                  <option value={1}>{t("desktop.dlssPerformance")}</option>
-                  <option value={2}>{t("desktop.dlssBalanced")}</option>
-                  <option value={3}>{t("desktop.dlssQualityMode")}</option>
-                  <option value={4}>{t("desktop.dlssUltraPerformance")}</option>
-                  <option value={5}>{t("desktop.dlssUltraQuality")}</option>
-                  <option value={6}>DLAA</option>
-                </select>
-
-                <label className="mt-4 flex items-center gap-3 text-xs text-[color:var(--sk-muted)]">
-                  <input type="checkbox" checked={dlss.autoExposure} disabled={!dlss.configurable || status.isRunning} onChange={(event) => setDlss({ ...dlss, autoExposure: event.target.checked })} className="accent-[#711361]" />
-                  {t("desktop.dlssAutoExposure")}
-                </label>
+                {/* Le réglage fin vit dans sa propre fenêtre : curseurs, préréglages
+                    et panneau F10. On ne garde ici que l'état et l'accès. */}
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[var(--sk-r-md)] border border-white/10 bg-black/25 p-3.5">
+                    <p className="sk-label">{t("desktop.dlssQuality")}</p>
+                    <p className="mt-1.5 text-xs font-black">{dlssQualityLabel}</p>
+                  </div>
+                  <div className="rounded-[var(--sk-r-md)] border border-white/10 bg-black/25 p-3.5">
+                    <p className="sk-label">{dlssCopy.panel}</p>
+                    <p className={`mt-1.5 text-xs font-black ${dlss.overlay.configured ? "text-emerald-300" : "text-amber-300"}`}>
+                      {dlss.overlay.configured ? dlssCopy.panelOn : dlssCopy.panelOff}
+                    </p>
+                  </div>
+                </div>
 
                 {dlss.missingFiles.length > 0 && <p className="mt-3 break-words text-[10px] leading-relaxed text-amber-200/70">{t("desktop.dlssMissing")} {dlss.missingFiles.join(", ")}</p>}
                 <p className="mt-3 text-[11px] leading-relaxed text-[color:var(--sk-faint)]">{status.isRunning ? t("desktop.dlssCloseGame") : t("desktop.dlssRestart")}</p>
 
                 <button
-                  onClick={() => runAction(
-                    () => api.saveDlssSettings({ enabled: dlss.enabled, qualityMode: dlss.qualityMode, autoExposure: dlss.autoExposure }),
-                    t("desktop.dlssSaved"),
-                  )}
-                  disabled={busy || status.isRunning || !dlss.configurable}
+                  onClick={openDlssStudio}
+                  disabled={!dlss.configurable}
                   className="sk-btn sk-btn-primary mt-4"
-                >{t("desktop.save")}</button>
+                ><Sparkles className="h-3.5 w-3.5" />{dlssCopy.open}</button>
 
                 <div className="mt-5 rounded-[var(--sk-r-md)] border border-white/10 bg-black/25 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">

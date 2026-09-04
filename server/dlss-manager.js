@@ -85,6 +85,15 @@ function readNumber(content, section, key, fallback) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+/**
+ * Copie un fichier de référence une seule fois. Toute copie ultérieure
+ * remplacerait l'original par une version déjà réécrite par STRYKER.
+ */
+function backupOnce(sourcePath, backupPath) {
+  if (!fs.existsSync(backupPath)) fs.copyFileSync(sourcePath, backupPath);
+  return backupPath;
+}
+
 function boundedNumber(value, minimum, maximum, label) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < minimum || parsed > maximum) {
@@ -376,7 +385,10 @@ export class DlssManager {
 
     const configPath = this.configPath(settings);
     const original = fs.readFileSync(configPath, "utf-8");
-    fs.copyFileSync(configPath, `${configPath}.stryker-dlss.bak`);
+    // La sauvegarde ne doit capturer que le ReShade.ini d'origine : la réécrire
+    // à chaque enregistrement remplaçait la copie de référence par une version
+    // déjà modifiée par STRYKER, et le fichier d'origine était perdu.
+    backupOnce(configPath, `${configPath}.stryker-dlss.bak`);
     let updated = updateIniSection(original, "ADDON", { LoadFromDllMain: "renodx-dlss.addon64" });
     updated = updateIniSection(updated, "RENODX-DLSS", {
       DirectNeuralRenderingEnabled: enabled ? 1 : 0,
@@ -398,17 +410,29 @@ export class DlssManager {
     return this.status(settings);
   }
 
-  configureOverlay(settings) {
+  configureOverlay(settings, { force = false } = {}) {
     const current = this.status(settings);
     if (!current.linked) throw new Error("Liez Football Life avant de configurer le panneau DLSS.");
     if (!current.configurable) throw new Error("ReShade.ini est introuvable. Installez d’abord RenoDX DLSS.");
+    // Appelé à chaque installation ou bascule de mod : sans ce court-circuit, le
+    // fichier était réécrit inutilement à chaque fois.
+    if (current.overlay.configured && !force) return current;
     const configPath = this.configPath(settings);
     let updated = fs.readFileSync(configPath, "utf-8");
-    fs.copyFileSync(configPath, `${configPath}.stryker-ui.bak`);
+    backupOnce(configPath, `${configPath}.stryker-ui.bak`);
     updated = updateIniSection(updated, "INPUT", { KeyOverlay: STRYKER_OVERLAY_KEY });
     updated = updateIniSection(updated, "ADDON", { LoadFromDllMain: "renodx-dlss.addon64" });
     updated = updateIniSection(updated, "STYLE", STRYKER_STYLE);
     atomicWrite(configPath, updated);
+    return this.status(settings);
+  }
+
+  /** Restaure le ReShade.ini capturé avant la première configuration STRYKER. */
+  restoreOverlay(settings) {
+    const configPath = this.configPath(settings);
+    const backupPath = `${configPath}.stryker-ui.bak`;
+    if (!fs.existsSync(backupPath)) throw new Error("Aucune sauvegarde du panneau d’origine n’est disponible.");
+    atomicCopy(backupPath, configPath);
     return this.status(settings);
   }
 }

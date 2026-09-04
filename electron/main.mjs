@@ -136,9 +136,46 @@ async function createWindow() {
     },
   });
 
+  // Les URL locales de confiance (le centre DLSS) ouvrent une vraie fenêtre
+  // Electron ; tout le reste part dans le navigateur par défaut.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void openExternal(url);
-    return { action: "deny" };
+    if (!isTrustedLocalUrl(url)) {
+      void openExternal(url);
+      return { action: "deny" };
+    }
+    return {
+      action: "allow",
+      overrideBrowserWindowOptions: {
+        title: "STRYKER — DLSS",
+        width: 1060,
+        height: 880,
+        minWidth: 720,
+        minHeight: 600,
+        autoHideMenuBar: true,
+        backgroundColor: "#050405",
+        icon: path.join(app.getAppPath(), "dist", "stryker.ico"),
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true,
+          sandbox: true,
+          webSecurity: true,
+          devTools: !app.isPackaged,
+        },
+      },
+    };
+  });
+
+  // La fenêtre enfant hérite des mêmes garde-fous de navigation.
+  mainWindow.webContents.on("did-create-window", (childWindow) => {
+    childWindow.webContents.setWindowOpenHandler(({ url }) => {
+      void openExternal(url);
+      return { action: "deny" };
+    });
+    childWindow.webContents.on("will-navigate", (event, url) => {
+      if (isTrustedLocalUrl(url)) return;
+      event.preventDefault();
+      void openExternal(url);
+    });
   });
 
   mainWindow.webContents.on("will-navigate", (event, url) => {

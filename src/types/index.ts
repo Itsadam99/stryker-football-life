@@ -176,6 +176,23 @@ export interface DlssSettings {
   qualityMode: number;
   qualityId: "default" | "performance" | "balanced" | "quality" | "ultra-performance" | "ultra-quality" | "dlaa";
   autoExposure: boolean;
+  /** Direct Neural Rendering, 0 → 1. */
+  intensity: number;
+  autoMask: boolean;
+  /** Blanc diffus en nits, 80 → 1000. */
+  diffuseWhiteNits: number;
+  /** 0 aucune, 1 conservatrice, 2 complète. */
+  uiCorrectionMode: 0 | 1 | 2;
+  globalToneStrength: number;
+  localToneStrength: number;
+  localStructureStrength: number;
+  skinStructureStrength: number;
+  overlay: {
+    configured: boolean;
+    shortcut: string;
+    hotReload: boolean;
+    nativePanelDetected: boolean;
+  };
   missingFiles: string[];
   configPath: string;
   backupPath: string;
