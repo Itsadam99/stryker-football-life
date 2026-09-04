@@ -14,13 +14,14 @@ import { assertPathInside, ensureDataDirectories, resolveDataRoot, sanitizeSegme
 import { ProcessManager } from "./process-manager.js";
 import { RepositoryManager } from "./repository-manager.js";
 import { RemoteInstaller } from "./remote-installer.js";
+import { listLogs, readLog } from "./log-reader.js";
 import { SiderManager, fileHash } from "./sider-manager.js";
 import { StateStore } from "./storage.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
-const APP_VERSION = "3.9.0";
+const APP_VERSION = "3.9.1";
 const MAX_LOCAL_ARCHIVE_BYTES = 20 * 1024 * 1024 * 1024;
 
 function ensureMockSandbox(mockDir) {
@@ -679,6 +680,14 @@ export function createApp(runtime = createRuntime()) {
   });
 
   app.get("/api/activity", (req, res) => res.json({ activity: store.snapshot().activity }));
+
+  app.get("/api/logs", (req, res) => res.json({ logs: listLogs(store.snapshot().settings) }));
+
+  app.get("/api/logs/:id", (req, res, next) => {
+    try {
+      res.json(readLog(store.snapshot().settings, req.params.id, { lines: req.query.lines }));
+    } catch (error) { next(error); }
+  });
   app.get("/api/launcher/status", (req, res) => res.json(processManager.status()));
   app.post("/api/launcher/launch", async (req, res, next) => {
     try { res.json({ success: true, ...await processManager.launch(store.snapshot().settings) }); }

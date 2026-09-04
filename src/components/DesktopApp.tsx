@@ -2,20 +2,21 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity, AlertTriangle, ArchiveRestore, ArrowDown, ArrowUp, CheckCircle2,
   CircleGauge, Download, ExternalLink, FolderSearch, HeartPulse, Layers3,
-  Library, PackageOpen, Play, Plus, RefreshCw, Settings, ShieldCheck, Sparkles, Square,
+  Library, PackageOpen, Play, Plus, RefreshCw, ScrollText, Search, Settings, ShieldCheck, Sparkles, Square,
   Trash2, UploadCloud, UserRoundCog, Wrench, XCircle,
 } from "lucide-react";
 import { api } from "../services/api";
 import { localizeCatalogMod, VERIFIED_CATALOG_MODS } from "../services/catalogData";
 import {
   ActivityItem, BackupItem, ConflictReport, DlssSettings, GameConfig, GameProcessStatus,
-  CatalogMod, HealthCheck, HealthReport, HubSubmission, ManagedMod, ModItem, Profile, UpdateStatus,
+  CatalogMod, HealthCheck, HealthReport, HubSubmission, LogContent, LogSource, ManagedMod, ModItem, Profile, UpdateStatus,
 } from "../types";
 import { StrykerLogo } from "./StrykerLogo";
 import { Language, LanguageSwitcher, useI18n } from "../i18n";
 import { DLSS_COPY } from "../services/dlssCopy";
+import { LOG_COPY, logLineLevel } from "../services/logCopy";
 
-type DesktopPage = "dashboard" | "mods" | "catalog" | "profiles" | "conflicts" | "settings";
+type DesktopPage = "dashboard" | "mods" | "catalog" | "profiles" | "conflicts" | "logs" | "settings";
 
 const EMPTY_CONFIG: GameConfig = {
   gamePath: "",
@@ -75,7 +76,7 @@ const EMPTY_DLSS: DlssSettings = {
   },
 };
 
-const APP_VERSION = "3.9.0";
+const APP_VERSION = "3.9.1";
 
 const EMPTY_UPDATE: UpdateStatus = {
   currentVersion: APP_VERSION,
@@ -106,12 +107,14 @@ function formatDate(value: string | null | undefined, language: Language, never:
 
 export function DesktopApp() {
   const { language, t } = useI18n();
+  const logCopy = LOG_COPY[language];
   const navigation: Array<{ id: DesktopPage; label: string; icon: React.ElementType }> = [
     { id: "dashboard", label: t("desktop.dashboard"), icon: CircleGauge },
     { id: "mods", label: t("desktop.mods"), icon: Layers3 },
     { id: "catalog", label: t("desktop.discover"), icon: Library },
     { id: "profiles", label: t("desktop.profiles"), icon: UserRoundCog },
     { id: "conflicts", label: t("desktop.conflicts"), icon: Wrench },
+    { id: "logs", label: logCopy.nav, icon: ScrollText },
     { id: "settings", label: t("desktop.settings"), icon: Settings },
   ];
   const [page, setPage] = useState<DesktopPage>("dashboard");
@@ -138,6 +141,19 @@ export function DesktopApp() {
   const [profileDescription, setProfileDescription] = useState("");
   const [dropActive, setDropActive] = useState(false);
   const deepLinkHandled = useRef(false);
+
+  // Tâche en cours : alimente la barre de progression sous l'en-tête. `progress`
+  // reste null quand l'opération ne sait pas où elle en est.
+  const [task, setTask] = useState<{ label: string; progress: number | null } | null>(null);
+  // Identifiant de l'élément en cours de bascule, pour n'animer que sa ligne.
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
+  const [logSources, setLogSources] = useState<LogSource[]>([]);
+  const [logSourceId, setLogSourceId] = useState<string | null>(null);
+  const [logContent, setLogContent] = useState<LogContent | null>(null);
+  const [logSearch, setLogSearch] = useState("");
+  const [logFollow, setLogFollow] = useState(true);
+  const logViewRef = useRef<HTMLDivElement | null>(null);
 
   const activeProfile = profiles.find((profile) => profile.active);
   const activeProfileLabel = activeProfile?.id === "default" ? t("desktop.mainProfile") : activeProfile?.name || "—";
@@ -180,6 +196,11 @@ export function DesktopApp() {
     const query = search.trim().toLowerCase();
     return query ? mods.filter((mod) => [mod.name, mod.author, mod.category].some((value) => value.toLowerCase().includes(query))) : mods;
   }, [mods, search]);
+  const visibleLogLines = useMemo(() => {
+    const lines = logContent?.lines ?? [];
+    const query = logSearch.trim().toLowerCase();
+    return query ? lines.filter((line) => line.toLowerCase().includes(query)) : lines;
+  }, [logContent, logSearch]);
   const externalCatalogMods = useMemo(
     () => VERIFIED_CATALOG_MODS
       .filter((mod) => mod.status === "pending_review" || Boolean(mod.sourceUrl || mod.downloadUrl))
@@ -258,18 +279,72 @@ export function DesktopApp() {
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, []);
 
-  const runAction = async (action: () => Promise<unknown>, successMessage?: string) => {
+  // Liste des journaux disponibles, reconstruite à chaque passage sur la page :
+  // un module peut créer son fichier au premier lancement du jeu.
+  useEffect(() => {
+    if (page !== "logs") return;
+    let cancelled = false;
+    api.getLogs()
+      .then((sources) => {
+        if (cancelled) return;
+        setLogSources(sources);
+        setLogSourceId((current) => (current && sources.some((item) => item.id === current) ? current : sources[0]?.id ?? null));
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [page, config.isLinked, status.isRunning]);
+
+  // Lecture du journal sélectionné. On ne replanifie que si le suivi est actif,
+  // et plus vite quand le jeu tourne : c'est là que les lignes arrivent.
+  useEffect(() => {
+    if (page !== "logs" || !logSourceId) return;
+    let cancelled = false;
+    let timer = 0;
+    const tick = async () => {
+      try {
+        const next = await api.readLog(logSourceId, 600);
+        if (!cancelled) setLogContent(next);
+      } catch {
+        // Fichier supprimé ou jeu délié : la liste sera reconstruite ensuite.
+      }
+      if (!cancelled && logFollow) timer = window.setTimeout(tick, status.isRunning ? 1_500 : 5_000);
+    };
+    void tick();
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [page, logSourceId, logFollow, status.isRunning]);
+
+  // Colle la vue au bas du fichier tant que le suivi est actif.
+  useEffect(() => {
+    if (!logFollow || page !== "logs") return;
+    const view = logViewRef.current;
+    if (view) view.scrollTop = view.scrollHeight;
+  }, [logContent, logFollow, page]);
+
+  /**
+   * `label` alimente la barre de progression sous l'en-tête ; `itemId` marque la
+   * ligne concernée pour que l'utilisateur voie *quel* mod travaille.
+   */
+  const runAction = async (
+    action: () => Promise<unknown>,
+    successMessage?: string,
+    { label, itemId }: { label?: string; itemId?: string } = {},
+  ) => {
     if (busy) return;
     setBusy(true);
+    setTask({ label: label || t("desktop.refresh"), progress: null });
+    if (itemId) setPendingId(itemId);
     try {
       const result = await action();
       if (result === false) return;
+      setTask({ label: t("desktop.refresh"), progress: null });
       await refreshAll();
       if (successMessage) announce(successMessage);
     } catch (error: any) {
       announce(error.message || t("desktop.genericError"), "error");
     } finally {
       setBusy(false);
+      setTask(null);
+      setPendingId(null);
     }
   };
 
@@ -277,13 +352,13 @@ export function DesktopApp() {
     const selection = await api.browseGameFolder();
     if (selection.cancelled || !selection.path) return false;
     await api.linkGame(selection.path);
-  }, t("desktop.linkedSuccess"));
+  }, t("desktop.linkedSuccess"), { label: t("desktop.linkGame") });
 
   const importArchive = () => runAction(async () => {
     const selection = await api.browseArchive();
     if (selection.cancelled || !selection.path) return false;
     await api.installArchive(selection.path);
-  }, config.isLinked ? t("desktop.archiveDeployed") : t("desktop.archivePrepared"));
+  }, config.isLinked ? t("desktop.archiveDeployed") : t("desktop.archivePrepared"), { label: t("desktop.installZip") });
 
   const installLegacyDlss = () => runAction(async () => {
     const selection = await api.browseLegacyDlssFile();
@@ -302,8 +377,10 @@ export function DesktopApp() {
       return;
     }
     void runAction(
-      () => api.installUploadedArchive(file),
+      // L'envoi rapporte sa progression : c'est l'opération la plus longue.
+      () => api.installUploadedArchive(file, (percent) => setTask({ label: file.name, progress: percent })),
       config.isLinked ? t("desktop.archiveDeployed") : t("desktop.archivePrepared"),
+      { label: file.name },
     );
   };
 
@@ -324,13 +401,23 @@ export function DesktopApp() {
     const ordered = [...mods];
     const [moved] = ordered.splice(index, 1);
     ordered.splice(nextIndex, 0, moved);
-    runAction(() => api.reorderMods(ordered.map((mod) => mod.id)), t("desktop.prioritiesDeployed"));
+    runAction(() => api.reorderMods(ordered.map((item) => item.id)), t("desktop.prioritiesDeployed"), { label: t("desktop.prioritiesDeployed"), itemId: moved.id });
   };
 
-  const launchOrStop = () => runAction(
-    () => status.isRunning ? api.stopGame() : api.launchGame(),
-    status.isRunning ? t("desktop.sessionStopped") : t("desktop.gameLaunched")
-  );
+  const launchOrStop = () => {
+    const starting = !status.isRunning;
+    // Au démarrage on bascule tout de suite sur le journal : c'est là que se
+    // voit ce que Sider charge, et l'attente devient lisible.
+    if (starting) {
+      setPage("logs");
+      setLogFollow(true);
+    }
+    return runAction(
+      () => (starting ? api.launchGame() : api.stopGame()),
+      starting ? t("desktop.gameLaunched") : t("desktop.sessionStopped"),
+      { label: starting ? t("desktop.launch") : t("desktop.stop") },
+    );
+  };
 
   const updateStateLabel = {
     disabled: t("desktop.updateDisabled"),
@@ -487,7 +574,7 @@ export function DesktopApp() {
           <div className="flex shrink-0 items-center gap-2">
             <LanguageSwitcher compact />
             <button
-              onClick={() => runAction(() => Promise.resolve(), t("desktop.updated"))}
+              onClick={() => runAction(() => Promise.resolve(), t("desktop.updated"), { label: t("desktop.refresh") })}
               disabled={busy}
               aria-label={t("desktop.refresh")}
               className="sk-icon-btn"
@@ -506,6 +593,28 @@ export function DesktopApp() {
             </button>
           </div>
         </header>
+
+        {/* Barre de tâche : visible pour toute opération, avec un pourcentage
+            réel quand l'opération sait où elle en est. */}
+        {(task || (updateStatus.state === "downloading" && updateStatus.updaterConfigured)) && (
+          <div className="sk-taskbar sticky top-[var(--sk-topbar)] z-20 px-5 py-2.5 lg:px-8" role="status" aria-live="polite">
+            <div className="mx-auto flex max-w-[1500px] items-center gap-3">
+              <RefreshCw className="h-3.5 w-3.5 shrink-0 animate-spin text-[color:var(--sk-accent)]" />
+              <span className="sk-label shrink-0 text-[color:var(--sk-muted)]">
+                {updateStatus.state === "downloading" && !task ? t("desktop.updateDownloading") : task?.label}
+              </span>
+              <div className="min-w-0 flex-1">
+                <ProgressBar value={updateStatus.state === "downloading" && !task ? updateStatus.progress : task?.progress ?? null} />
+              </div>
+              {(() => {
+                const shown = updateStatus.state === "downloading" && !task ? updateStatus.progress : task?.progress;
+                return typeof shown === "number"
+                  ? <span className="shrink-0 font-mono text-[11px] font-bold text-[color:var(--sk-accent-soft)]">{Math.round(shown)} %</span>
+                  : null;
+              })()}
+            </div>
+          </div>
+        )}
 
         <main className="mx-auto max-w-[1500px] p-5 lg:p-8">
           {updateStatus.updaterConfigured && ["available", "downloading", "ready"].includes(updateStatus.state) && (
@@ -707,13 +816,21 @@ export function DesktopApp() {
                                 role="switch"
                                 aria-checked={mod.enabled}
                                 aria-label={`${mod.enabled ? t("desktop.disable") : t("desktop.enable")} ${mod.name}`}
-                                onClick={() => runAction(() => api.toggleManagedMod(mod.id, !mod.enabled), mod.enabled ? t("desktop.disabled") : t("desktop.enabled"))}
+                                onClick={() => runAction(
+                                  () => api.toggleManagedMod(mod.id, !mod.enabled),
+                                  mod.enabled ? t("desktop.disabled") : t("desktop.enabled"),
+                                  { label: `${mod.enabled ? t("desktop.disable") : t("desktop.enable")} · ${mod.name}`, itemId: mod.id },
+                                )}
                                 className="flex items-center gap-2.5 text-[9px] font-black uppercase tracking-[0.08em]"
                               >
                                 <span className="sk-switch" data-on={mod.enabled ? "on" : "off"}><span /></span>
-                                <span className={mod.enabled ? "text-[color:var(--sk-ok)]" : "text-[color:var(--sk-ghost)]"}>
-                                  {mod.enabled ? t("desktop.activeStatus") : t("desktop.disabledState")}
-                                </span>
+                                {pendingId === mod.id ? (
+                                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-[color:var(--sk-accent)]" />
+                                ) : (
+                                  <span className={mod.enabled ? "text-[color:var(--sk-ok)]" : "text-[color:var(--sk-ghost)]"}>
+                                    {mod.enabled ? t("desktop.activeStatus") : t("desktop.disabledState")}
+                                  </span>
+                                )}
                               </button>
                               <div className="flex justify-end gap-1.5">
                                 <IconButton label={`${t("desktop.moveUp")} ${mod.name}`} disabled={trueIndex === 0} onClick={() => moveMod(trueIndex, "up")}><ArrowUp className="h-4 w-4" /></IconButton>
@@ -721,7 +838,7 @@ export function DesktopApp() {
                                 <IconButton
                                   label={`${t("desktop.uninstall")} ${mod.name}`}
                                   danger
-                                  onClick={() => { if (window.confirm(`${t("desktop.uninstall")} ${mod.name} ? ${t("desktop.uninstallConfirm")}`)) runAction(() => api.uninstallMod(mod.id), t("desktop.uninstalled")); }}
+                                  onClick={() => { if (window.confirm(`${t("desktop.uninstall")} ${mod.name} ? ${t("desktop.uninstallConfirm")}`)) runAction(() => api.uninstallMod(mod.id), t("desktop.uninstalled"), { label: `${t("desktop.uninstall")} · ${mod.name}`, itemId: mod.id }); }}
                                 ><Trash2 className="h-4 w-4" /></IconButton>
                               </div>
                             </div>
@@ -744,7 +861,7 @@ export function DesktopApp() {
                         role="switch"
                         aria-checked={mod.enabled}
                         aria-label={`${mod.enabled ? t("desktop.disable") : t("desktop.enable")} ${t("desktop.manualEntry")} ${mod.name}`}
-                        onClick={() => runAction(() => api.toggleManualMod(mod.lineIndex, !mod.enabled), t("desktop.manualUpdated"))}
+                        onClick={() => runAction(() => api.toggleManualMod(mod.lineIndex, !mod.enabled), t("desktop.manualUpdated"), { label: mod.name })}
                         className="sk-switch"
                         data-on={mod.enabled ? "brand" : "off"}
                       ><span /></button>
@@ -778,6 +895,7 @@ export function DesktopApp() {
                           key={mod.id}
                           mod={mod}
                           installed={Boolean(installedMod)}
+                          pending={pendingId === mod.id}
                           badge={t("desktop.hosted")}
                           badgeTone="brand"
                           installedLabel={installedMod?.installCount && installedMod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")}
@@ -789,6 +907,7 @@ export function DesktopApp() {
                               config.isLinked
                                 ? `${mod.title} ${installedMod ? t("desktop.reinstalledDeployed") : t("desktop.installedDeployed")}`
                                 : `${mod.title} ${t("desktop.preparedLink")}`,
+                              { label: `${t("desktop.install")} · ${mod.title}`, itemId: mod.id },
                             )}
                             disabled={busy}
                             className="sk-btn sk-btn-primary flex-1"
@@ -855,6 +974,7 @@ export function DesktopApp() {
                         key={mod.id}
                         mod={mod}
                         installed={Boolean(installedMod)}
+                        pending={pendingId === mod.id}
                         badge={mod.status === "pending_review" ? t("desktop.pendingReview") : remoteInstallable ? t("desktop.hosted") : mod.legalStatus === "verified_source" ? t("desktop.verifiedSource") : t("desktop.communityLink")}
                         badgeTone={mod.status === "pending_review" ? "warn" : remoteInstallable || mod.legalStatus === "verified_source" ? "ok" : "warn"}
                         installedLabel={installedMod?.installCount && installedMod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")}
@@ -868,6 +988,7 @@ export function DesktopApp() {
                               config.isLinked
                                 ? `${mod.title} ${installedMod ? t("desktop.reinstalledDeployed") : t("desktop.installedDeployed")}`
                                 : `${mod.title} ${t("desktop.preparedLink")}`,
+                              { label: `${t("desktop.install")} · ${mod.title}`, itemId: mod.id },
                             )}
                             disabled={busy}
                             className="sk-btn sk-btn-primary flex-1"
@@ -978,6 +1099,92 @@ export function DesktopApp() {
                   </div>
                 ))}
               </Panel>
+            </div>
+          )}
+
+          {/* -------------------------------------------------------------- LOGS */}
+          {page === "logs" && (
+            <div className="space-y-5">
+              {!config.isLinked ? (
+                <section className="flex gap-3.5 border border-amber-400/30 bg-amber-400/[0.07] p-5">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                  <div>
+                    <h2 className="sk-display text-base text-amber-100">{logCopy.notLinked}</h2>
+                    <p className="mt-1.5 text-xs leading-relaxed text-amber-100/65">{logCopy.notLinkedHint}</p>
+                  </div>
+                </section>
+              ) : logSources.length === 0 ? (
+                <Empty text={`${logCopy.empty} · ${logCopy.emptyHint}`} />
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="sk-segment" role="group" aria-label={logCopy.sources}>
+                      {logSources.map((source) => (
+                        <button
+                          key={source.id}
+                          type="button"
+                          className="sk-segment-item"
+                          data-active={source.id === logSourceId}
+                          aria-pressed={source.id === logSourceId}
+                          onClick={() => { setLogSourceId(source.id); setLogContent(null); }}
+                        >
+                          {source.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="relative block">
+                        <span className="sr-only">{logCopy.searchLabel}</span>
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--sk-ghost)]" />
+                        <input
+                          value={logSearch}
+                          onChange={(event) => setLogSearch(event.target.value)}
+                          placeholder={logCopy.search}
+                          className="sk-input w-56 pl-9"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        aria-pressed={logFollow}
+                        onClick={() => setLogFollow((value) => !value)}
+                        className={`sk-btn ${logFollow ? "sk-btn-brand" : "sk-btn-ghost"}`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${logFollow ? "animate-pulse bg-white" : "bg-[color:var(--sk-ghost)]"}`} />
+                        {logFollow ? logCopy.live : logCopy.paused}
+                      </button>
+                    </div>
+                  </div>
+
+                  <section className="sk-panel overflow-hidden">
+                    <div className="sk-panel-head">
+                      <h2 className="sk-display flex items-center gap-2.5 text-base">
+                        <ScrollText className="h-4 w-4 text-[color:var(--sk-brand-glow)]" />
+                        {logSources.find((item) => item.id === logSourceId)?.label || logCopy.nav}
+                        <span className="border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-black not-italic text-[color:var(--sk-faint)]">
+                          {visibleLogLines.length} {logCopy.lines}
+                        </span>
+                      </h2>
+                      <span className="sk-label">
+                        {logContent ? `${logCopy.updatedAt} ${formatDate(logContent.updatedAt, language, t("desktop.never"))}` : logCopy.loading}
+                      </span>
+                    </div>
+                    <div ref={logViewRef} className="sk-log h-[58vh] border-0">
+                      {visibleLogLines.length === 0 ? (
+                        <p className="p-6 text-center text-xs text-[color:var(--sk-ghost)]">
+                          {logSearch.trim() ? logCopy.noMatch : logCopy.loading}
+                        </p>
+                      ) : visibleLogLines.map((line, index) => (
+                        <span key={`${index}-${line.slice(0, 24)}`} className="sk-log-line" data-level={logLineLevel(line)}>
+                          <LogLine line={line} query={logSearch.trim()} />
+                        </span>
+                      ))}
+                    </div>
+                    {logContent?.truncated && (
+                      <p className="border-t border-white/10 px-4 py-2 text-[10px] text-[color:var(--sk-ghost)]">{logCopy.truncated}</p>
+                    )}
+                  </section>
+                </>
+              )}
             </div>
           )}
 
@@ -1209,9 +1416,10 @@ function Metric({ index, icon: Icon, label, value, detail, warning }: { index: s
   );
 }
 
-function ModCard({ mod, installed, badge, badgeTone, installedLabel, meta, children }: {
+function ModCard({ mod, installed, pending, badge, badgeTone, installedLabel, meta, children }: {
   mod: CatalogMod;
   installed: boolean;
+  pending?: boolean;
   badge: string;
   badgeTone?: "ok" | "warn" | "brand";
   installedLabel: string;
@@ -1220,6 +1428,7 @@ function ModCard({ mod, installed, badge, badgeTone, installedLabel, meta, child
 }) {
   return (
     <article className={`sk-panel group flex flex-col overflow-hidden ${installed ? "border-emerald-500/35" : ""}`}>
+      {pending && <ProgressBar value={null} />}
       <div className="relative h-32 shrink-0 overflow-hidden border-b border-white/[0.07] bg-[radial-gradient(circle_at_75%_20%,rgba(130,27,110,.34),transparent_46%),var(--sk-ink)]">
         <img
           src="/stryker-logo.png"
@@ -1251,6 +1460,44 @@ function IconButton({ label, danger, disabled, onClick, children }: { label: str
       {children}
     </button>
   );
+}
+
+/** Déterminée si `value` est un nombre, indéterminée sinon. */
+function ProgressBar({ value, tone }: { value: number | null; tone?: "ok" | "info" }) {
+  const indeterminate = value === null || Number.isNaN(value);
+  const clamped = indeterminate ? 0 : Math.min(100, Math.max(0, value));
+  return (
+    <div
+      className="sk-progress"
+      data-indeterminate={indeterminate ? "true" : undefined}
+      data-tone={tone}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={indeterminate ? undefined : Math.round(clamped)}
+    >
+      <div className="sk-progress-value" style={indeterminate ? undefined : { width: `${clamped}%` }} />
+    </div>
+  );
+}
+
+/** Surligne les occurrences du filtre dans une ligne de journal. */
+function LogLine({ line, query }: { line: string; query: string }) {
+  if (!query) return <>{line}</>;
+  const haystack = line.toLowerCase();
+  const needle = query.toLowerCase();
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  let found = haystack.indexOf(needle);
+  let key = 0;
+  while (found !== -1) {
+    if (found > cursor) parts.push(line.slice(cursor, found));
+    parts.push(<mark key={key += 1} className="sk-log-match">{line.slice(found, found + query.length)}</mark>);
+    cursor = found + query.length;
+    found = haystack.indexOf(needle, cursor);
+  }
+  if (cursor < line.length) parts.push(line.slice(cursor));
+  return <>{parts}</>;
 }
 
 function Empty({ text }: { text: string }) {

@@ -213,6 +213,25 @@ export interface DlssSettings {
   };
 }
 
+/** Un fichier journal du jeu exposé par le moteur local. */
+export interface LogSource {
+  id: string;
+  label: string;
+  size: number;
+  updatedAt: string | null;
+  /** Chemin relatif au dossier du jeu, affiché tel quel. */
+  path: string;
+}
+
+export interface LogContent {
+  id: string;
+  size: number;
+  /** Vrai quand le début du fichier a été écarté : on ne lit que la fin. */
+  truncated: boolean;
+  updatedAt: string;
+  lines: string[];
+}
+
 export interface GameProcessStatus {
   isRunning: boolean;
   pid: number | null;

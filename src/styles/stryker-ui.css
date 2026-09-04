@@ -629,6 +629,81 @@
     box-shadow: inset 2px 0 0 0 var(--sk-accent);
   }
 
+  /* --- Barres de progression --------------------------------------------
+     Déterminée quand l'opération sait où elle en est (téléchargement, envoi
+     d'archive), indéterminée sinon — plutôt qu'un faux pourcentage. */
+  .sk-progress {
+    background: rgba(255, 255, 255, 0.08);
+    height: 3px;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+
+  .sk-progress-value {
+    background: var(--sk-accent);
+    height: 100%;
+    transition: width 240ms var(--sk-ease);
+  }
+
+  .sk-progress[data-indeterminate="true"] .sk-progress-value {
+    animation: sk-indeterminate 1.15s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+    width: 34%;
+  }
+
+  .sk-progress[data-tone="ok"] .sk-progress-value { background: var(--sk-ok); }
+  .sk-progress[data-tone="info"] .sk-progress-value { background: var(--sk-info); }
+
+  /* Bandeau de tâche en cours, collé sous la barre supérieure */
+  .sk-taskbar {
+    animation: sk-taskbar-in 240ms var(--sk-ease) both;
+    background: var(--sk-ink);
+    border-bottom: 1px solid var(--sk-line);
+  }
+
+  /* --- Journal ------------------------------------------------------------ */
+  .sk-log {
+    background: #050406;
+    border: 1px solid var(--sk-line);
+    color: var(--sk-muted);
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .sk-log-line {
+    border-left: 2px solid transparent;
+    display: block;
+    padding: 1px 10px;
+  }
+
+  .sk-log-line:hover {
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .sk-log-line[data-level="error"] {
+    border-left-color: var(--sk-danger);
+    color: #fecdd3;
+  }
+
+  .sk-log-line[data-level="warn"] {
+    border-left-color: var(--sk-warn);
+    color: #fde68a;
+  }
+
+  .sk-log-line[data-level="ok"] {
+    border-left-color: var(--sk-ok);
+    color: #a7f3d0;
+  }
+
+  .sk-log-match {
+    background: var(--sk-accent);
+    color: #fff;
+  }
+
   /* --- Toast ------------------------------------------------------------- */
   .sk-toast {
     animation: sk-toast-in 340ms var(--sk-ease-back) both;
@@ -673,6 +748,16 @@
 @keyframes sk-toast-in {
   from { opacity: 0; transform: translateY(12px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes sk-indeterminate {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(330%); }
+}
+
+@keyframes sk-taskbar-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
