@@ -60,6 +60,29 @@ if (manifestVersion !== version) {
   fail(`latest.yml annonce la version ${manifestVersion || "?"} alors que package.json est en ${version}.\nRelancez « npm run package:win » après avoir changé la version.`);
 }
 
+// Les archives tierces du catalogue intégré vivent hors du dépôt public : le
+// moteur les ignore silencieusement quand elles manquent, ce qui produirait un
+// installateur amputé sans que rien ne le signale. On refuse de publier ça.
+const bundledCatalog = path.join(ROOT, "bundled-mods", "catalog.json");
+if (fs.existsSync(bundledCatalog)) {
+  let entries = [];
+  try {
+    entries = JSON.parse(fs.readFileSync(bundledCatalog, "utf-8"));
+  } catch {
+    fail(`Catalogue intégré illisible : ${bundledCatalog}`);
+  }
+  const missing = (Array.isArray(entries) ? entries : [])
+    .map((entry) => String(entry?.archiveFile || ""))
+    .filter((name) => name && !fs.existsSync(path.join(ROOT, "bundled-mods", name)));
+  if (missing.length > 0) {
+    fail([
+      `Archives du catalogue intégré absentes : ${missing.join(", ")}.`,
+      "Sans elles, l'installateur se construit quand même mais ces mods disparaissent de l'application.",
+      "Ajoutez-les dans bundled-mods/ puis relancez « npm run package:win ».",
+    ].join("\n"));
+  }
+}
+
 const installerSize = fs.statSync(installer).size;
 const manifestSize = Number(manifestText.match(/^\s+size:\s*(\d+)$/m)?.[1]);
 if (Number.isFinite(manifestSize) && manifestSize !== installerSize) {

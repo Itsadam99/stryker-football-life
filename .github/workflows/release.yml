@@ -52,15 +52,51 @@ jobs:
           }
           Write-Host "Version $version confirmée."
 
+      # Les archives tierces du catalogue intégré ne sont pas dans le dépôt
+      # public. Sans elles l'installateur se construit quand même, mais les mods
+      # concernés disparaissent de l'application : on ne publie pas ça.
+      - name: Vérifier le catalogue intégré
+        id: bundled
+        shell: pwsh
+        run: |
+          $catalog = "bundled-mods/catalog.json"
+          if (-not (Test-Path $catalog)) {
+            "complete=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            exit 0
+          }
+          $missing = @()
+          foreach ($entry in (Get-Content $catalog -Raw | ConvertFrom-Json)) {
+            if (-not (Test-Path (Join-Path "bundled-mods" $entry.archiveFile))) {
+              $missing += $entry.archiveFile
+            }
+          }
+          if ($missing.Count -gt 0) {
+            Write-Warning "Archives intégrées absentes : $($missing -join ', ')"
+            "complete=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            "complete=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+
       - name: Construire l'installateur
         run: npm run package:win
 
-      # publish-release.mjs refuse un lot incohérent : manifeste absent, version
-      # divergente ou taille qui ne correspond pas à l'installateur.
+      # publish-release.mjs refuse en plus un lot incohérent : manifeste absent,
+      # version divergente ou taille qui ne correspond pas à l'installateur.
       - name: Publier sur GitHub Releases
+        if: steps.bundled.outputs.complete == 'true'
         run: npm run release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publication ignorée
+        if: steps.bundled.outputs.complete != 'true'
+        shell: pwsh
+        run: |
+          $message = "Publication ignoree : les archives du catalogue integre manquent sur le runner. " +
+            "L'installateur construit ici est incomplet et n'a pas ete publie. " +
+            "Publiez depuis une machine disposant de bundled-mods/ avec « npm run release »."
+          Write-Warning $message
+          "## Publication ignorée`n`n$message" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
 
       - name: Conserver l'installateur en artefact
         uses: actions/upload-artifact@v4
