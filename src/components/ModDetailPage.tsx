@@ -29,7 +29,7 @@ export const ModDetailPage: React.FC<ModDetailPageProps> = ({ mod, onBack, onIns
       <section className="px-3 sm:px-5">
         <div className="relative mx-auto min-h-[72vh] max-w-[1380px] overflow-hidden rounded-[1.8rem] border border-white/10 bg-[#130b11] sm:rounded-[2.5rem]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_28%,rgba(143,28,121,.3),transparent_38%),linear-gradient(130deg,#050405_0%,#160b13_58%,#080607_100%)]" />
-          <img src="/stryker-logo.png" alt="" aria-hidden="true" className="absolute -right-[12%] top-[-18%] w-[74rem] max-w-none opacity-[0.1] mix-blend-screen" />
+          <img src="/stryker-logo.png" alt="" aria-hidden="true" width={1536} height={1024} loading="lazy" decoding="async" className="absolute -right-[12%] top-[-18%] w-[74rem] max-w-none opacity-[0.1] mix-blend-screen" />
           <div className="absolute inset-0 stryker-noise opacity-20" />
           <div className="relative z-10 flex min-h-[72vh] flex-col justify-between p-6 sm:p-10 lg:p-16">
             <div className="flex items-center justify-between gap-4">

@@ -675,7 +675,10 @@ export function createApp(runtime = createRuntime()) {
   return app;
 }
 
-export async function startServer({ port = Number(process.env.PORT || 3001), host = process.env.STRYKER_HOST || "127.0.0.1", rootDir = ROOT_DIR, dataRoot, nativeDialogs = null, updateManager = null, publicHub, adminToken } = {}) {
+// Variable dédiée plutôt que PORT : PORT est souvent déjà positionné par les
+// outils qui lancent le client (harnais, CI, IDE), et le moteur local se liait
+// alors au port de Vite pendant que le proxy continuait de viser 3001.
+export async function startServer({ port = Number(process.env.STRYKER_API_PORT || 3001), host = process.env.STRYKER_HOST || "127.0.0.1", rootDir = ROOT_DIR, dataRoot, nativeDialogs = null, updateManager = null, publicHub, adminToken } = {}) {
   const effectiveDataRoot = dataRoot || resolveDataRoot(rootDir);
   ensureMockSandbox(path.join(effectiveDataRoot, "demo"));
   const runtime = createRuntime({ rootDir, dataRoot: effectiveDataRoot, nativeDialogs, updateManager, publicHub, adminToken });

@@ -75,10 +75,12 @@ export const HomePage: React.FC<HomePageProps> = ({
             {t("home.badge")}
           </div>
 
-          <div className="relative z-[2] m-auto w-full px-4 pb-32 pt-40 text-center sm:px-8 sm:pb-36">
+          <div className="relative z-[2] m-auto w-full px-4 pb-28 pt-32 text-center sm:px-8 sm:pb-32">
             <p className="mb-4 text-[10px] font-black uppercase tracking-[0.42em] text-[#e6a6d9] sm:mb-6 sm:text-xs">{copy.heroKicker}</p>
             <h1 className="sr-only">STRYKER</h1>
-            <img src="/stryker-logo.png" alt="STRYKER" className="stryker-hero-logo mx-auto w-full max-w-5xl object-contain" />
+            {/* Le logo est plafonné en hauteur : sans cela il mange 680 px et
+                repousse les boutons sous la ligne de flottaison en 720 px. */}
+            <img src="/stryker-logo.png" alt="STRYKER" width={1536} height={1024} decoding="async" className="stryker-hero-logo mx-auto max-h-[46svh] w-full max-w-5xl object-contain" />
             <p className="mx-auto mt-9 max-w-2xl text-sm font-medium leading-relaxed text-white/66 sm:mt-12 sm:text-base">
               {t("home.description")}
             </p>
@@ -114,7 +116,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="mx-auto grid max-w-[1380px] gap-5 lg:grid-cols-3">
           {featured.map((mod, index) => (
             <article key={mod.id} data-reveal className="brand-mod-card group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[1.8rem] border border-white/10 p-6 sm:p-8">
-              <img src="/stryker-logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -right-20 -top-12 w-[25rem] max-w-none opacity-[0.075] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.12]" />
+              <img src="/stryker-logo.png" alt="" aria-hidden="true" width={1536} height={1024} loading="lazy" decoding="async" className="pointer-events-none absolute -right-20 -top-12 w-[25rem] max-w-none opacity-[0.075] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.12]" />
               <div className="relative z-10 flex items-start justify-between gap-4">
                 <span className="rounded-full border border-white/15 bg-black/30 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.16em]">{statusLabel(mod, { hosted: t("home.hosted"), verified: t("home.verified"), community: t("home.community") })}</span>
                 <span className="text-4xl font-black tracking-[-0.08em] text-white/16">{String(index + 1).padStart(2, "0")}</span>
