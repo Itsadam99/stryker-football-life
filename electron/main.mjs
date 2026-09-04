@@ -8,19 +8,49 @@ let mainWindow = null;
 let localServer = null;
 let allowedOrigin = "";
 let pendingDeepLink = process.argv.find((argument) => /^stryker:\/\//i.test(argument)) || null;
+// Vrai quand l'utilisateur a accepté la mise à jour proposée au démarrage :
+// une fois le téléchargement fini, on installe sans redemander.
+let updateAccepted = false;
+
 const updateManager = createUpdateManager({
   currentVersion: app.getVersion(),
   isPackaged: app.isPackaged,
   resourcesPath: process.resourcesPath,
-  // La mise à jour est déjà téléchargée et s'installera de toute façon à la
-  // fermeture : on propose simplement d'aller plus vite.
+
+  // Au lancement, STRYKER cherche une mise à jour et la propose.
+  onAvailable: (version) => {
+    if (!mainWindow) return;
+    void dialog.showMessageBox(mainWindow, {
+      type: "info",
+      title: "STRYKER",
+      message: `La version ${version} est disponible.`,
+      detail: "STRYKER peut la télécharger et l’installer maintenant. L’application redémarrera une fois la mise à jour terminée.",
+      buttons: ["Mettre à jour maintenant", "Plus tard"],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    }).then(({ response }) => {
+      if (response !== 0) return;
+      updateAccepted = true;
+      // Les erreurs de téléchargement remontent déjà dans l'état affiché
+      // par la page Paramètres.
+      void updateManager.download().catch(() => undefined);
+    }).catch(() => undefined);
+  },
+
+  // Téléchargement terminé : on applique tout de suite si l'utilisateur avait
+  // accepté, sinon on lui laisse le choix du moment.
   onReady: (version) => {
+    if (updateAccepted) {
+      updateManager.install();
+      return;
+    }
     if (!mainWindow) return;
     void dialog.showMessageBox(mainWindow, {
       type: "info",
       title: "STRYKER",
       message: `La version ${version} est prête.`,
-      detail: "Elle s’installera automatiquement au prochain démarrage de STRYKER. Tu peux aussi redémarrer maintenant pour en profiter tout de suite.",
+      detail: "Elle s’installera au prochain démarrage de STRYKER. Tu peux aussi redémarrer maintenant.",
       buttons: ["Redémarrer maintenant", "Plus tard"],
       defaultId: 0,
       cancelId: 1,
