@@ -12,6 +12,23 @@ const updateManager = createUpdateManager({
   currentVersion: app.getVersion(),
   isPackaged: app.isPackaged,
   resourcesPath: process.resourcesPath,
+  // La mise à jour est déjà téléchargée et s'installera de toute façon à la
+  // fermeture : on propose simplement d'aller plus vite.
+  onReady: (version) => {
+    if (!mainWindow) return;
+    void dialog.showMessageBox(mainWindow, {
+      type: "info",
+      title: "STRYKER",
+      message: `La version ${version} est prête.`,
+      detail: "Elle s’installera automatiquement au prochain démarrage de STRYKER. Tu peux aussi redémarrer maintenant pour en profiter tout de suite.",
+      buttons: ["Redémarrer maintenant", "Plus tard"],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    }).then(({ response }) => {
+      if (response === 0) updateManager.install();
+    }).catch(() => undefined);
+  },
 });
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();

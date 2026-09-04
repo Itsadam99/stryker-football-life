@@ -18,7 +18,9 @@
     "preview": "vite preview",
     "predesktop": "npm run build",
     "desktop": "electron .",
-    "package:win": "npm run build && electron-builder --config electron-builder.config.cjs --win nsis --publish never"
+    "package:win": "npm run build && electron-builder --config electron-builder.config.cjs --win nsis --publish never",
+    "release": "node scripts/publish-release.mjs",
+    "release:check": "node scripts/publish-release.mjs --dry"
   },
   "engines": {
     "node": ">=20"

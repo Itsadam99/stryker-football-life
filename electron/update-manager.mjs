@@ -18,9 +18,10 @@ function readConfiguredFeed(resourcesPath) {
 }
 
 export class UpdateManager {
-  constructor({ currentVersion, isPackaged, resourcesPath, platform = process.platform, updater } = {}) {
+  constructor({ currentVersion, isPackaged, resourcesPath, platform = process.platform, updater, onReady } = {}) {
     const feed = readConfiguredFeed(resourcesPath);
     this.updater = updater;
+    this.onReady = typeof onReady === "function" ? onReady : null;
     this.configured = Boolean(isPackaged && platform === "win32" && feed.configured);
     this.feedUrl = feed.url;
     this.started = false;
@@ -48,7 +49,10 @@ export class UpdateManager {
   start() {
     if (this.started || !this.configured) return this.status();
     this.started = true;
-    this.updater.autoDownload = false;
+    // La mise à jour se télécharge en tâche de fond dès qu'elle est trouvée,
+    // puis s'installe à la fermeture : au prochain démarrage, STRYKER est à
+    // jour sans que personne ait eu à cliquer sur « Télécharger ».
+    this.updater.autoDownload = true;
     this.updater.autoInstallOnAppQuit = true;
     this.updater.allowPrerelease = false;
 
@@ -72,13 +76,18 @@ export class UpdateManager {
       progress: Math.max(0, Math.min(100, Number(progress.percent || 0))),
       message: `Téléchargement de la mise à jour : ${Math.round(Number(progress.percent || 0))} %`,
     }));
-    this.updater.on("update-downloaded", (info) => this.setStatus({
-      state: "ready",
-      availableVersion: info.version,
-      updateAvailable: true,
-      progress: 100,
-      message: `La version ${info.version} est prête. Redémarrez STRYKER pour l’installer.`,
-    }));
+    this.updater.on("update-downloaded", (info) => {
+      this.setStatus({
+        state: "ready",
+        availableVersion: info.version,
+        updateAvailable: true,
+        progress: 100,
+        message: `La version ${info.version} est prête. Redémarrez STRYKER pour l’installer.`,
+      });
+      // Le processus principal propose le redémarrage ; un échec de la boîte de
+      // dialogue ne doit pas casser le suivi de mise à jour.
+      try { this.onReady?.(info.version); } catch { /* ignoré */ }
+    });
     this.updater.on("error", (error) => this.setStatus({
       state: "error",
       progress: 0,
