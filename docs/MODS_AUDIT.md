@@ -1,4 +1,4 @@
-# Mods — STRYKER 3.9.2
+# Mods — STRYKER 3.9.3
 
 ## Corrections
 
@@ -16,15 +16,21 @@
 
 ## Vérifications effectuées
 
-Les 16 archives locales ont été comparées à leurs empreintes et tailles de catalogue puis installées, désactivées, réactivées et désinstallées dans une installation FL2026 simulée et isolée. Les sauvegardes d’Option File et la map de maillots originale ont été restaurées.
+Les 17 archives locales ont été comparées à leurs empreintes et tailles de catalogue puis installées, désactivées, réactivées et désinstallées dans une installation FL2026 simulée et isolée. Les sauvegardes d’Option File et la map de maillots originale ont été restaurées.
 
-Paquets : Graphic Menu EPL, contrôleur STRYKER DLSS, Ficabre Goalnets, Shirtless Celebration, Facepacks 204/222/223, Premier League Facepack Vol.1, Realism Menu Light, Pyro Supporters, Pyro No Spectator Patch, maillots Bundesliga/LaLiga/Ligue 1/Premier League et Option File Transfers V7.
+Paquets : Graphic Menu EPL, contrôleur STRYKER DLSS, Ficabre Goalnets, Shirtless Celebration, Facepacks 204/222/223, Premier League Facepack Vol.1, Realism Menu Light, Pyro Supporters, Pyro No Spectator Patch, maillots Bundesliga/LaLiga/Ligue 1/Premier League, Option File Transfers V7 et POTM Server 2.4 AIO.
 
 Le parcours Découvrir a été exercé dans Chrome : recherche, installation réelle d’un paquet de test via l’API locale, désactivation, désinstallation, recherche vide et affichage à 420 px sans débordement horizontal. Aucun jeu ou dossier personnel de mods n’a été utilisé pour ces essais.
 
 Les tests de RAR utilisent une véritable archive RAR non compressée créée pour les essais : import local, upload, téléchargement HTTP, empreinte, extraction et rejets de chemins dangereux.
 
 Ce contrôle valide les opérations de STRYKER, pas le rendu ni les comportements pendant un match. Les modifications mémoire de Shirtless Celebration, l’effet Pyro, les presets de filets et le rendu DLSS nécessitent encore une validation dans le jeu et sur la version précise de son exécutable.
+
+## POTM Server 2.4 AIO
+
+L’archive de l’auteur livre deux copies du même module — `modules/POTM_Server.lua` et `modules/common/POTM_Server.lua` — et le correctif « 1-0 en coupe ML » est distribué à part, dans un ZIP contenant uniquement une révision plus récente du même fichier. Installés tels quels, ces deux modules seraient tous les deux déclarés dans `sider.ini` et le serveur POTM se chargerait deux fois.
+
+Le paquet STRYKER ne conserve donc qu’un seul module Lua, la révision du 22/03/2026, avec la racine LiveCPK et les données `content/POTM` des quinze compétitions. Le paquet a été installé, désactivé, réactivé puis désinstallé dans l’installation FL2026 simulée : trois composants reconnus (LiveCPK, content Sider, module Lua), empreinte et taille conformes à la fiche.
 
 ## Paquets absents du catalogue installable
 

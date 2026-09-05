@@ -1,0 +1,25 @@
+{
+  "mod": {
+    "id": "potm-server-2-4-aio",
+    "title": "POTM Server 2.4 AIO",
+    "author": "D4NT / Aboutpes / OOP-04",
+    "version": "2.4",
+    "shortDesc": "Cérémonie Joueur du match avec trophées et animations pour 15 compétitions.",
+    "fullDesc": "Paquet complet POTM : racine LiveCPK, données Sider content/POTM et module Lua. STRYKER a conservé un seul module — la révision corrigée du 22/03/2026 qui règle le score 1-0 affiché en coupe de Master League — et retiré le doublon modules/common livré par l’auteur, afin que Sider ne charge pas deux fois le même serveur POTM.",
+    "category": "other",
+    "compatibility": ["Football Life 2026", "PES 2021", "Sider 7"],
+    "size": "108,3 Mo",
+    "thumbnail": "/stryker-logo.png",
+    "screenshots": [],
+    "downloadUrl": "https://github.com/Itsadam99/stryker-football-life/releases/download/mods-2026.09/potm-server-2-4-aio.zip",
+    "installationType": "automatic",
+    "legalStatus": "verified_package",
+    "verificationDate": "2026-09-05",
+    "archiveHash": "3c7827eaa7ba9a47f19ab26f12169eccb15eacee3fd73ab19705c5205a903c1b",
+    "archiveSize": 113546159,
+    "fileCount": 1833,
+    "status": "published",
+    "publishedAt": "2026-09-05T21:00:00.000Z",
+    "license": "Crédits : D4NT, Aboutpes et OOP-04 — redistribution publique confirmée par l’éditeur STRYKER."
+  }
+}
