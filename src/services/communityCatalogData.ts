@@ -258,6 +258,26 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
     fileCount: 2,
     license: "Crédits Prayudi StarGames et communauté SmokePatch — redistribution publique confirmée par l’éditeur STRYKER.",
   }),
+  {
+    ...preview({
+      id: "potm-server-2-4-aio",
+      title: "POTM Server 2.4 AIO",
+      author: "D4NT / Aboutpes / OOP-04",
+      version: "2.4",
+      shortDesc: "Cérémonie du Joueur du match avec trophée et animations pour quinze compétitions.",
+      fullDesc: "Racine LiveCPK, données Sider content/POTM et module Lua installés ensemble. STRYKER ne conserve qu’un seul module — la révision du 22/03/2026 qui corrige le score 1-0 affiché dans les coupes de Master League — et retire le doublon modules/common livré par l’auteur, afin que Sider ne charge jamais deux fois le serveur POTM.",
+      category: "other",
+      compatibility: ["Football Life 2026", "PES 2021", "Sider 7"],
+      size: "108,3 Mo",
+      tags: ["POTM", "cérémonie", "trophée", "Sider", "LiveCPK"],
+      archiveHash: "3c7827eaa7ba9a47f19ab26f12169eccb15eacee3fd73ab19705c5205a903c1b",
+      archiveSize: 113546159,
+      fileCount: 1833,
+      license: "Crédits : D4NT, Aboutpes et OOP-04 — redistribution publique confirmée par l’éditeur STRYKER.",
+    }),
+    verificationDate: "2026-09-05",
+    publishedAt: "2026-09-05T21:00:00.000Z",
+  },
 ];
 
 type CommunityLanguage = "en" | "pt" | "es";
@@ -279,6 +299,7 @@ export const DESKTOP_COMMUNITY_TRANSLATIONS: Record<CommunityLanguage, Record<st
     "kitpack-premier-league-2026-27": { shortDesc: "Third edition of the 2026/27 Premier League kit pack.", fullDesc: "Complete Sider/Kitserver pack with configurations, numbers and maps; the duplicate CPK is excluded.", size: "156.7 MB", tags: ["Premier League", "V3", "2026/27", "Kitserver"] },
     "kitpack-laliga-2026-27": { shortDesc: "Complete LaLiga EA Sports 2026/27 pack ready for Kitserver.", fullDesc: "Club kits, goalkeepers, numbers and configurations in the official Sider version, without the redundant CPK.", size: "184.9 MB", tags: ["LaLiga", "Nono Kitmaker", "2026/27", "Kitserver"] },
     "option-file-transfers-v7-2026": { shortDesc: "Updated transfer and squad Option File for Football Life 2026.", fullDesc: "STRYKER backs up the current EDIT00000000, installs V7 in the 2026 save folder and restores the original when disabled. In-game changes are preserved in backup history.", size: "10.5 MB", tags: ["transfers", "squads", "Option File", "automatic backup"] },
+    "potm-server-2-4-aio": { shortDesc: "Player of the Match ceremony with trophy and animations for fifteen competitions.", fullDesc: "LiveCPK root, Sider content/POTM data and the Lua module are installed together. STRYKER keeps a single module — the 22/03/2026 revision that fixes the 1-0 score shown in Master League cup matches — and drops the duplicate modules/common copy so Sider never loads the POTM server twice.", size: "108.3 MB", tags: ["POTM", "ceremony", "trophy", "Sider", "LiveCPK"] },
   },
   pt: {
     "ficabre-goalnets-module-v1": { shortDesc: "Redes 2025/26 completas com física, formas, sons e predefinições por clube, competição e estádio.", fullDesc: "O módulo Sider inclui mapas, predefinições e recursos LiveCPK. O STRYKER removeu o script batch das fontes e converteu os 41 000 ficheiros para o seu formato sólido verificado.", size: "745,6 MB", tags: ["redes", "física", "Sider", "LiveCPK", "2025/26"] },
@@ -295,6 +316,7 @@ export const DESKTOP_COMMUNITY_TRANSLATIONS: Record<CommunityLanguage, Record<st
     "kitpack-premier-league-2026-27": { shortDesc: "Terceira edição do kitpack Premier League 2026/27.", fullDesc: "Pack Sider/Kitserver com configurações, números e mapas, sem o CPK duplicado.", size: "156,7 MB", tags: ["Premier League", "V3", "2026/27", "Kitserver"] },
     "kitpack-laliga-2026-27": { shortDesc: "Pack LaLiga EA Sports 2026/27 completo para Kitserver.", fullDesc: "Equipamentos, guarda-redes, números e configurações por clube na versão Sider oficial.", size: "184,9 MB", tags: ["LaLiga", "Nono Kitmaker", "2026/27", "Kitserver"] },
     "option-file-transfers-v7-2026": { shortDesc: "Option File com transferências e plantéis atualizados para Football Life 2026.", fullDesc: "O STRYKER guarda o EDIT00000000 atual, instala a V7 e restaura o original ao desativar. As alterações feitas no jogo também ficam arquivadas.", size: "10,5 MB", tags: ["transferências", "plantéis", "Option File", "cópia automática"] },
+    "potm-server-2-4-aio": { shortDesc: "Cerimónia de Jogador do Jogo com troféu e animações para quinze competições.", fullDesc: "Raiz LiveCPK, dados Sider content/POTM e módulo Lua instalados em conjunto. O STRYKER mantém um único módulo — a revisão de 22/03/2026 que corrige o resultado 1-0 mostrado nas taças da Master League — e remove a cópia duplicada modules/common, para que o Sider nunca carregue duas vezes o servidor POTM.", size: "108,3 MB", tags: ["POTM", "cerimónia", "troféu", "Sider", "LiveCPK"] },
   },
   es: {
     "ficabre-goalnets-module-v1": { shortDesc: "Redes 2025/26 completas con físicas, formas, sonidos y ajustes por club, competición y estadio.", fullDesc: "El módulo Sider incluye mapas, ajustes y recursos LiveCPK. STRYKER eliminó el script batch de las fuentes y convirtió los 41 000 archivos a su formato sólido verificado.", size: "745,6 MB", tags: ["redes", "física", "Sider", "LiveCPK", "2025/26"] },
@@ -311,5 +333,6 @@ export const DESKTOP_COMMUNITY_TRANSLATIONS: Record<CommunityLanguage, Record<st
     "kitpack-premier-league-2026-27": { shortDesc: "Tercera edición del kitpack Premier League 2026/27.", fullDesc: "Pack Sider/Kitserver con configuraciones, números y mapas, sin el CPK duplicado.", size: "156,7 MB", tags: ["Premier League", "V3", "2026/27", "Kitserver"] },
     "kitpack-laliga-2026-27": { shortDesc: "Pack completo LaLiga EA Sports 2026/27 listo para Kitserver.", fullDesc: "Equipaciones, porteros, dorsales y configuraciones por club en la versión Sider oficial.", size: "184,9 MB", tags: ["LaLiga", "Nono Kitmaker", "2026/27", "Kitserver"] },
     "option-file-transfers-v7-2026": { shortDesc: "Option File con fichajes y plantillas actualizadas para Football Life 2026.", fullDesc: "STRYKER guarda el EDIT00000000 actual, instala V7 y restaura el original al desactivar. Los cambios hechos en el juego también quedan archivados.", size: "10,5 MB", tags: ["fichajes", "plantillas", "Option File", "copia automática"] },
+    "potm-server-2-4-aio": { shortDesc: "Ceremonia de Jugador del Partido con trofeo y animaciones para quince competiciones.", fullDesc: "Raíz LiveCPK, datos Sider content/POTM y módulo Lua se instalan juntos. STRYKER conserva un solo módulo — la revisión del 22/03/2026 que corrige el 1-0 mostrado en las copas de Master League — y retira la copia duplicada modules/common, para que Sider nunca cargue dos veces el servidor POTM.", size: "108,3 MB", tags: ["POTM", "ceremonia", "trofeo", "Sider", "LiveCPK"] },
   },
 };

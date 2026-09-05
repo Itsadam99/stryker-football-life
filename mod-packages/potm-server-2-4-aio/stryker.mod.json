@@ -1,0 +1,14 @@
+{
+  "$schema": "../../docs/stryker.mod.schema.json",
+  "id": "potm-server-2-4-aio",
+  "name": "POTM Server 2.4 AIO",
+  "version": "2.4",
+  "author": "D4NT / Aboutpes / OOP-04",
+  "category": "other",
+  "compatibility": ["Football Life 2026", "PES 2021", "Sider 7"],
+  "components": [
+    { "type": "livecpk", "root": "livecpk/POTM" },
+    { "type": "sider", "root": "content", "target": "content" },
+    { "type": "lua", "root": "modules", "entrypoints": ["POTM_Server.lua"] }
+  ]
+}
