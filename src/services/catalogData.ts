@@ -10,26 +10,26 @@ export const BUNDLED_CATALOG_MODS: CatalogMod[] = [
     author: "EFER.Q",
     version: "2025/26",
     shortDesc: "Menu graphique Premier League 2025/26 pour PES 2021 et Football Life 2026, préparé pour STRYKER.",
-    fullDesc: "Pack complet avec Menu EPL, UIColors, module Lua et données content. Le paquet contrôlé est prêt, mais sa publication reste désactivée tant que l’autorisation de redistribution publique n’a pas été confirmée.",
+    fullDesc: "Menu Premier League, UIColors et ressources Sider installés ensemble, avec activation et désinstallation depuis STRYKER.",
     category: "menu",
     compatibility: ["PES 2021", "Football Life 2026", "Sider 7.3.4"],
     size: "127,1 Mo",
     thumbnail: "/stryker-logo.png",
     downloadUrl: "",
     screenshots: [],
-    installationType: "manual",
+    installationType: "automatic",
     rating: 0,
     downloadsCount: 0,
     tags: ["menu", "Premier League", "EPL", "UIColors", "EFER.Q"],
-    legalStatus: "unverified",
+    legalStatus: "verified_package",
     verificationDate: "2026-08-31",
     archiveHash: "6b9ebfe5cdbbdcb8f10711feaaba17c8e839c57e6abe6b728c54196404771a8a",
     archiveSize: 133307293,
     fileCount: 87,
-    status: "pending_review",
+    status: "published",
     sourceUrl: "https://pes-files.com/pes-2021-new-graphic-menu-epl-2025-26/",
-    license: "Crédits : EFER.Q — autorisation de redistribution publique à confirmer avant hébergement.",
-    repositoryUrl: STRYKER_RAW_REPOSITORY,
+    license: "Crédits : EFER.Q — redistribution autorisée par le mainteneur STRYKER.",
+
   },
   {
     id: "stryker-dlss5-controller",
@@ -282,7 +282,7 @@ const CATALOG_TRANSLATIONS: Record<Exclude<CatalogLanguage, "fr">, Record<string
     },
     "eferq-graphic-menu-epl-2526": {
       shortDesc: "Premier League 2025/26 graphic menu for PES 2021 and Football Life 2026, prepared for STRYKER.",
-      fullDesc: "Complete package with Menu EPL, UIColors, a Lua module and content data. The verified package is ready, but publishing remains disabled until public redistribution permission is confirmed.",
+      fullDesc: "Premier League menu, UIColors and Sider resources installed together. Manage and uninstall the package in STRYKER.",
       version: "2025/26", compatibility: ["PES 2021", "Football Life 2026", "Sider 7.3.4"], size: "127.1 MB", tags: ["menu", "Premier League", "EPL", "UIColors", "EFER.Q"],
     },
     "stryker-dlss5-controller": {
@@ -334,7 +334,7 @@ const CATALOG_TRANSLATIONS: Record<Exclude<CatalogLanguage, "fr">, Record<string
     },
     "eferq-graphic-menu-epl-2526": {
       shortDesc: "Menu gráfico da Premier League 2025/26 para PES 2021 e Football Life 2026, preparado para o STRYKER.",
-      fullDesc: "Pack completo com Menu EPL, UIColors, módulo Lua e dados content. O pacote verificado está pronto, mas a publicação permanece desativada até ser confirmada a autorização de redistribuição pública.",
+      fullDesc: "Menu Premier League, UIColors e recursos Sider instalados em conjunto. Gere e desinstala o pacote no STRYKER.",
       version: "2025/26", compatibility: ["PES 2021", "Football Life 2026", "Sider 7.3.4"], size: "127,1 MB", tags: ["menu", "Premier League", "EPL", "UIColors", "EFER.Q"],
     },
     "stryker-dlss5-controller": {
@@ -386,7 +386,7 @@ const CATALOG_TRANSLATIONS: Record<Exclude<CatalogLanguage, "fr">, Record<string
     },
     "eferq-graphic-menu-epl-2526": {
       shortDesc: "Menú gráfico de la Premier League 2025/26 para PES 2021 y Football Life 2026, preparado para STRYKER.",
-      fullDesc: "Pack completo con Menu EPL, UIColors, módulo Lua y datos content. El paquete verificado está listo, pero la publicación permanece desactivada hasta confirmar el permiso de redistribución pública.",
+      fullDesc: "Menú Premier League, UIColors y recursos Sider instalados juntos. Gestiona y desinstala el paquete en STRYKER.",
       version: "2025/26", compatibility: ["PES 2021", "Football Life 2026", "Sider 7.3.4"], size: "127,1 MB", tags: ["menú", "Premier League", "EPL", "UIColors", "EFER.Q"],
     },
     "stryker-dlss5-controller": {

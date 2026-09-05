@@ -102,6 +102,7 @@ export interface ActivityItem {
 }
 
 export interface CatalogMod {
+  dependencies?: Array<{ id: string; version?: string }>;
   id: string;
   title: string;
   shortDesc: string;

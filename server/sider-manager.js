@@ -3,6 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { assertPathInside, sanitizeSegment, toWindowsPath } from "./paths.js";
+import { adaptLuaPaths } from "./lua-paths.js";
 
 const MANAGED_START = "; >>> STRYKER MANAGED MODS >>>";
 const MANAGED_END = "; <<< STRYKER MANAGED MODS <<<";
@@ -53,6 +54,8 @@ function listRegularFiles(root) {
   }
   return files;
 }
+
+export function isKitMap(value) { return /^content\/(kits|kit-server)\/map\.txt$/i.test(value); }
 
 function normalizeSiderDataTarget(value) {
   const normalized = String(value || "").replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/\/+$/, "");
@@ -338,6 +341,12 @@ export class SiderManager {
           const destination = path.join(nextRoot, mod.id);
           assertPathInside(nextRoot, destination, "Déploiement Lua");
           fs.cpSync(source, destination, { recursive: true, force: true, errorOnExist: false });
+          for (const file of listRegularFiles(destination)) {
+            if (!file.toLowerCase().endsWith(".lua")) continue;
+            const original = fs.readFileSync(file, "utf8");
+            const adapted = adaptLuaPaths(original, mod, component, path.dirname(siderPath));
+            if (adapted !== original) fs.writeFileSync(file, adapted, "utf8");
+          }
         }
       }
 
@@ -525,7 +534,7 @@ export class SiderManager {
           const relativeSource = path.relative(sourceRoot, source).replace(/\\/g, "/");
           const relativeTarget = `${targetRoot}/${relativeSource}`;
           const key = relativeTarget.toLowerCase();
-          if (key === "content/kits/map.txt" && desired.has(key)) {
+          if (isKitMap(key) && desired.has(key)) {
             desired.get(key).mergeSources.push({ source, modId });
             continue;
           }
@@ -535,26 +544,6 @@ export class SiderManager {
           desired.set(key, { relativeTarget, source, destination, modId, mergeSources: [{ source, modId }] });
         }
       }
-    }
-
-    const mergedRoot = fs.mkdtempSync(path.join(this.dataDirectories.temp, "sider-merged-"));
-    for (const [key, item] of desired.entries()) {
-      if (key !== "content/kits/map.txt" || item.mergeSources.length < 2) continue;
-      const seenTeamIds = new Set();
-      const lines = ["# STRYKER — map Kitserver fusionnée automatiquement"];
-      for (const sourceItem of item.mergeSources) {
-        lines.push("", `# ${inlineComment(sourceItem.modId)}`);
-        for (const line of fs.readFileSync(sourceItem.source, "utf-8").split(/\r?\n/)) {
-          const teamId = line.match(/^\s*(\d+)\s*,/)?.[1];
-          if (teamId && seenTeamIds.has(teamId)) continue;
-          if (teamId) seenTeamIds.add(teamId);
-          if (line.trim()) lines.push(line);
-        }
-      }
-      const merged = path.join(mergedRoot, "kits-map.txt");
-      fs.writeFileSync(merged, `${lines.join("\r\n")}\r\n`, "utf-8");
-      item.source = merged;
-      item.modId = item.mergeSources.map(({ modId }) => modId).join(",");
     }
 
     const bucket = this.backupBucket(siderPath);
@@ -590,7 +579,31 @@ export class SiderManager {
       return backup;
     };
 
+    const mergedRoot = fs.mkdtempSync(path.join(this.dataDirectories.temp, "sider-merged-"));
     try {
+      for (const [key, item] of desired.entries()) {
+        if (!isKitMap(key)) continue;
+        const previous = previousFiles[key];
+        const baseline = previous?.originalBackup ? resolveOriginalBackup(previous.originalBackup)
+          : !previous && fs.existsSync(item.destination) ? item.destination : null;
+        if (baseline && !fs.existsSync(baseline)) throw new Error("Sauvegarde de la map Kitserver manquante.");
+        const sources = [...item.mergeSources, ...(baseline ? [{ source: baseline, modId: "Installation originale" }] : [])];
+        const seen = new Set();
+        const lines = ["# STRYKER — map Kitserver fusionnée automatiquement"];
+        for (const sourceItem of sources) {
+          lines.push("", "# " + inlineComment(sourceItem.modId));
+          for (const line of fs.readFileSync(sourceItem.source, "utf8").split(/\r?\n/)) {
+            const id = line.match(/^\s*(\d+)\s*,/)?.[1];
+            if (id && seen.has(id)) continue;
+            if (id) seen.add(id);
+            if (line.trim()) lines.push(line);
+          }
+        }
+        const merged = path.join(mergedRoot, crypto.createHash("sha256").update(key).digest("hex") + ".txt");
+        fs.writeFileSync(merged, lines.join("\r\n") + "\r\n", "utf8");
+        item.source = merged;
+        item.modId = item.mergeSources.map(({ modId }) => modId).join(",");
+      }
       for (const key of allKeys) {
         const relativeTarget = desired.get(key)?.relativeTarget || previousFiles[key]?.relativeTarget || key;
         const destination = resolveManagedDestination(relativeTarget);

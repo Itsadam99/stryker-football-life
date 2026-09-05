@@ -2,10 +2,11 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { assertPathInside, sanitizeSegment } from "./paths.js";
-import { inferCategory } from "./sider-manager.js";
+import { inferCategory, isKitMap } from "./sider-manager.js";
 import { extractZipSafely } from "./zip-extractor.js";
 import { extractRarSafely } from "./rar-extractor.js";
 import { expandPackedPayload } from "./packed-payload.js";
+import { analyzeArchive } from "./archive-analysis.js";
 
 const MAX_ARCHIVE_BYTES = 20 * 1024 * 1024 * 1024;
 const MAX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024 * 1024;
@@ -88,12 +89,15 @@ function findManifest(extractRoot) {
     .sort((a, b) => a.split(path.sep).length - b.split(path.sep).length);
 
   for (const candidate of candidates) {
+    const explicit = path.basename(candidate).toLowerCase() === "stryker.mod.json";
     try {
       const manifest = JSON.parse(fs.readFileSync(candidate, "utf-8"));
       if (manifest && Array.isArray(manifest.components)) {
         return { manifest, manifestPath: candidate, baseDir: path.dirname(candidate) };
       }
-    } catch {
+      if (explicit) throw new Error("liste des composants absente");
+    } catch (error) {
+      if (explicit) throw new Error("Manifeste STRYKER invalide : " + error.message);
       // A community mod.json without STRYKER fields is treated as ordinary metadata.
     }
   }
@@ -101,6 +105,7 @@ function findManifest(extractRoot) {
 }
 
 function validateManifestComponents(manifestInfo, extractRoot) {
+  if (!manifestInfo.manifest.components.length) throw new Error("Le manifeste ne contient aucun composant installable.");
   return manifestInfo.manifest.components.map((component) => {
     if (!component || !["livecpk", "lua", "sider", "save"].includes(component.type)) {
       throw new Error("Le manifeste contient un type de composant non pris en charge.");
@@ -166,56 +171,6 @@ function validateManifestComponents(manifestInfo, extractRoot) {
   });
 }
 
-function analyzeHeuristically(extractRoot) {
-  const components = [];
-  const directLivecpk = findDirectoriesNamed(extractRoot, "livecpk", 3)
-    .sort((a, b) => a.split(path.sep).length - b.split(path.sep).length)[0];
-
-  if (directLivecpk) {
-    for (const entry of fs.readdirSync(directLivecpk, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const root = path.join(directLivecpk, entry.name);
-      const files = relativeFiles(root);
-      if (files.length > 0) {
-        components.push({ type: "livecpk", root: path.relative(extractRoot, root), files });
-      }
-    }
-  }
-
-  if (components.length === 0) {
-    const commonDirectories = findDirectoriesNamed(extractRoot, "common", 4);
-    const uniqueParents = [...new Set(commonDirectories.map((directory) => path.dirname(directory)))];
-    for (const root of uniqueParents) {
-      components.push({ type: "livecpk", root: path.relative(extractRoot, root), files: relativeFiles(root) });
-    }
-  }
-
-  const modulesDirectory = findDirectoriesNamed(extractRoot, "modules", 3)
-    .sort((a, b) => a.split(path.sep).length - b.split(path.sep).length)[0];
-  if (modulesDirectory) {
-    const luaFiles = walkFiles(modulesDirectory).filter((file) => file.toLowerCase().endsWith(".lua"));
-    if (luaFiles.length === 1) {
-      components.push({
-        type: "lua",
-        root: path.relative(extractRoot, modulesDirectory),
-        entrypoints: [path.relative(modulesDirectory, luaFiles[0]).replace(/\\/g, "/")],
-      });
-    } else if (luaFiles.length > 1) {
-      throw new Error(
-        "Plusieurs modules Lua ont été détectés. Ajoutez un fichier stryker.mod.json déclarant explicitement les entrypoints pour éviter une installation incorrecte."
-      );
-    }
-  }
-
-  if (components.length === 0) {
-    throw new Error(
-      "Aucune structure LiveCPK ou module Lua simple n’a été reconnue. Cette archive nécessite un manifeste stryker.mod.json ou une installation manuelle."
-    );
-  }
-
-  return components;
-}
-
 function inspectExtractedContent(extractRoot) {
   const files = walkFiles(extractRoot);
   let totalBytes = 0;
@@ -258,7 +213,7 @@ export class ModEngine {
   }
 
   async installArchive(archivePath, metadata = {}) {
-    if (!archivePath || typeof archivePath !== "string") throw new Error("Sélectionnez une archive ZIP.");
+    if (!archivePath || typeof archivePath !== "string") throw new Error("Sélectionnez une archive ZIP ou RAR.");
     const resolvedArchive = path.resolve(archivePath);
     if (!fs.existsSync(resolvedArchive) || !fs.statSync(resolvedArchive).isFile()) throw new Error("Archive introuvable.");
     const archiveKind = path.extname(resolvedArchive).toLowerCase();
@@ -294,9 +249,10 @@ export class ModEngine {
       const manifestInfo = findManifest(tempRoot);
       const components = manifestInfo
         ? validateManifestComponents(manifestInfo, tempRoot)
-        : analyzeHeuristically(tempRoot);
+        : analyzeArchive(tempRoot, { walkFiles, relativeFiles, findDirectoriesNamed });
 
       const manifest = manifestInfo?.manifest || {};
+      const siderOverlay = manifest.siderOverlay ? normalizeSiderOverlay(manifest.siderOverlay) : null;
       const requestedName = cleanText(metadata.name || manifest.name, path.basename(resolvedArchive, path.extname(resolvedArchive)), 120);
       const idBase = sanitizeSegment(metadata.id || manifest.id || requestedName, "mod").toLowerCase();
       const packageIdWasDeclared = Boolean(metadata.id || manifest.id);
@@ -306,7 +262,6 @@ export class ModEngine {
         || (packageIdWasDeclared && (
           mod.packageId === idBase
           || mod.id === idBase
-          || mod.id.startsWith(`${idBase}-`)
         ))
       ));
       const id = existing?.id || `${idBase}-${archiveHash.slice(0, 8)}`;
@@ -337,7 +292,7 @@ export class ModEngine {
         category: ALLOWED_CATEGORIES.has(metadata.category || manifest.category) ? (metadata.category || manifest.category) : inferCategory(requestedName),
         compatibility: (Array.isArray(metadata.compatibility) ? metadata.compatibility : Array.isArray(manifest.compatibility) ? manifest.compatibility : []).filter((value) => typeof value === "string").slice(0, 20).map((value) => value.slice(0, 100)),
         dependencies: (Array.isArray(manifest.dependencies) ? manifest.dependencies : []).filter((dependency) => dependency && typeof dependency.id === "string" && dependency.id.length <= 160).slice(0, 100).map((dependency) => ({ id: dependency.id, ...(typeof dependency.version === "string" ? { version: dependency.version.slice(0, 40) } : {}) })),
-        siderOverlay: manifest.siderOverlay ? normalizeSiderOverlay(manifest.siderOverlay) : null,
+        siderOverlay,
         sourceUrl: cleanText(metadata.sourceUrl || manifest.sourceUrl, "", 1000),
         sourceType: metadata.sourceType || "local-archive",
         archiveName: path.basename(resolvedArchive),
@@ -354,14 +309,25 @@ export class ModEngine {
         this.store.update((draft) => {
           draft.mods[id] = record;
           const profile = draft.profiles.find((item) => item.id === draft.activeProfileId);
-          if (!profile.modOrder.includes(id)) profile.modOrder.push(id);
-          if (!existing && !profile.enabledMods.includes(id)) profile.enabledMods.push(id);
+          const alreadyInProfile = profile.modOrder.includes(id);
+          if (!alreadyInProfile) profile.modOrder.push(id);
+          if ((!existing || !alreadyInProfile) && !profile.enabledMods.includes(id)) profile.enabledMods.push(id);
+          // A patch must override its base package on its first installation.
+          if (!existing || !alreadyInProfile) {
+            const dependencies = record.dependencies.map((dependency) => Object.values(draft.mods).find((item) => item.id === dependency.id || item.packageId === dependency.id)?.id).filter(Boolean);
+            const firstDependency = profile.modOrder.findIndex((item) => dependencies.includes(item));
+            if (firstDependency >= 0) {
+              profile.modOrder = profile.modOrder.filter((item) => item !== id);
+              profile.modOrder.splice(firstDependency, 0, id);
+            }
+          }
           profile.updatedAt = new Date().toISOString();
         });
         const next = this.store.snapshot();
         const deployment = this.siderManager.deploy(next, this.activeProfile(next));
         this.store.update((draft) => {
           draft.deployment = {
+            engineRevision: 2,
             lastDeployedAt: new Date().toISOString(),
             lastSiderHash: deployment.hash,
             profileId: draft.activeProfileId,
@@ -392,6 +358,7 @@ export class ModEngine {
     const deployment = this.siderManager.deploy(state, profile);
     this.store.update((draft) => {
       draft.deployment = {
+        engineRevision: 2,
         lastDeployedAt: new Date().toISOString(),
         lastSiderHash: deployment.hash,
         profileId: profile.id,
@@ -491,11 +458,15 @@ export class ModEngine {
       if (!enabled.has(modId)) continue;
       const mod = state.mods[modId];
       for (const component of mod?.components || []) {
-        if (component.type !== "livecpk") continue;
+        if (!["livecpk", "sider", "save"].includes(component.type)) continue;
         for (const file of component.files || []) {
-          const owners = fileOwners.get(file) || [];
+          const key = component.type === "sider" ? "content/" + file.toLowerCase()
+            : component.type === "save" ? "save/" + file.toLowerCase() : file.toLowerCase();
+          // Kit maps are combined by team ID at deployment, not overwritten as a file.
+          if (isKitMap(key)) continue;
+          const owners = fileOwners.get(key) || [];
           if (!owners.includes(modId)) owners.push(modId);
-          fileOwners.set(file, owners);
+          fileOwners.set(key, owners);
         }
       }
     }
@@ -528,8 +499,9 @@ export class ModEngine {
       if (!enabled.has(modId)) continue;
       const mod = state.mods[modId];
       for (const dependency of mod?.dependencies || []) {
-        if (!state.mods[dependency.id]) issues.push({ modId, dependency, reason: "missing" });
-        else if (!enabled.has(dependency.id)) issues.push({ modId, dependency, reason: "disabled" });
+        const required = Object.values(state.mods).find((item) => item.id === dependency.id || item.packageId === dependency.id);
+        if (!required) issues.push({ modId, dependency, reason: "missing" });
+        else if (!enabled.has(required.id)) issues.push({ modId, dependency, reason: "disabled" });
       }
     }
     return issues;

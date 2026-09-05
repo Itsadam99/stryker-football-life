@@ -157,6 +157,10 @@ test("fusionne les maps Kitserver de plusieurs Kitpacks selon la priorité", (t)
   fs.mkdirSync(second, { recursive: true });
   fs.writeFileSync(path.join(first, "map.txt"), '101, "First League\\Alpha"\n102, "First League\\Beta"\n');
   fs.writeFileSync(path.join(second, "map.txt"), '101, "Second League\\Duplicate"\n201, "Second League\\Gamma"\n');
+  const destinationMap = path.join(path.dirname(siderPath), "content", "kits", "map.txt");
+  fs.mkdirSync(path.dirname(destinationMap), { recursive: true });
+  const originalMap = '101, "Original Alpha"\n999, "Original Team"\n';
+  fs.writeFileSync(destinationMap, originalMap);
   const state = {
     settings: { siderPath },
     mods: {
@@ -170,4 +174,13 @@ test("fusionne les maps Kitserver de plusieurs Kitpacks selon la priorité", (t)
   assert.match(merged, /101, "First League\\Alpha"/);
   assert.doesNotMatch(merged, /Second League\\Duplicate/);
   assert.match(merged, /201, "Second League\\Gamma"/);
+  assert.match(merged, /999, "Original Team"/);
+  assert.doesNotMatch(merged, /Original Alpha/);
+  manager.deploy(state, { id: "default", name: "Test", modOrder: ["first", "second"], enabledMods: ["second"] });
+  const remaining = fs.readFileSync(destinationMap, "utf8");
+  assert.match(remaining, /Second League\\Duplicate/);
+  assert.doesNotMatch(remaining, /First League/);
+  assert.match(remaining, /Original Team/);
+  manager.deploy(state, { id: "default", name: "Test", modOrder: ["first", "second"], enabledMods: [] });
+  assert.equal(fs.readFileSync(destinationMap, "utf8"), originalMap);
 });

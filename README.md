@@ -11,12 +11,12 @@ Le projet est indépendant. Il n’est affilié ni à Konami, ni à SmokePatch, 
 - détection stricte d’une installation existante de Football Life/PES 2021 et de `sider.ini` ;
 - priorité donnée au véritable Sider de Football Life dans `SiderAddons`, avec migration et redéploiement automatiques des anciennes liaisons incorrectes ;
 - staging privé des mods dans `%LOCALAPPDATA%\STRYKER\mods` ;
-- import de ZIP par sélection ou glisser-déposer, avec contrôle des chemins, limite de 20 Go et refus du code exécutable ;
-- reconnaissance des structures LiveCPK courantes et des manifestes `stryker.mod.json` ;
+- import de ZIP et RAR par sélection ou glisser-déposer, avec contrôle des chemins, limite de 20 Go et refus du code exécutable ;
+- reconnaissance automatique des structures LiveCPK, Asset, modules Lua Sider, content et Option File, avec ou sans manifeste `stryker.mod.json` ;
 - déploiement transactionnel des lignes `cpk.root` et des modules Lua ;
 - sauvegarde de `sider.ini` avant chaque changement, avec restauration depuis l’interface ;
 - installation et réinstallation sans doublon, état visible, activation/désactivation immédiate sans lancer le jeu, ordre de priorité, désinstallation récupérable et profils clonables ;
-- détection des collisions de fichiers LiveCPK et des dépendances déclarées ;
+- détection des collisions LiveCPK, content et Option File ; résolution des dépendances par identifiant de paquet ;
 - détection des conflits entre mods sans signaler comme conflit les deux composants d’un même paquet ;
 - liaison par une fenêtre Windows native et lancement réel de Football Life, directement ou après démarrage de Sider ;
 - reconnaissance prioritaire du lanceur officiel `FL 20XX start.exe`, y compris pour une installation déjà liée ;
@@ -27,13 +27,13 @@ Le projet est indépendant. Il n’est affilié ni à Konami, ni à SmokePatch, 
 - application Electron autonome, sans Node.js requis chez l’utilisateur final.
 - mises à jour Windows vérifiées au démarrage, téléchargeables dans l’application et installables au redémarrage depuis un flux HTTPS publié par STRYKER ;
 
-STRYKER ne prétend pas automatiser les installateurs `.exe`, les DLL, les archives RAR/7z ou les mods dont la structure est ambiguë. Ceux-ci restent manuels par sécurité.
+STRYKER ne prétend pas automatiser les installateurs `.exe`, les DLL, les archives 7z ou les mods dont la structure est ambiguë. Ces archives sont refusées avec une explication ; elles ne sont pas affichées comme installables dans Découvrir.
 
 ## Utilisation de l’application
 
 1. Ouvrir STRYKER et sélectionner le dossier qui contient l’exécutable de Football Life ou `PES2021.exe`.
 2. Vérifier l’état de l’installation sur le tableau de bord.
-3. Installer un mod hébergé depuis **Découvrir → Installer**, ou déposer/importer un ZIP local depuis **Mods**. Un mod non répertorié est vérifié, placé dans le staging, puis déployé automatiquement si le jeu est lié.
+3. Rechercher un mod dans **Découvrir**, puis choisir **Installer**. Ses boutons deviennent **Activer/Désactiver** et **Désinstaller**. Un ZIP ou RAR local peut aussi être importé depuis **Mods** ou **Découvrir**, sans manifeste obligatoire lorsque sa structure est reconnue.
 4. Pour publier un mod, ouvrir **Publier un mod** sur le site, remplir la fiche et envoyer l’archive en modération.
 5. Ajuster l’ordre : le mod placé le plus haut est prioritaire dans le bloc STRYKER.
 6. Examiner la page **Conflits**, puis lancer le jeu.

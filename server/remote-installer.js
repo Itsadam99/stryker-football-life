@@ -60,7 +60,8 @@ export class RemoteInstaller {
     const detailUrl = new URL(`api/catalog/${encodeURIComponent(safeModId)}`, base);
     const details = await jsonResponse(await fetch(detailUrl, { redirect: "error" }), "Impossible de lire la fiche du mod");
     const record = details.mod;
-    if (!record || record.id !== safeModId || !record.archiveHash) throw new Error("Fiche de mod distante incomplète.");
+    if (!record || record.id !== safeModId || !/^[a-f0-9]{64}$/i.test(record.archiveHash || "") || !record.downloadUrl) throw new Error("Fiche de mod distante incomplète.");
+    if (record.status !== "published") throw new Error("Ce mod n’est pas disponible à l’installation.");
 
     const downloadUrl = new URL(record.downloadUrl, base);
     if (!trustedDownloadRequest(downloadUrl, base)) throw new Error("Le téléchargement doit rester sur un stockage STRYKER approuvé.");
@@ -72,7 +73,11 @@ export class RemoteInstaller {
     const announcedSize = Number(response.headers.get("content-length") || 0);
     if (announcedSize > MAX_ARCHIVE_BYTES) throw new Error("Archive supérieure à la limite de 20 Go.");
 
-    const target = path.join(this.dataDirectories.downloads, `remote-${sanitizeSegment(safeModId)}-${crypto.randomBytes(5).toString("hex")}.zip`);
+    // Le moteur choisit son extracteur d'après l'extension : la forcer à .zip
+    // rendait tout mod hébergé en .rar ininstallable à distance.
+    const sourceExtension = path.extname(new URL(downloadUrl).pathname).toLowerCase();
+    const archiveExtension = sourceExtension === ".rar" ? ".rar" : ".zip";
+    const target = path.join(this.dataDirectories.downloads, `remote-${sanitizeSegment(safeModId)}-${crypto.randomBytes(5).toString("hex")}${archiveExtension}`);
     assertPathInside(this.dataDirectories.downloads, target, "Téléchargement distant");
     const hash = crypto.createHash("sha256");
     let received = 0;
