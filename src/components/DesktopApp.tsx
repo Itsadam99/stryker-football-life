@@ -9,12 +9,13 @@ import { api } from "../services/api";
 import { localizeCatalogMod, VERIFIED_CATALOG_MODS } from "../services/catalogData";
 import {
   ActivityItem, BackupItem, ConflictReport, DlssSettings, GameConfig, GameProcessStatus,
-  CatalogMod, HealthCheck, HealthReport, HubSubmission, LogContent, LogSource, ManagedMod, ModItem, Profile, UpdateStatus,
+  CatalogMod, HealthCheck, HealthReport, LogContent, LogSource, ManagedMod, ModItem, Profile, UpdateStatus,
 } from "../types";
 import { StrykerLogo } from "./StrykerLogo";
 import { Language, LanguageSwitcher, useI18n } from "../i18n";
 import { DLSS_COPY } from "../services/dlssCopy";
 import { LOG_COPY, logLineLevel } from "../services/logCopy";
+import { installableCatalog, installedCatalogMod, searchCatalog, catalogInstallPlan } from "../services/installableCatalog";
 
 type DesktopPage = "dashboard" | "mods" | "catalog" | "profiles" | "conflicts" | "logs" | "settings";
 
@@ -76,7 +77,7 @@ const EMPTY_DLSS: DlssSettings = {
   },
 };
 
-const APP_VERSION = "3.9.1";
+const APP_VERSION = "3.9.2";
 
 const EMPTY_UPDATE: UpdateStatus = {
   currentVersion: APP_VERSION,
@@ -130,12 +131,12 @@ export function DesktopApp() {
   const [backups, setBackups] = useState<BackupItem[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [catalogMods, setCatalogMods] = useState<CatalogMod[]>([]);
-  const [submissions, setSubmissions] = useState<HubSubmission[]>([]);
   const [version, setVersion] = useState(APP_VERSION);
   const [busy, setBusy] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [notice, setNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [search, setSearch] = useState("");
+  const [catalogSearch, setCatalogSearch] = useState("");
   const [profileFormOpen, setProfileFormOpen] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileDescription, setProfileDescription] = useState("");
@@ -201,12 +202,11 @@ export function DesktopApp() {
     const query = logSearch.trim().toLowerCase();
     return query ? lines.filter((line) => line.toLowerCase().includes(query)) : lines;
   }, [logContent, logSearch]);
-  const externalCatalogMods = useMemo(
-    () => VERIFIED_CATALOG_MODS
-      .filter((mod) => mod.status === "pending_review" || Boolean(mod.sourceUrl || mod.downloadUrl))
-      .map((mod) => localizeCatalogMod(mod, language)),
-    [language],
+  const availableCatalog = useMemo(
+    () => installableCatalog(catalogMods, VERIFIED_CATALOG_MODS).map((mod) => localizeCatalogMod(mod, language)),
+    [catalogMods, language],
   );
+  const filteredCatalog = useMemo(() => searchCatalog(availableCatalog, catalogSearch), [availableCatalog, catalogSearch]);
 
   const announce = (message: string, type: "success" | "error" = "success") => {
     setNotice({ message, type });
@@ -214,7 +214,7 @@ export function DesktopApp() {
   };
 
   const refreshAll = async () => {
-    const [nextConfig, nextDlss, nextMods, sider, nextProfiles, nextHealth, nextConflicts, nextBackups, nextActivity, nextStatus, nextVersion, nextCatalog, nextSubmissions] = await Promise.all([
+    const [nextConfig, nextDlss, nextMods, sider, nextProfiles, nextHealth, nextConflicts, nextBackups, nextActivity, nextStatus, nextVersion, nextCatalog] = await Promise.all([
       api.getConfig(),
       api.getDlssSettings(),
       api.getManagedMods(),
@@ -227,7 +227,6 @@ export function DesktopApp() {
       api.getLauncherStatus(),
       api.getVersion(),
       api.getCatalog(),
-      api.getSubmissions(),
     ]);
     setConfig(nextConfig);
     setDlss(nextDlss);
@@ -242,7 +241,6 @@ export function DesktopApp() {
     setVersion(nextVersion.currentVersion);
     setUpdateStatus(nextVersion);
     setCatalogMods(nextCatalog);
-    setSubmissions(nextSubmissions);
   };
 
   useEffect(() => {
@@ -354,6 +352,19 @@ export function DesktopApp() {
     await api.linkGame(selection.path);
   }, t("desktop.linkedSuccess"), { label: t("desktop.linkGame") });
 
+  const installCatalogEntry = async (target: CatalogMod) => {
+    for (const mod of catalogInstallPlan(target, availableCatalog, mods)) {
+      const installed = installedCatalogMod(mod, mods);
+      if (installed) {
+        if (!installed.enabled) await api.toggleManagedMod(installed.id, true);
+        continue;
+      }
+      setTask({ label: t("desktop.install") + " · " + mod.title, progress: null });
+      if (catalogMods.some((item) => item.id === mod.id)) await api.installCatalogMod(mod.id);
+      else await api.installRemoteCatalogMod(mod.repositoryUrl || "", mod.id);
+    }
+  };
+
   const importArchive = () => runAction(async () => {
     const selection = await api.browseArchive();
     if (selection.cancelled || !selection.path) return false;
@@ -437,7 +448,7 @@ export function DesktopApp() {
   };
 
   useEffect(() => {
-    if (deepLinkHandled.current) return;
+    if (deepLinkHandled.current || initialLoading) return;
     const params = new URLSearchParams(window.location.search);
     const modId = params.get("installMod");
     const repository = params.get("repository");
@@ -448,10 +459,10 @@ export function DesktopApp() {
     cleanUrl.searchParams.delete("installMod");
     cleanUrl.searchParams.delete("repository");
     window.history.replaceState({}, "", cleanUrl);
-    void runAction(() => repository ? api.installRemoteCatalogMod(repository, modId) : api.installCatalogMod(modId), config.isLinked
+    void runAction(() => { const entry = availableCatalog.find((mod) => mod.id === modId); return entry ? installCatalogEntry(entry) : repository ? api.installRemoteCatalogMod(repository, modId) : api.installCatalogMod(modId); }, config.isLinked
       ? t("desktop.hubInstalled")
       : t("desktop.hubPrepared"));
-  }, [config.isLinked, t]);
+  }, [initialLoading, config.isLinked, availableCatalog, t]);
 
   if (initialLoading) {
     return (
@@ -885,42 +896,29 @@ export function DesktopApp() {
                 </button>
               </div>
 
-              <Panel title={t("desktop.catalog")} icon={Library} count={catalogMods.length}>
-                {catalogMods.length === 0 ? <Empty text={t("desktop.noPublished")} /> : (
+              <label className="relative block">
+                <span className="sr-only">{t("catalog.searchLabel")}</span>
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                <input type="search" value={catalogSearch} onChange={(event) => setCatalogSearch(event.target.value)} placeholder={t("catalog.search")} className="sk-input pl-10" />
+              </label>
+              <Panel title={t("desktop.catalog")} icon={Library} count={filteredCatalog.length}>
+                {filteredCatalog.length === 0 ? <Empty text={catalogSearch.trim() ? t("catalog.noResults") : t("desktop.noPublished")} /> : (
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {catalogMods.map((mod) => {
-                      const installedMod = mods.find((item) => item.packageId === mod.id || item.archiveHash === mod.archiveHash || item.id.startsWith(`${mod.id}-`));
+                    {filteredCatalog.map((mod) => {
+                      const installedMod = installedCatalogMod(mod, mods);
                       return (
-                        <ModCard
-                          key={mod.id}
-                          mod={mod}
-                          installed={Boolean(installedMod)}
-                          pending={pendingId === mod.id}
-                          badge={t("desktop.hosted")}
-                          badgeTone="brand"
-                          installedLabel={installedMod?.installCount && installedMod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")}
-                          meta={`SHA-256 ${mod.archiveHash?.slice(0, 12)}… · ${mod.downloadsCount} ${t("desktop.installations")}`}
-                        >
-                          <button
-                            onClick={() => runAction(
-                              () => api.installCatalogMod(mod.id),
-                              config.isLinked
-                                ? `${mod.title} ${installedMod ? t("desktop.reinstalledDeployed") : t("desktop.installedDeployed")}`
-                                : `${mod.title} ${t("desktop.preparedLink")}`,
-                              { label: `${t("desktop.install")} · ${mod.title}`, itemId: mod.id },
-                            )}
-                            disabled={busy}
-                            className="sk-btn sk-btn-primary flex-1"
-                          >
-                            <Download className="h-3.5 w-3.5" /> {installedMod ? t("desktop.reinstall") : t("desktop.install")}
-                          </button>
-                          {installedMod && (
-                            <button
-                              onClick={() => runAction(() => api.toggleManagedMod(installedMod.id, !installedMod.enabled), installedMod.enabled ? t("desktop.disabled") : t("desktop.enabled"))}
-                              disabled={busy}
-                              className="sk-btn sk-btn-ghost flex-1"
-                            >
+                        <ModCard key={mod.id} mod={mod} installed={Boolean(installedMod)} pending={pendingId === mod.id}
+                          badge={t("desktop.hosted")} badgeTone="brand" installedLabel={t("desktop.installedState")} meta={mod.size}>
+                          {installedMod ? <>
+                            <button onClick={() => runAction(() => api.toggleManagedMod(installedMod.id, !installedMod.enabled), installedMod.enabled ? t("desktop.disabled") : t("desktop.enabled"), { label: mod.title, itemId: mod.id })} disabled={busy} className="sk-btn sk-btn-ghost flex-1">
                               {installedMod.enabled ? t("desktop.disable") : t("desktop.enable")}
+                            </button>
+                            <button aria-label={t("desktop.uninstall") + " " + mod.title} onClick={() => runAction(() => api.uninstallMod(installedMod.id), t("desktop.uninstalled"), { label: t("desktop.uninstall") + " · " + mod.title, itemId: mod.id })} disabled={busy} className="sk-btn sk-btn-danger flex-1">
+                              <Trash2 className="h-3.5 w-3.5" />{t("desktop.uninstall")}
+                            </button>
+                          </> : (
+                            <button onClick={() => runAction(() => installCatalogEntry(mod), config.isLinked ? t("desktop.hubInstalled") : t("desktop.hubPrepared"), { label: t("desktop.install") + " · " + mod.title, itemId: mod.id })} disabled={busy} className="sk-btn sk-btn-primary flex-1">
+                              <Download className="h-3.5 w-3.5" />{t("desktop.install")}
                             </button>
                           )}
                         </ModCard>
@@ -928,82 +926,6 @@ export function DesktopApp() {
                     })}
                   </div>
                 )}
-              </Panel>
-
-              <Panel title={t("desktop.moderation")} icon={ShieldCheck} count={submissions.length}>
-                <p className="mb-4 text-[11px] leading-relaxed text-[color:var(--sk-faint)]">{t("desktop.moderationDescription")}</p>
-                {submissions.length === 0 ? <Empty text={t("desktop.noSubmissions")} /> : (
-                  <div className="space-y-3">
-                    {submissions.map((submission) => (
-                      <article key={submission.id} className="sk-panel gap-4 p-4 md:flex md:items-center">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="sk-display text-base">{submission.title}</h3>
-                            <span className="sk-chip" data-tone={submission.status === "pending_review" ? "warn" : submission.status === "rejected" ? "danger" : undefined}>
-                              {submission.status === "pending_review" ? t("desktop.pendingReview") : submission.status === "awaiting_archive" ? t("desktop.archiveMissing") : t("desktop.rejected")}
-                            </span>
-                          </div>
-                          <p className="mt-1.5 font-mono text-[9px] text-[color:var(--sk-ghost)]">
-                            {submission.author} · {submission.version} · {submission.fileCount || 0} {t("desktop.files")} · {submission.archiveSize ? `${(submission.archiveSize / 1024 / 1024).toFixed(1)} MB` : "—"}
-                          </p>
-                          <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--sk-muted)]">{submission.shortDesc}</p>
-                        </div>
-                        {submission.status === "pending_review" && (
-                          <div className="mt-3 flex flex-wrap gap-2 md:mt-0">
-                            <button onClick={() => runAction(() => api.installSubmission(submission.id), t("desktop.testInstalled"))} className="sk-btn sk-btn-ghost">{t("desktop.test")}</button>
-                            <button onClick={() => runAction(() => api.publishSubmission(submission.id), t("desktop.published"))} className="sk-btn bg-emerald-600 text-white hover:bg-emerald-500">{t("desktop.publish")}</button>
-                            <button
-                              onClick={() => { const note = window.prompt(t("desktop.rejectReason"), t("desktop.rejectDefault")); if (note !== null) runAction(() => api.rejectSubmission(submission.id, note), t("desktop.submissionRejected")); }}
-                              className="sk-btn sk-btn-danger"
-                            >{t("desktop.reject")}</button>
-                          </div>
-                        )}
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </Panel>
-
-              <Panel title={t("desktop.externalResources")} icon={ExternalLink} count={externalCatalogMods.length}>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {externalCatalogMods.map((mod) => {
-                    const installedMod = mods.find((item) => item.packageId === mod.id || item.archiveHash === mod.archiveHash || item.id.startsWith(`${mod.id}-`));
-                    const remoteInstallable = mod.status !== "pending_review" && mod.installationType === "automatic" && Boolean(mod.repositoryUrl);
-                    return (
-                      <ModCard
-                        key={mod.id}
-                        mod={mod}
-                        installed={Boolean(installedMod)}
-                        pending={pendingId === mod.id}
-                        badge={mod.status === "pending_review" ? t("desktop.pendingReview") : remoteInstallable ? t("desktop.hosted") : mod.legalStatus === "verified_source" ? t("desktop.verifiedSource") : t("desktop.communityLink")}
-                        badgeTone={mod.status === "pending_review" ? "warn" : remoteInstallable || mod.legalStatus === "verified_source" ? "ok" : "warn"}
-                        installedLabel={installedMod?.installCount && installedMod.installCount > 1 ? t("desktop.reinstalledState") : t("desktop.installedState")}
-                      >
-                        {mod.status === "pending_review" ? (
-                          <span className="sk-btn sk-btn-ghost flex-1 cursor-default border-amber-300/25 bg-amber-300/[0.06] text-amber-100/65">{t("desktop.pendingReview")}</span>
-                        ) : remoteInstallable ? (
-                          <button
-                            onClick={() => runAction(
-                              () => api.installRemoteCatalogMod(mod.repositoryUrl || "", mod.id),
-                              config.isLinked
-                                ? `${mod.title} ${installedMod ? t("desktop.reinstalledDeployed") : t("desktop.installedDeployed")}`
-                                : `${mod.title} ${t("desktop.preparedLink")}`,
-                              { label: `${t("desktop.install")} · ${mod.title}`, itemId: mod.id },
-                            )}
-                            disabled={busy}
-                            className="sk-btn sk-btn-primary flex-1"
-                          >
-                            <Download className="h-3.5 w-3.5" /> {installedMod ? t("desktop.reinstall") : t("desktop.install")}
-                          </button>
-                        ) : (
-                          <a href={mod.sourceUrl || mod.downloadUrl} target="_blank" rel="noreferrer" className="sk-btn sk-btn-ghost flex-1">
-                            {t("desktop.authorSource")} <ExternalLink className="h-3 w-3" />
-                          </a>
-                        )}
-                      </ModCard>
-                    );
-                  })}
-                </div>
               </Panel>
             </div>
           )}

@@ -21,7 +21,7 @@ import { StateStore } from "./storage.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
-const APP_VERSION = "3.9.1";
+const APP_VERSION = "3.9.2";
 const MAX_LOCAL_ARCHIVE_BYTES = 20 * 1024 * 1024 * 1024;
 
 function ensureMockSandbox(mockDir) {
@@ -172,13 +172,15 @@ export function createRuntime({
   const siderManager = new SiderManager({ dataDirectories });
   const modEngine = new ModEngine({ store, siderManager, dataDirectories });
   const dlssManager = new DlssManager();
-  if ((siderInstallationChanged || facepackDeploymentChanged || dlssControllerMigrated) && Object.keys(store.snapshot().mods).length > 0) {
+  const modPathsChanged = store.snapshot().settings.isLinked && store.snapshot().deployment?.engineRevision !== 2;
+  if ((siderInstallationChanged || facepackDeploymentChanged || dlssControllerMigrated || modPathsChanged) && Object.keys(store.snapshot().mods).length > 0) {
     try {
       modEngine.deployCurrentProfile();
       store.addActivity("migration", facepackDeploymentChanged
         ? "Facepacks déplacés dans le dossier LiveCPK de Football Life"
         : dlssControllerMigrated
           ? "Contrôleur DLSS migré vers le panneau RenoDX instantané sur F10"
+          : modPathsChanged ? "Chemins des modules et fusion des maillots mis à jour"
           : "Mods redéployés vers l’installation Sider réellement utilisée par Football Life", {
         previousSiderPath: existingSettings.siderPath,
         siderPath: store.snapshot().settings.siderPath,
@@ -499,7 +501,7 @@ export function createApp(runtime = createRuntime()) {
       const declaredLength = Number(req.get("Content-Length") || 0);
       if (declaredLength > MAX_LOCAL_ARCHIVE_BYTES) throw new Error("Archive supérieure à la limite de sécurité de 20 Go.");
 
-      uploadPath = path.join(runtime.dataDirectories.temp, `drop-${crypto.randomUUID()}.zip`);
+      uploadPath = path.join(runtime.dataDirectories.temp, `drop-${crypto.randomUUID()}${path.extname(safeName).toLowerCase()}`);
       assertPathInside(runtime.dataDirectories.temp, uploadPath, "Archive déposée");
       let receivedBytes = 0;
       const limiter = new Transform({
@@ -510,7 +512,7 @@ export function createApp(runtime = createRuntime()) {
         },
       });
       await pipeline(req, limiter, fs.createWriteStream(uploadPath, { flags: "wx", mode: 0o600 }));
-      if (receivedBytes === 0) throw new Error("L’archive ZIP déposée est vide.");
+      if (receivedBytes === 0) throw new Error("L’archive déposée est vide.");
 
       const mod = await modEngine.installArchive(uploadPath, {
         name: path.basename(safeName, path.extname(safeName)),

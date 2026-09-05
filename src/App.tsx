@@ -14,6 +14,7 @@ import { CatalogMod } from "./types";
 import { api } from "./services/api";
 import { BUNDLED_CATALOG_MODS, localizeCatalogMod, VERIFIED_CATALOG_MODS } from "./services/catalogData";
 import { createStrykerInstallLink } from "./services/distribution";
+import { installableCatalog } from "./services/installableCatalog";
 import { LanguageSwitcher, useI18n } from "./i18n";
 
 export function App() {
@@ -33,9 +34,8 @@ export function App() {
   }, []);
 
   const catalogMods = useMemo(() => {
-    const uniqueMods = new Map<string, CatalogMod>();
-    [...BUNDLED_CATALOG_MODS, ...hostedMods, ...VERIFIED_CATALOG_MODS].forEach((mod) => uniqueMods.set(mod.id, mod));
-    return [...uniqueMods.values()].map((mod) => localizeCatalogMod(mod, language));
+    return installableCatalog([...BUNDLED_CATALOG_MODS, ...hostedMods], VERIFIED_CATALOG_MODS)
+      .map((mod) => localizeCatalogMod(mod, language));
   }, [hostedMods, language]);
 
   useEffect(() => () => cancelProtocolAttempt.current(), []);

@@ -159,6 +159,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "fl26-pyro-no-spectator-patch",
+    dependencies: [{ id: "fl26-pyro-supporters-v0-9a" }],
     title: "FL26 Pyro — No Spectator Patch",
     author: "heazebell666",
     version: "1.0.0",

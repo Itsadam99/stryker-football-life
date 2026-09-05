@@ -1,6 +1,6 @@
 {
   "name": "stryker-football-life",
-  "version": "3.9.1",
+  "version": "3.9.2",
   "description": "Gestionnaire local de mods pour SP Football Life et PES 2021",
   "author": "Adam",
   "license": "UNLICENSED",
@@ -14,7 +14,7 @@
     "build": "tsc && vite build",
     "build:site": "tsc && node scripts/build-site.mjs",
     "check": "tsc --noEmit",
-    "test": "node --test --test-concurrency=1 test/api-security.test.js test/dlss-manager.test.js test/game-detection.test.js test/mod-engine.test.js test/protocol-links.test.js test/repository.test.js test/sider-manager.test.js test/update-manager.test.js",
+    "test": "node --test --test-concurrency=1 test/api-security.test.js test/archive-installation.test.js test/catalog.test.js test/dlss-manager.test.js test/game-detection.test.js test/mod-engine.test.js test/protocol-links.test.js test/repository.test.js test/sider-manager.test.js test/update-manager.test.js",
     "preview": "vite preview",
     "predesktop": "npm run build",
     "desktop": "electron .",

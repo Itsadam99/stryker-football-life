@@ -139,9 +139,9 @@ async function createWindow() {
       pickArchive: async () => {
         const options = {
           title: "Sélectionner une archive de mod",
-          buttonLabel: "Choisir ce ZIP",
+          buttonLabel: "Choisir cette archive",
           properties: ["openFile"],
-          filters: [{ name: "Archives ZIP", extensions: ["zip"] }],
+          filters: [{ name: "Mods ZIP ou RAR", extensions: ["zip", "rar"] }],
         };
         const result = mainWindow
           ? await dialog.showOpenDialog(mainWindow, options)
