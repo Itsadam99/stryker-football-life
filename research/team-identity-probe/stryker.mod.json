@@ -1,0 +1,11 @@
+{
+  "id": "stryker-team-identity-probe",
+  "name": "STRYKER — Diagnostic tactiques (aucun effet gameplay)",
+  "version": "0.1.0",
+  "author": "STRYKER",
+  "category": "other",
+  "compatibility": ["Football Life 2026 — diagnostic expérimental", "Sider 7.3+"],
+  "components": [
+    { "type": "lua", "root": "modules", "entrypoints": ["team-identity-probe.lua"] }
+  ]
+}
