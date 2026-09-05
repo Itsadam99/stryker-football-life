@@ -1,0 +1,19 @@
+{
+  "mod": {
+    "id": "turfloader-v4",
+    "title": "TurfLoader V4.0",
+    "author": "Parigo-57",
+    "version": "4.0",
+    "category": "turf",
+    "compatibility": [
+      "Football Life 2026",
+      "PES 2021",
+      "Sider 7"
+    ],
+    "downloadUrl": "https://github.com/Itsadam99/stryker-football-life/releases/download/mods-2026.09/turfloader-v4.rar",
+    "archiveHash": "3cd72772216010b15492eae6788e55ca93542e992f46e455b3aa104556ae316c",
+    "archiveSize": 1641697148,
+    "fileCount": 1781,
+    "status": "published"
+  }
+}
