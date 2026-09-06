@@ -123,7 +123,7 @@ def _new_coach(state, boundary, club_id):
     return identity
 
 
-def advance_season(state, boundary, results):
+def advance_season(state, boundary, results, *, season_start=None):
     """One explicit end-of-season event; returns a new snapshot, never mutates input.
 
     Results keyed by every club: {matches: int, points: int}. Policy numbers are
@@ -137,7 +137,15 @@ def advance_season(state, boundary, results):
         if state['last_event']['results_hash'] != fingerprint:
             raise ValueError('Conflicting replay; restore the matching career snapshot first.')
         return deepcopy(state)
-    if target <= current or not 270 <= (target - current).days <= 400:
+    full_season = 270 <= (target - current).days <= 400
+    partial_first_season = False
+    if season_start is not None:
+        start = _date(season_start)
+        partial_first_season = (not state.get('last_event') and start < current < target
+                                and 270 <= (target - start).days <= 400)
+        if not partial_first_season:
+            raise ValueError('Invalid explicit first-season calendar.')
+    if target <= current or not (full_season or partial_first_season):
         raise ValueError('One career season at a time; no wall-clock or skipped-year advancement.')
     if set(results) != set(state['clubs']):
         raise ValueError('Complete club results required; player-match statistics are insufficient.')

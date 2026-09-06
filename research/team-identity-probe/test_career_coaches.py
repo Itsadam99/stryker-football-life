@@ -28,6 +28,16 @@ def results(state, points=61, matches=38):
 
 
 class CoachingTests(unittest.TestCase):
+    def test_installing_midseason_requires_an_explicit_season_calendar(self):
+        state = fixture()
+        state['date'] = '2025-10-24'
+        with self.assertRaises(ValueError):
+            advance_season(state, '2026-07-01', results(state))
+        output = advance_season(state, '2026-07-01', results(state), season_start='2025-07-01')
+        self.assertEqual(output['date'], '2026-07-01')
+        with self.assertRaises(ValueError):
+            advance_season(state, '2026-07-01', results(state), season_start='2023-07-01')
+
     def test_full_sized_fictional_population_survives_25_seasons(self):
         state = fixture()
         template_coach = deepcopy(state['coaches']['coach:0'])

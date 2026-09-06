@@ -28,7 +28,7 @@
     "before": 0,
     "after": 1,
     "validationScope": "one controlled in-game edit of the primary tactic for Paris FC",
-    "notValidated": ["other tactic presets", "Tactics.bin bit layout", "BAL or ML save offsets", "live match memory", "long-pass frequency during play"]
+    "notValidated": ["other tactic presets individually", "Tactics.bin bit layout", "ML save offsets", "live match memory", "long-pass frequency during play"]
   },
   "initialCareerCandidates": {
     "pattern": "99 formation bytes following the EDIT record team ID",
@@ -43,6 +43,9 @@
     "teamRecordSize": 1680,
     "teamNameOffset": 0,
     "teamPlanOffset": 1116,
+    "teamSlotReferenceOffset": 648,
+    "teamCoachReferenceOffset": 652,
+    "teamCoachReferenceMatches": "730 of 730 named teams in the observed BAL snapshot",
     "coachTableOffset": 1260084,
     "coachRecordSize": 600,
     "coachIdOffset": 0,
@@ -62,9 +65,31 @@
       "dataBytesChanged": 4,
       "displayTitleModified": true,
       "allSixDecodedBlocksRoundTripExact": true,
-      "inGameLoadValidated": false,
+      "inGameLoadValidated": true,
+      "displayedShortPassValidated": true,
+      "userConfirmation": "save 3 displays short passes; original save 1 still displays long passes",
       "matchBehaviourValidated": false
     },
     "notValidated": ["other careers and game versions", "ML layout", "which plan is selected by the live engine", "runtime application without reloading"]
+  },
+  "extendedTrial": {
+    "title": "STRYKER TEST - Coach et styles",
+    "slot": "BL00000003",
+    "teamsProcessed": 730,
+    "teamsSkipped": 0,
+    "changedDataBytes": 1189,
+    "forcedTestAppointment": {"team": "Paris FC", "oldCoach": 101358, "newCoach": 18, "name": "Laurent Blanc"},
+    "allSixDecodedBlocksRoundTripExact": true,
+    "inGameLoadValidated": true,
+    "userConfirmedCoachAndMainFormation": "Laurent Blanc and 4-3-3 are both displayed in slot 4",
+    "revision2": {"changedDataBytes": 1200, "installed": false, "change": "4-2-3-1 uses LM/RM roles instead of wing forwards; main Paris FC 4-3-3 unchanged"},
+    "automaticSeasonSimulationEnabled": false
+  },
+  "calendarObservation": {
+    "offsets": [11322908, 11516880],
+    "encoding": "uint16 little-endian year, uint8 month, uint8 day",
+    "threeMatchingSnapshotDates": ["2025-09-02", "2025-10-24", "2026-02-21"],
+    "guard": "both binary copies and D/M/Y description must agree",
+    "seasonBoundaryDetectionValidated": false
   }
 }

@@ -19,15 +19,22 @@ def digest(data):
 
 
 def build_trial(source, destination, crypto_tools, team, coach, title):
+    data = (Path(source) / 'data.dat').read_bytes()
+    output, report = patch_build_up(data, expected_name=team, expected_coach_id=coach, short_pass=True)
+    report['changedOffsets'] = sorted(c['offset'] for c in report['changedBytes'])
+    return write_verified_trial(source, destination, crypto_tools, output, report, title)
+
+
+def write_verified_trial(source, destination, crypto_tools, output, report, title):
     source, destination, crypto_tools = map(Path, (source, destination, crypto_tools))
     blocks = {name: (source / name).read_bytes() for name in BLOCKS}
-    output, report = patch_build_up(blocks['data.dat'], expected_name=team,
-                                   expected_coach_id=coach, short_pass=True)
     # Independently verify the complete decoded diff, not just the adapter's log.
     actual = [i for i, (before, after) in enumerate(zip(blocks['data.dat'], output)) if before != after]
-    if len(output) != len(blocks['data.dat']) or actual != sorted(c['offset'] for c in report['changedBytes']):
+    if digest(blocks['data.dat']) != report['beforeSha256'] or digest(output) != report['afterSha256']:
+        raise ValueError('Patch provenance differs from the source snapshot.')
+    if len(output) != len(blocks['data.dat']) or actual != report['changedOffsets']:
         raise ValueError('Unexpected changes outside the tactical patch.')
-    if not set(actual).issubset(report['allowedOffsets']):
+    if 'allowedOffsets' in report and not set(actual).issubset(report['allowedOffsets']):
         raise ValueError('A change is outside the allowed instruction locations.')
     label = title.encode('utf-8')
     if not label or len(label) >= 128 or b'\0' in label or len(blocks['description.dat']) != 384:

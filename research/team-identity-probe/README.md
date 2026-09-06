@@ -30,7 +30,7 @@ Exemple avec des dossiers de copies locales :
 python research/team-identity-probe/build_career_trial.py --decoded CHEMIN_COPIE_DECODEE --output NOUVEAU_DOSSIER --crypto-tools DOSSIER_PESX --team "Paris FC" --coach 101358 --title "STRYKER TEST - Paris FC"
 ```
 
-Un essai a été ajouté manuellement au troisième emplacement BAL libre, sans remplacer les deux sauvegardes existantes. Son chargement et ses consignes affichées restent à vérifier dans FL. Un cycle de chiffrement correct ne prouve pas la validité en jeu.
+Un essai a été ajouté manuellement au troisième emplacement BAL libre, sans remplacer les deux sauvegardes existantes. L’utilisateur confirme son chargement et les passes courtes affichées, tandis que l’original garde les passes longues. La fréquence effective des longs ballons reste à observer.
 
 ## Simulation des entraîneurs hors jeu
 
@@ -47,3 +47,19 @@ python -m unittest discover -s research/team-identity-probe -p "test_career*.py"
 ```
 
 16 tests réussis, dont une population entièrement fictive de 749 clubs / 980 entraîneurs initiaux sur 25 saisons. Il s’agit d’une simulation de code, pas de 25 saisons jouées dans FL.
+
+## Essai étendu et sources conservées
+
+`tactical_plans.py` compile dix consignes et six formations, en préservant les données sans rapport avec elles. `career_application.py` sait également préparer l’affectation explicite d’un coach natif disponible, avec contrôle de ses deux références. Il relie les intentions du moteur de simulation à ces opérations ; l’activation automatique reste suspendue aux données de résultats et à la gestion des états de sauvegarde. `career_calendar.py` lit une date uniquement si ses deux copies binaires et la description concordent, ce qui a été recoupé sur trois dates de carrière.
+
+`identity-presets.json` contient les profils de conception Barça/Atlético et le test Paris FC/Laurent Blanc. Les autres équipes conservent leur identité native, avec correction des relances longues des plans orientés possession. La nomination de Laurent Blanc est un test explicite ; aucun résultat ou licenciement n’est inventé.
+
+```powershell
+python research/team-identity-probe/build_identity_trial.py --decoded COPIE_DECODEE --output NOUVEAU_DOSSIER --crypto-tools DOSSIER_PESX --coach-bin COPIE_COACH_BIN --coach-trial
+```
+
+Le fichier produit a été ajouté en sauvegarde 4, titre « STRYKER TEST - Coach et styles ». Le rapport couvre 730 équipes, aucune ignorée, 1 189 octets de données modifiés et six blocs identiques après chiffrement/déchiffrement. L’utilisateur confirme Laurent Blanc et le 4-3-3 affichés dans cette sauvegarde. Les nouvelles formations ne changent pas les identifiants des titulaires ; leur pertinence par joueur et leur comportement en match doivent être évalués. La révision suivante corrige les rôles larges du 4-2-3-1 (milieux gauche/droit) ; elle est construite et vérifiée, mais n’a pas remplacé la sauvegarde 4 pendant la session de jeu.
+
+Le code reste séparé du catalogue Striker. L’archive de développement conserve les sources, pas les sauvegardes, tables de jeu, clés ou exécutables externes. Il faut toujours le dépôt STRYKER pour le test du module de diagnostic, et les outils PES 2021 externes pour chiffrer une nouvelle copie de carrière.
+
+La suite complète comprend maintenant 29 tests de carrière, couvrant aussi l’application d’un changement de coach, les formations, la protection des champs non déclarés, le calendrier et l’initialisation en cours de saison (qui exige un calendrier de saison explicite). `build_source_archive.py --output NOUVELLE_ARCHIVE.zip --revision REVISION_GIT` conserve les sources et les notes avec un inventaire d’empreintes, puis vérifie le contenu de l’archive.
