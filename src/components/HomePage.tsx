@@ -4,6 +4,7 @@ import type { CatalogMod } from "../types";
 import { useI18n } from "../i18n";
 import { STRYKER_DOWNLOAD_URL } from "../services/distribution";
 import { SITE_COPY } from "../services/siteCopy";
+import { ModCover } from "./ModCover";
 
 interface HomePageProps {
   mods: CatalogMod[];
@@ -116,7 +117,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="mx-auto grid max-w-[1380px] gap-5 lg:grid-cols-3">
           {featured.map((mod, index) => (
             <article key={mod.id} data-reveal className="brand-mod-card group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[1.8rem] border border-white/10 p-6 sm:p-8">
-              <img src="/stryker-logo.png" alt="" aria-hidden="true" width={1536} height={1024} loading="lazy" decoding="async" className="pointer-events-none absolute -right-20 -top-12 w-[25rem] max-w-none opacity-[0.075] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.12]" />
+              <ModCover mod={mod} watermarkClassName="pointer-events-none absolute -right-20 -top-12 w-[25rem] max-w-none opacity-[0.075] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.12]" coverClassName="opacity-70 transition duration-700 group-hover:scale-105 group-hover:opacity-80" overlayClassName="bg-[linear-gradient(to_top,rgba(7,5,7,.96),rgba(7,5,7,.62)_58%,rgba(7,5,7,.5))]" />
               <div className="relative z-10 flex items-start justify-between gap-4">
                 <span className="rounded-full border border-white/15 bg-black/30 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.16em]">{statusLabel(mod, { hosted: t("home.hosted"), verified: t("home.verified"), community: t("home.community") })}</span>
                 <span className="text-4xl font-black tracking-[-0.08em] text-white/16">{String(index + 1).padStart(2, "0")}</span>
