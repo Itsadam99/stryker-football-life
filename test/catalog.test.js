@@ -40,8 +40,14 @@ test("installation des dépendances dans le bon ordre, sans réinstaller une bas
 
 test("chaque mod communautaire installable possède sa fiche et la même empreinte", () => {
   for (const mod of DESKTOP_COMMUNITY_MODS) {
-    assert.equal(mod.status, "published", mod.id);
     const { mod: record } = JSON.parse(fs.readFileSync(new URL("../public/repository/api/catalog/" + mod.id, import.meta.url), "utf8"));
+    // Un paquet retiré reste décrit par sa fiche, mais les deux doivent dire la
+    // même chose : sans ce contrôle, il pourrait rester installable d'un côté.
+    assert.equal(record.status, mod.status, mod.id);
+    if (mod.status !== "published") {
+      assert.notEqual(mod.installationType, "automatic", mod.id);
+      continue;
+    }
     assert.equal(record.archiveHash, mod.archiveHash, mod.id);
     assert.equal(record.downloadUrl, mod.downloadUrl, mod.id);
     assert.equal(record.archiveSize, mod.archiveSize, mod.id);

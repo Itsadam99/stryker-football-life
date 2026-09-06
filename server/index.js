@@ -208,8 +208,8 @@ export function createRuntime({
     && Object.values(store.snapshot().mods || {}).some((mod) => mod.packageId === "stryker-dlss5-controller")) {
     try {
       dlssManager.configureOverlay(store.snapshot().settings, {
-        strykerPanel: Object.values(store.snapshot().mods || {})
-          .some((mod) => mod.packageId === "stryker-dlss5-controller" && mod.siderOverlay?.primary),
+        strykerHotkey: Object.values(store.snapshot().mods || {})
+          .some((mod) => mod.packageId === "stryker-dlss5-controller"),
       });
     } catch (error) {
       store.addActivity("error", "La configuration du panneau DLSS F10 sera retentée", { message: error.message });
@@ -230,8 +230,10 @@ export function createApp(runtime = createRuntime()) {
 
   // Effet de bord d'une installation de mod : un panneau non configurable ne
   // doit jamais faire échouer l'installation elle-même, qui a réussi.
-  function strykerPanelInstalled() {
-    return modEngine.list().some((item) => item.packageId === "stryker-dlss5-controller" && item.siderOverlay?.primary);
+  // C'est l'application qui ouvre le centre de contrôle sur F10, pas un module
+  // Lua : la présence du paquet suffit à justifier de libérer la touche.
+  function dlssControllerInstalled() {
+    return modEngine.list().some((item) => item.packageId === "stryker-dlss5-controller");
   }
 
   function syncDlssController(mod = null) {
@@ -241,7 +243,7 @@ export function createApp(runtime = createRuntime()) {
     try {
       const current = dlssManager.status(store.snapshot().settings);
       return current.configurable
-        ? dlssManager.configureOverlay(store.snapshot().settings, { strykerPanel: strykerPanelInstalled() })
+        ? dlssManager.configureOverlay(store.snapshot().settings, { strykerHotkey: dlssControllerInstalled() })
         : current;
     } catch (error) {
       store.addActivity("error", "La configuration du panneau DLSS F10 sera retentée", { message: error.message });
@@ -387,10 +389,10 @@ export function createApp(runtime = createRuntime()) {
         return res.status(409).json({ success: false, error: "Fermez Football Life une seule fois pour installer le nouveau panneau F10." });
       }
       // force : un clic explicite réapplique le thème même s'il est déjà en place.
-      const strykerPanel = strykerPanelInstalled();
-      const dlss = dlssManager.configureOverlay(store.snapshot().settings, { force: true, strykerPanel });
-      store.addActivity("dlss", strykerPanel
-        ? "Panneau STRYKER sur F10, réglages RenoDX en direct sur Origine"
+      const strykerHotkey = dlssControllerInstalled();
+      const dlss = dlssManager.configureOverlay(store.snapshot().settings, { force: true, strykerHotkey });
+      store.addActivity("dlss", strykerHotkey
+        ? "Centre de contrôle STRYKER sur F10, overlay RenoDX sur Origine"
         : "Panneau DLSS instantané configuré sur F10");
       res.json({ success: true, dlss });
     } catch (error) { next(error); }

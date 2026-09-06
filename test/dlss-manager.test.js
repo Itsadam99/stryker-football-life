@@ -72,7 +72,7 @@ test("configure une installation DLSS liée avec sauvegarde", (t) => {
   assert.throws(() => manager.save(settings, { enabled: true, unexpected: true }), /non autorisé/i);
 });
 
-test("laisse F10 à ReShade tant que le panneau STRYKER n’est pas installé, puis le lui rend", (t) => {
+test("laisse F10 à ReShade tant que le contrôleur STRYKER n’est pas installé, puis le lui rend", (t) => {
   const gamePath = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-overlay-"));
   t.after(() => fs.rmSync(gamePath, { recursive: true, force: true }));
   for (const name of ["d3d11.dll", "renodx-dlss.addon64", "nvngx_dlss.dll", "nvngx_dlssnr.dll", "sl.interposer.dll"]) {
@@ -83,18 +83,18 @@ test("laisse F10 à ReShade tant que le panneau STRYKER n’est pas installé, p
   const settings = { isLinked: true, gamePath };
   const manager = new DlssManager();
 
-  // Sans le module Lua capable de dessiner le panneau, déplacer l’overlay
-  // laisserait F10 sans rien ouvrir.
+  // Sans le contrôleur installé, STRYKER ne répond pas à F10 : déplacer
+  // l’overlay laisserait la touche sans effet.
   const withoutPanel = manager.configureOverlay(settings);
   assert.equal(readIniValue(fs.readFileSync(configPath, "utf-8"), "INPUT", "KeyOverlay"), "121,0,0,0");
   assert.equal(withoutPanel.overlay.configured, true);
   assert.equal(withoutPanel.overlay.shortcut, "F10");
   assert.equal(withoutPanel.overlay.advancedShortcut, "F10");
 
-  const withPanel = manager.configureOverlay(settings, { strykerPanel: true });
+  const withHotkey = manager.configureOverlay(settings, { strykerHotkey: true });
   assert.equal(readIniValue(fs.readFileSync(configPath, "utf-8"), "INPUT", "KeyOverlay"), "36,0,0,0");
-  assert.equal(withPanel.overlay.shortcut, "F10");
-  assert.equal(withPanel.overlay.advancedShortcut, "Origine");
+  assert.equal(withHotkey.overlay.shortcut, "F10");
+  assert.equal(withHotkey.overlay.advancedShortcut, "Origine");
 
   // Le thème STRYKER et le fichier d’origine survivent au déplacement.
   assert.match(fs.readFileSync(configPath, "utf-8"), /PresetPath=keep\.ini/);

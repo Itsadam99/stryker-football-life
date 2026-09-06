@@ -1,4 +1,4 @@
-# Mods — STRYKER 3.9.8
+# Mods — STRYKER 3.10.0
 
 ## Corrections
 
@@ -50,6 +50,15 @@ Soccer Revolution 11 remplace `dt13_all.cpk`, `dt18_all.cpk` et l’exécutable 
 Un CPK de remplacement ne modifie pourtant qu’une poignée de fichiers. `scripts/build-livecpk-from-cpk-diff.mjs` extrait le CPK d’origine du jeu et celui du mod, compare les contenus par SHA-256 et ne garde que ce qui diffère. Sur 427 fichiers, 14 diffèrent : les neuf `common/match/constant/constant_*.bin`, quatre binaires `common/anime/FHSequence/bin` et `common/anime/Mbinfo/json/anim_infos.json`. Servis par `cpk.root`, ils produisent le même résultat en jeu sans écraser un seul fichier de Football Life, et la désactivation suffit à revenir en arrière. L’archive passe ainsi de 508 Mo à 5,0 Mo.
 
 Les deux exécutables modifiés livrés par l’auteur ne sont pas redistribués : ce sont des binaires du jeu, et la règle 7 de [MOD_STORAGE.md](MOD_STORAGE.md) les laisse à leur source d’origine. Le correctif d’exécutable reste donc à appliquer à la main pour qui le souhaite.
+
+
+## Soccer Revolution 11 retiré de Découvrir
+
+Signalé le 06/09/2026 : Football Life plante dès que l’overlay ReShade s’ouvre. Windows enregistre deux arrêts, `0xc0000374` dans `ntdll.dll` — corruption du tas — et `0xc000041d` dans l’exécutable. Une corruption du tas se déclare à l’allocation suivante, pas à l’endroit fautif : l’ouverture d’un overlay, qui alloue son atlas de polices, est simplement le moment où elle se voit.
+
+Le paquet désactivé, le crash disparaît. Le suspect est `common/anime/Mbinfo/json/anim_infos.json` : l’auteur le livre à 534 Mo au lieu des 15 Mo d’origine, pour le même nombre d’entrées, en gonflant ses valeurs numériques avec 21,6 millions de suites de vingt-quatre 9 — des entiers de 38 chiffres.
+
+La fiche passe donc en `pending_review` et sort de Découvrir. Les neuf `common/match/constant/constant_*.bin` portent l’essentiel du réglage de gameplay ; une version sans la base d’animations reste à vérifier en jeu avant toute republication.
 
 ## Paquets absents du catalogue installable
 
