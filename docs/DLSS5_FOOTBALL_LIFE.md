@@ -73,11 +73,13 @@ Sur RTX 20/30/40, le panneau propose **Sélectionner et installer**. L'utilisate
 Le catalogue contient également **STRYKER DLSS 5 Universal RTX Controller**, un petit ZIP Lua installable automatiquement. STRYKER le place en première position et affecte `F10` à son panneau dédié : il n'est plus nécessaire d'ouvrir l'overlay avec Espace ni de faire défiler les modules. Utiliser :
 
 - `F10` pour ouvrir ou fermer directement le panneau DLSS ;
-- les flèches `Haut` / `Bas` pour sélectionner Neural Rendering, le niveau de qualité ou l'exposition automatique ;
+- les flèches `Haut` / `Bas` pour parcourir les onze réglages : Neural Rendering, mode de qualité, exposition automatique, intensité, masque automatique, blanc diffus, correction de l'interface, tonalité globale et locale, structure locale et structure des visages ;
 - les flèches `Gauche` / `Droite` pour changer la valeur et l'enregistrer ;
 - `Entrée` pour relire la configuration présente dans `ReShade.ini`.
 
 La touche Sider précédente est sauvegardée et restaurée si le contrôleur est désactivé ou désinstallé dans STRYKER.
+
+L'overlay RenoDX complet n'est pas supprimé pour autant : STRYKER le déplace sur `Origine`. Lui applique ses changements pendant la partie, ce que le panneau STRYKER ne peut pas faire. Tant qu'une installation n'a pas le module capable de dessiner le panneau — les versions antérieures à la 3.9.6 le réduisaient à un marqueur de chargement — ReShade conserve `F10`, sinon la touche n'ouvrirait plus rien.
 
 Le contrôleur en jeu sauvegarde `ReShade.ini.sider-dlss.bak`. Les changements prennent effet au prochain lancement, car Sider ne peut pas recréer en toute sécurité le moteur NVIDIA déjà chargé pendant une partie.
 
