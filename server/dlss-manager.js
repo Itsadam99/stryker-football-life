@@ -28,7 +28,15 @@ const REQUIRED_FILES = [
   "sl.interposer.dll",
 ];
 
-const STRYKER_OVERLAY_KEY = "121,0,0,0"; // F10
+// Quand le contrôleur dessine son propre panneau, F10 lui revient et l’overlay
+// RenoDX complet passe sur Origine : le retirer priverait l’utilisateur du seul
+// endroit où un réglage DLSS s’applique sans relancer le jeu. Sans ce panneau —
+// une installation qui n’a pas encore la version 3 du module — ReShade garde
+// F10, sinon la touche n’ouvrirait plus rien.
+const RESHADE_KEY_F10 = "121,0,0,0";
+const RESHADE_KEY_HOME = "36,0,0,0";
+export const STRYKER_PANEL_SHORTCUT = "F10";
+export const RESHADE_ADVANCED_SHORTCUT = "Origine";
 const STRYKER_STYLE = {
   StyleIndex: 3,
   FontSize: 16,
@@ -241,7 +249,7 @@ export class DlssManager {
         linked: false, installed: false, configurable: false, enabled: false,
         qualityMode: 0, qualityId: "default", autoExposure: false,
         ...DLSS_DEFAULTS,
-        overlay: { configured: false, shortcut: "F10", hotReload: true, nativePanelDetected: false },
+        overlay: { configured: false, shortcut: STRYKER_PANEL_SHORTCUT, advancedShortcut: RESHADE_ADVANCED_SHORTCUT, hotReload: true, nativePanelDetected: false },
         missingFiles: REQUIRED_FILES, configPath: "", backupPath: "",
         compatibility: this.compatibilityStatus("", gpu),
       };
@@ -271,9 +279,12 @@ export class DlssManager {
       localStructureStrength: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingLocalStructureStrength", DLSS_DEFAULTS.localStructureStrength),
       skinStructureStrength: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingSkinStructureStrength", DLSS_DEFAULTS.skinStructureStrength),
       overlay: {
-        configured: readIniValue(content, "INPUT", "KeyOverlay") === STRYKER_OVERLAY_KEY
+        configured: [RESHADE_KEY_F10, RESHADE_KEY_HOME].includes(readIniValue(content, "INPUT", "KeyOverlay"))
           && ["3", "4"].includes(readIniValue(content, "STYLE", "StyleIndex")),
-        shortcut: "F10",
+        shortcut: STRYKER_PANEL_SHORTCUT,
+        advancedShortcut: readIniValue(content, "INPUT", "KeyOverlay") === RESHADE_KEY_HOME
+          ? RESHADE_ADVANCED_SHORTCUT
+          : STRYKER_PANEL_SHORTCUT,
         hotReload: true,
         nativePanelDetected: String(readIniValue(content, "OVERLAY", "Window") || "").includes("RenoDX DLSS"),
       },
@@ -410,17 +421,24 @@ export class DlssManager {
     return this.status(settings);
   }
 
-  configureOverlay(settings, { force = false } = {}) {
+  /**
+   * `strykerPanel` dit si le module Lua du contrôleur dessine bien son panneau.
+   * Lui seul justifie de déplacer l’overlay RenoDX : autrement F10 n’ouvrirait
+   * plus rien du tout.
+   */
+  configureOverlay(settings, { force = false, strykerPanel = false } = {}) {
     const current = this.status(settings);
     if (!current.linked) throw new Error("Liez Football Life avant de configurer le panneau DLSS.");
     if (!current.configurable) throw new Error("ReShade.ini est introuvable. Installez d’abord RenoDX DLSS.");
+    const wantedKey = strykerPanel ? RESHADE_KEY_HOME : RESHADE_KEY_F10;
+    const wantedShortcut = strykerPanel ? RESHADE_ADVANCED_SHORTCUT : STRYKER_PANEL_SHORTCUT;
     // Appelé à chaque installation ou bascule de mod : sans ce court-circuit, le
     // fichier était réécrit inutilement à chaque fois.
-    if (current.overlay.configured && !force) return current;
+    if (current.overlay.configured && current.overlay.advancedShortcut === wantedShortcut && !force) return current;
     const configPath = this.configPath(settings);
     let updated = fs.readFileSync(configPath, "utf-8");
     backupOnce(configPath, `${configPath}.stryker-ui.bak`);
-    updated = updateIniSection(updated, "INPUT", { KeyOverlay: STRYKER_OVERLAY_KEY });
+    updated = updateIniSection(updated, "INPUT", { KeyOverlay: wantedKey });
     updated = updateIniSection(updated, "ADDON", { LoadFromDllMain: "renodx-dlss.addon64" });
     updated = updateIniSection(updated, "STYLE", STRYKER_STYLE);
     atomicWrite(configPath, updated);

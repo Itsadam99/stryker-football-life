@@ -17,6 +17,8 @@ import { createStrykerInstallLink } from "./services/distribution";
 import { installableCatalog } from "./services/installableCatalog";
 import { LanguageSwitcher, useI18n } from "./i18n";
 
+const SPOTLIGHT_MOD_ID = "stryker-dlss5-controller";
+
 export function App() {
   const { language, t } = useI18n();
   const mode = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("mode") : null;
@@ -35,7 +37,10 @@ export function App() {
 
   const catalogMods = useMemo(() => {
     return installableCatalog([...BUNDLED_CATALOG_MODS, ...hostedMods], VERIFIED_CATALOG_MODS)
-      .map((mod) => localizeCatalogMod(mod, language));
+      .map((mod) => localizeCatalogMod(mod, language))
+      // Le contrôleur DLSS ouvre le catalogue : c'est le seul paquet dont
+      // STRYKER est l'auteur, et le tri reste stable pour tous les autres.
+      .sort((a, b) => Number(b.id === SPOTLIGHT_MOD_ID) - Number(a.id === SPOTLIGHT_MOD_ID));
   }, [hostedMods, language]);
 
   useEffect(() => () => cancelProtocolAttempt.current(), []);

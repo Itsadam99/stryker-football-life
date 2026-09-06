@@ -29,7 +29,11 @@ STRYKER refuse toute autre empreinte, sauvegarde la DLL présente en `nvngx_dlss
 
 STRYKER place automatiquement ce contrôleur en premier dans l'overlay et réserve `F10` lors de son activation. La touche d'overlay précédente est restaurée si le mod est désactivé.
 
-Les modes proposés suivent l'énumération Streamline : Jeu/automatique, Performance, Équilibré, Qualité, Ultra Performance, Ultra Qualité et DLAA.
+Le panneau expose onze réglages : activation du Neural Rendering, mode de qualité, exposition automatique, intensité, masque automatique, blanc diffus, correction de l'interface, tonalité globale et locale, structure locale et structure des visages. Les modes de qualité suivent l'énumération Streamline : Jeu/automatique, Performance, Équilibré, Qualité, Ultra Performance, Ultra Qualité et DLAA.
+
+## Réglage en direct
+
+Le panneau STRYKER écrit `ReShade.ini` : ses changements prennent effet au lancement suivant. Pour voir un réglage bouger pendant la partie, `Origine` ouvre l'overlay RenoDX complet, qui applique tout immédiatement. STRYKER lui laisse cette touche et le thème visuel STRYKER.
 
 Une sauvegarde `ReShade.ini.sider-dlss.bak` est créée avant chaque écriture.
 
