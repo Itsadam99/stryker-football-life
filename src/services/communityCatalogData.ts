@@ -191,6 +191,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }, "premier-league-facepack-vol-1.zip"),
   preview({
     id: "realism-menu-light-v2",
+    thumbnail: "/mods/realism-menu-light-v2.jpg",
     title: "Realism Menu Light Mod",
     author: "Communauté Football Life",
     version: "2.0.0",
@@ -224,6 +225,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "fl26-pyro-no-spectator-patch",
+    thumbnail: "/mods/fl26-pyro-no-spectator-patch.jpg",
     dependencies: [{ id: "fl26-pyro-supporters-v0-9a" }],
     title: "FL26 Pyro — No Spectator Patch",
     author: "heazebell666",
@@ -352,6 +354,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   {
     ...preview({
       id: "soccer-revolution-11-gameplay",
+    thumbnail: "/mods/soccer-revolution-11-gameplay.webp",
       title: "Soccer Revolution 11 Gameplay — constantes et animations",
       author: "elijio876",
       version: "1.1",

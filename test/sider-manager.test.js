@@ -184,3 +184,51 @@ test("fusionne les maps Kitserver de plusieurs Kitpacks selon la priorité", (t)
   manager.deploy(state, { id: "default", name: "Test", modOrder: ["first", "second"], enabledMods: [] });
   assert.equal(fs.readFileSync(destinationMap, "utf8"), originalMap);
 });
+
+test("ne recopie pas les données Sider déjà déployées, mais répare celles qui ont bougé", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-redeploy-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const data = ensureDataDirectories(path.join(root, "data"));
+  const siderPath = path.join(root, "game", "SiderAddons", "sider.ini");
+  fs.mkdirSync(path.dirname(siderPath), { recursive: true });
+  fs.writeFileSync(siderPath, "[sider]\r\n");
+
+  const staging = path.join(data.mods, "gros-paquet");
+  fs.mkdirSync(path.join(staging, "content", "POTM"), { recursive: true });
+  fs.writeFileSync(path.join(staging, "content", "POTM", "lourd.bin"), "x".repeat(4096));
+  fs.writeFileSync(path.join(staging, "content", "POTM", "leger.bin"), "y");
+
+  const state = {
+    settings: { siderPath },
+    mods: {
+      "gros-paquet": {
+        id: "gros-paquet", name: "Gros paquet", version: "1.0.0", stagingPath: staging,
+        components: [{ type: "sider", root: "content", target: "content" }],
+      },
+    },
+  };
+  const profile = { id: "default", name: "Test", modOrder: ["gros-paquet"], enabledMods: ["gros-paquet"] };
+  const manager = new SiderManager({ dataDirectories: data });
+  const deployed = path.join(path.dirname(siderPath), "content", "POTM", "lourd.bin");
+
+  manager.deploy(state, profile);
+  assert.equal(fs.readFileSync(deployed, "utf-8").length, 4096);
+
+  // Un second déploiement identique ne doit toucher à rien : c'est cette
+  // recopie intégrale qui faisait passer une installation pour un blocage.
+  const before = fs.statSync(deployed);
+  manager.deploy(state, profile);
+  const after = fs.statSync(deployed);
+  assert.equal(after.ctimeMs, before.ctimeMs, "le fichier inchangé a été réécrit");
+  assert.equal(after.mtimeMs, before.mtimeMs);
+
+  // Une destination modifiée hors de STRYKER est en revanche remise en place.
+  fs.writeFileSync(deployed, "abimee");
+  manager.deploy(state, profile);
+  assert.equal(fs.readFileSync(deployed, "utf-8").length, 4096);
+
+  // Et une source mise à jour est bien redéployée.
+  fs.writeFileSync(path.join(staging, "content", "POTM", "lourd.bin"), "z".repeat(2048));
+  manager.deploy(state, profile);
+  assert.equal(fs.readFileSync(deployed, "utf-8"), "z".repeat(2048));
+});
