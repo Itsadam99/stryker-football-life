@@ -338,6 +338,27 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
     verificationDate: "2026-09-05",
     publishedAt: "2026-09-05T21:00:00.000Z",
   },
+  {
+    ...preview({
+      id: "soccer-revolution-11-gameplay",
+      title: "Soccer Revolution 11 Gameplay — constantes et animations",
+      author: "elijio876",
+      version: "1.1",
+      shortDesc: "Constantes de match et base d’animations du gameplay Soccer Revolution 11. Le correctif de l’exécutable n’est pas inclus.",
+      fullDesc: "Le mod d’origine remplace deux CPK du jeu et son exécutable. STRYKER a comparé dt13_all.cpk et dt18_all.cpk à ceux de Football Life : sur 427 fichiers, 14 seulement diffèrent. Ce sont eux qui sont publiés, en racine LiveCPK — les neuf constant_*.bin de common/match/constant, quatre binaires FHSequence et la base anim_infos.json. Sider les sert par-dessus les CPK du jeu : aucun fichier de Football Life n’est écrasé et la désactivation suffit à tout annuler. Les FL_2026.exe et PES2021.exe modifiés livrés par l’auteur ne sont pas redistribués.",
+      category: "gameplay",
+      compatibility: ["Football Life 2026", "PES 2021", "Sider 7"],
+      size: "5,0 Mo",
+      tags: ["gameplay", "constantes de match", "animations", "LiveCPK", "elijio876"],
+      archiveHash: "a1f0a5666a2f7739a9f346c19260e702d0e33959803a94e9f233fe54d8f32111",
+      archiveSize: 5236882,
+      fileCount: 15,
+      sourceUrl: "https://pes-files.com/pes-2021-gameplay-soccer-revolution-2026-update-v11/",
+      license: "Crédits : elijio876 — seules les données du mod sont redistribuées ; les exécutables du jeu restent chez l’auteur.",
+    }),
+    verificationDate: "2026-09-06",
+    publishedAt: "2026-09-06T10:00:00.000Z",
+  },
 ];
 
 type CommunityLanguage = "en" | "pt" | "es";
@@ -363,6 +384,7 @@ export const DESKTOP_COMMUNITY_TRANSLATIONS: Record<CommunityLanguage, Record<st
     "kitpack-laliga-2026-27": { shortDesc: "Complete LaLiga EA Sports 2026/27 pack ready for Kitserver.", fullDesc: "Club kits, goalkeepers, numbers and configurations in the official Sider version, without the redundant CPK.", size: "184.9 MB", tags: ["LaLiga", "Nono Kitmaker", "2026/27", "Kitserver"] },
     "option-file-transfers-v7-2026": { shortDesc: "Updated transfer and squad Option File for Football Life 2026.", fullDesc: "STRYKER backs up the current EDIT00000000, installs V7 in the 2026 save folder and restores the original when disabled. In-game changes are preserved in backup history.", size: "10.5 MB", tags: ["transfers", "squads", "Option File", "automatic backup"] },
     "potm-server-2-4-aio": { shortDesc: "Player of the Match ceremony with trophy and animations for fifteen competitions.", fullDesc: "LiveCPK root, Sider content/POTM data and the Lua module are installed together. STRYKER keeps a single module — the 22/03/2026 revision that fixes the 1-0 score shown in Master League cup matches — and drops the duplicate modules/common copy so Sider never loads the POTM server twice.", size: "108.3 MB", tags: ["POTM", "ceremony", "trophy", "Sider", "LiveCPK"] },
+    "soccer-revolution-11-gameplay": { shortDesc: "Match constants and animation database from the Soccer Revolution 11 gameplay. The executable patch is not included.", fullDesc: "The original mod replaces two of the game’s CPKs and its executable. STRYKER compared dt13_all.cpk and dt18_all.cpk against Football Life’s own: out of 427 files, only 14 differ. Those are what ships here, as a LiveCPK root — the nine constant_*.bin files from common/match/constant, four FHSequence binaries and the anim_infos.json database. Sider serves them on top of the game’s CPKs, so no Football Life file is overwritten and disabling the mod undoes everything. The modified FL_2026.exe and PES2021.exe shipped by the author are not redistributed.", size: "5.0 MB", tags: ["gameplay", "match constants", "animations", "LiveCPK", "elijio876"] },
   },
   pt: {
     "ficabre-goalnets-module-v1": { shortDesc: "Redes 2025/26 completas com física, formas, sons e predefinições por clube, competição e estádio.", fullDesc: "O módulo Sider inclui mapas, predefinições e recursos LiveCPK. O STRYKER removeu o script batch das fontes e converteu os 41 000 ficheiros para o seu formato sólido verificado.", size: "745,6 MB", tags: ["redes", "física", "Sider", "LiveCPK", "2025/26"] },
@@ -383,6 +405,7 @@ export const DESKTOP_COMMUNITY_TRANSLATIONS: Record<CommunityLanguage, Record<st
     "kitpack-laliga-2026-27": { shortDesc: "Pack LaLiga EA Sports 2026/27 completo para Kitserver.", fullDesc: "Equipamentos, guarda-redes, números e configurações por clube na versão Sider oficial.", size: "184,9 MB", tags: ["LaLiga", "Nono Kitmaker", "2026/27", "Kitserver"] },
     "option-file-transfers-v7-2026": { shortDesc: "Option File com transferências e plantéis atualizados para Football Life 2026.", fullDesc: "O STRYKER guarda o EDIT00000000 atual, instala a V7 e restaura o original ao desativar. As alterações feitas no jogo também ficam arquivadas.", size: "10,5 MB", tags: ["transferências", "plantéis", "Option File", "cópia automática"] },
     "potm-server-2-4-aio": { shortDesc: "Cerimónia de Jogador do Jogo com troféu e animações para quinze competições.", fullDesc: "Raiz LiveCPK, dados Sider content/POTM e módulo Lua instalados em conjunto. O STRYKER mantém um único módulo — a revisão de 22/03/2026 que corrige o resultado 1-0 mostrado nas taças da Master League — e remove a cópia duplicada modules/common, para que o Sider nunca carregue duas vezes o servidor POTM.", size: "108,3 MB", tags: ["POTM", "cerimónia", "troféu", "Sider", "LiveCPK"] },
+    "soccer-revolution-11-gameplay": { shortDesc: "Constantes de jogo e base de animações do gameplay Soccer Revolution 11. O patch do executável não está incluído.", fullDesc: "O mod original substitui dois CPK do jogo e o seu executável. O STRYKER comparou dt13_all.cpk e dt18_all.cpk com os do Football Life: em 427 ficheiros, apenas 14 diferem. São esses que são publicados, como raiz LiveCPK — os nove constant_*.bin de common/match/constant, quatro binários FHSequence e a base anim_infos.json. O Sider serve-os por cima dos CPK do jogo: nenhum ficheiro do Football Life é substituído e desativar o mod anula tudo. Os FL_2026.exe e PES2021.exe modificados do autor não são redistribuídos.", size: "5,0 MB", tags: ["gameplay", "constantes de jogo", "animações", "LiveCPK", "elijio876"] },
   },
   es: {
     "ficabre-goalnets-module-v1": { shortDesc: "Redes 2025/26 completas con físicas, formas, sonidos y ajustes por club, competición y estadio.", fullDesc: "El módulo Sider incluye mapas, ajustes y recursos LiveCPK. STRYKER eliminó el script batch de las fuentes y convirtió los 41 000 archivos a su formato sólido verificado.", size: "745,6 MB", tags: ["redes", "física", "Sider", "LiveCPK", "2025/26"] },
@@ -403,5 +426,6 @@ export const DESKTOP_COMMUNITY_TRANSLATIONS: Record<CommunityLanguage, Record<st
     "kitpack-laliga-2026-27": { shortDesc: "Pack completo LaLiga EA Sports 2026/27 listo para Kitserver.", fullDesc: "Equipaciones, porteros, dorsales y configuraciones por club en la versión Sider oficial.", size: "184,9 MB", tags: ["LaLiga", "Nono Kitmaker", "2026/27", "Kitserver"] },
     "option-file-transfers-v7-2026": { shortDesc: "Option File con fichajes y plantillas actualizadas para Football Life 2026.", fullDesc: "STRYKER guarda el EDIT00000000 actual, instala V7 y restaura el original al desactivar. Los cambios hechos en el juego también quedan archivados.", size: "10,5 MB", tags: ["fichajes", "plantillas", "Option File", "copia automática"] },
     "potm-server-2-4-aio": { shortDesc: "Ceremonia de Jugador del Partido con trofeo y animaciones para quince competiciones.", fullDesc: "Raíz LiveCPK, datos Sider content/POTM y módulo Lua se instalan juntos. STRYKER conserva un solo módulo — la revisión del 22/03/2026 que corrige el 1-0 mostrado en las copas de Master League — y retira la copia duplicada modules/common, para que Sider nunca cargue dos veces el servidor POTM.", size: "108,3 MB", tags: ["POTM", "ceremonia", "trofeo", "Sider", "LiveCPK"] },
+    "soccer-revolution-11-gameplay": { shortDesc: "Constantes de partido y base de animaciones del gameplay Soccer Revolution 11. El parche del ejecutable no está incluido.", fullDesc: "El mod original reemplaza dos CPK del juego y su ejecutable. STRYKER comparó dt13_all.cpk y dt18_all.cpk con los de Football Life: de 427 ficheros, solo 14 difieren. Son esos los que se publican, como raíz LiveCPK — los nueve constant_*.bin de common/match/constant, cuatro binarios FHSequence y la base anim_infos.json. Sider los sirve por encima de los CPK del juego: ningún fichero de Football Life se sobrescribe y desactivar el mod lo deshace todo. Los FL_2026.exe y PES2021.exe modificados del autor no se redistribuyen.", size: "5,0 MB", tags: ["gameplay", "constantes de partido", "animaciones", "LiveCPK", "elijio876"] },
   },
 };

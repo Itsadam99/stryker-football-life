@@ -189,6 +189,25 @@ function safeSegments(value) {
   return parts;
 }
 
+/** Table des matières seule : aucun octet de contenu n’est lu ni écrit. */
+export function listCpk(archivePath) {
+  const file = fs.openSync(archivePath, "r");
+  try {
+    const magic = Buffer.alloc(4);
+    fs.readSync(file, magic, 0, 4, 0);
+    if (magic.toString("ascii") !== "CPK ") throw new Error("Ce fichier n’est pas une archive CPK.");
+    const header = utfAt(file, 0)[0];
+    const tocOffset = Number(header.TocOffset || 0);
+    if (!tocOffset) throw new Error("CPK sans table des matières : format non pris en charge.");
+    return utfAt(file, tocOffset).map((entry) => ({
+      path: [...safeSegments(entry.DirName), ...safeSegments(entry.FileName)].join("/"),
+      size: Number(entry.ExtractSize || entry.FileSize),
+    }));
+  } finally {
+    fs.closeSync(file);
+  }
+}
+
 export function extractCpk(archivePath, destination) {
   const file = fs.openSync(archivePath, "r");
   try {
