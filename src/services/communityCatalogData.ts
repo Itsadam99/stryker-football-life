@@ -328,6 +328,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   {
     ...preview({
       id: "potm-server-2-4-aio",
+      thumbnail: "/mods/potm-server-2-4-aio.jpg",
       title: "POTM Server 2.4 AIO",
       author: "D4NT / Aboutpes / OOP-04",
       version: "2.4",

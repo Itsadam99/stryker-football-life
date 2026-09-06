@@ -41,7 +41,7 @@ export const BUNDLED_CATALOG_MODS: CatalogMod[] = [
     category: "other",
     compatibility: ["Football Life 2026", "PES 2021", "Sider 7", "RenoDX DLSS SF 0.1", "GeForce RTX 20 / 30 / 40 / 50"],
     size: "5,0 Ko",
-    thumbnail: "/stryker-logo.png",
+    thumbnail: "/mods/stryker-dlss5-controller.jpg",
     downloadUrl: "",
     screenshots: [],
     installationType: "automatic",
