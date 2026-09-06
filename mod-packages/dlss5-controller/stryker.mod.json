@@ -1,7 +1,7 @@
 {
   "id": "stryker-dlss5-controller",
   "name": "STRYKER DLSS 5 Universal RTX Controller",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "author": "STRYKER",
   "category": "other",
   "compatibility": [
@@ -12,10 +12,6 @@
     "GeForce RTX 20 / 30 / 40 / 50"
   ],
   "sourceUrl": "https://github.com/RankFTW/RHI",
-  "siderOverlay": {
-    "toggleVkey": "0x79",
-    "primary": true
-  },
   "externalDependencies": [
     {
       "id": "dlssnr-legacy-rtx-310.8.0",

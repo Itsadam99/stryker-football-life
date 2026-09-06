@@ -370,6 +370,10 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
       sourceUrl: "https://pes-files.com/pes-2021-gameplay-soccer-revolution-2026-update-v11/",
       license: "Crédits : elijio876 — seules les données du mod sont redistribuées ; les exécutables du jeu restent chez l’auteur.",
     }),
+    // Retiré de Découvrir : activé, ce paquet fait planter Football Life avec
+    // une corruption du tas ; désactivé, le crash disparaît. Voir MODS_AUDIT.
+    status: "pending_review",
+    installationType: "manual",
     verificationDate: "2026-09-06",
     publishedAt: "2026-09-06T10:00:00.000Z",
   },

@@ -432,16 +432,16 @@ export class DlssManager {
   }
 
   /**
-   * `strykerPanel` dit si le module Lua du contrôleur dessine bien son panneau.
-   * Lui seul justifie de déplacer l’overlay RenoDX : autrement F10 n’ouvrirait
-   * plus rien du tout.
+   * `strykerHotkey` dit si STRYKER répond lui-même à F10, ce qui n’est le cas
+   * que lorsque le contrôleur est installé. Sans lui, déplacer l’overlay RenoDX
+   * laisserait la touche sans effet.
    */
-  configureOverlay(settings, { force = false, strykerPanel = false } = {}) {
+  configureOverlay(settings, { force = false, strykerHotkey = false } = {}) {
     const current = this.status(settings);
     if (!current.linked) throw new Error("Liez Football Life avant de configurer le panneau DLSS.");
     if (!current.configurable) throw new Error("ReShade.ini est introuvable. Installez d’abord RenoDX DLSS.");
-    const wantedKey = strykerPanel ? RESHADE_KEY_HOME : RESHADE_KEY_F10;
-    const wantedShortcut = strykerPanel ? RESHADE_ADVANCED_SHORTCUT : STRYKER_PANEL_SHORTCUT;
+    const wantedKey = strykerHotkey ? RESHADE_KEY_HOME : RESHADE_KEY_F10;
+    const wantedShortcut = strykerHotkey ? RESHADE_ADVANCED_SHORTCUT : STRYKER_PANEL_SHORTCUT;
     // Appelé à chaque installation ou bascule de mod : sans ce court-circuit, le
     // fichier était réécrit inutilement à chaque fois.
     if (current.overlay.configured && current.overlay.advancedShortcut === wantedShortcut && !force) return current;
