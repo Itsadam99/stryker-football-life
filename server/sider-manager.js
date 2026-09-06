@@ -31,6 +31,12 @@ function atomicCopyFile(source, destination) {
   fs.mkdirSync(directory, { recursive: true });
   const tempPath = path.join(directory, `.${path.basename(destination)}.${process.pid}.${Date.now()}.${crypto.randomBytes(3).toString("hex")}.tmp`);
   fs.copyFileSync(source, tempPath);
+  // La date de la source est reportée sur la copie : c'est elle qui permettra
+  // au déploiement suivant de reconnaître un fichier déjà à jour.
+  try {
+    const stats = fs.statSync(source);
+    fs.utimesSync(tempPath, stats.atime, stats.mtime);
+  } catch { /* Un système de fichiers sans dates utilisables retombe sur la recopie. */ }
   try {
     fs.renameSync(tempPath, destination);
   } catch (error) {
@@ -38,6 +44,25 @@ function atomicCopyFile(source, destination) {
     fs.copyFileSync(tempPath, destination);
     fs.unlinkSync(tempPath);
   }
+}
+
+// Deux secondes de tolérance : FAT et exFAT n'enregistrent les dates qu'à la
+// seconde paire, et une copie vers ces systèmes perd la précision de la source.
+const MTIME_TOLERANCE_MS = 2000;
+
+/**
+ * Un déploiement réécrivait chaque fichier géré de chaque mod actif, et en
+ * sauvegardait autant : avec quelques gros paquets de contenu, une simple
+ * installation recopiait plusieurs gigaoctets et paraissait ne jamais finir.
+ * Un fichier déjà identique — même taille, même date — est laissé en place.
+ */
+function alreadyDeployed(source, destination) {
+  let target;
+  try { target = fs.statSync(destination); }
+  catch { return false; }
+  if (!target.isFile()) return false;
+  const origin = fs.statSync(source);
+  return origin.size === target.size && Math.abs(origin.mtimeMs - target.mtimeMs) <= MTIME_TOLERANCE_MS;
 }
 
 function listRegularFiles(root) {
@@ -435,8 +460,17 @@ export class SiderManager {
       return backup;
     };
 
+    // Un fichier déjà déployé à l'identique n'est ni sauvegardé ni réécrit. La
+    // condition exige un état précédent : au premier déploiement d'une clé, la
+    // destination est un fichier du jeu qu'il faut archiver avant de l'écraser.
+    const unchanged = new Set();
+    for (const [key, item] of desired.entries()) {
+      if (previousFiles[key] && alreadyDeployed(item.source, item.destination)) unchanged.add(key);
+    }
+
     try {
       for (const key of allKeys) {
+        if (unchanged.has(key)) continue;
         const relativeTarget = desired.get(key)?.relativeTarget || previousFiles[key]?.relativeTarget || key;
         const destination = resolveManagedDestination(relativeTarget);
         if (fs.existsSync(destination)) {
@@ -461,7 +495,7 @@ export class SiderManager {
           originalBackup = path.relative(bucket, backupPath).replace(/\\/g, "/");
           createdOriginals.push(backupPath);
         }
-        atomicCopyFile(item.source, item.destination);
+        if (!unchanged.has(key)) atomicCopyFile(item.source, item.destination);
         nextFiles[key] = { relativeTarget: item.relativeTarget, originalBackup, modId: item.modId };
       }
 
@@ -580,6 +614,9 @@ export class SiderManager {
     };
 
     const mergedRoot = fs.mkdtempSync(path.join(this.dataDirectories.temp, "sider-merged-"));
+    // Rempli après la fusion des maps Kitserver, qui remplace la source de
+    // certaines entrées par un fichier fraîchement écrit.
+    const unchanged = new Set();
     try {
       for (const [key, item] of desired.entries()) {
         if (!isKitMap(key)) continue;
@@ -604,7 +641,11 @@ export class SiderManager {
         item.source = merged;
         item.modId = item.mergeSources.map(({ modId }) => modId).join(",");
       }
+      for (const [key, item] of desired.entries()) {
+        if (previousFiles[key] && alreadyDeployed(item.source, item.destination)) unchanged.add(key);
+      }
       for (const key of allKeys) {
+        if (unchanged.has(key)) continue;
         const relativeTarget = desired.get(key)?.relativeTarget || previousFiles[key]?.relativeTarget || key;
         const destination = resolveManagedDestination(relativeTarget);
         if (fs.existsSync(destination)) {
@@ -629,7 +670,7 @@ export class SiderManager {
           originalBackup = path.relative(bucket, backupPath).replace(/\\/g, "/");
           createdOriginals.push(backupPath);
         }
-        atomicCopyFile(item.source, item.destination);
+        if (!unchanged.has(key)) atomicCopyFile(item.source, item.destination);
         nextFiles[key] = { relativeTarget: item.relativeTarget, originalBackup, modId: item.modId };
       }
 

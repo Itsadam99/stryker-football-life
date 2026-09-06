@@ -1,4 +1,4 @@
-# Mods — STRYKER 3.9.6
+# Mods — STRYKER 3.9.7
 
 ## Corrections
 
@@ -13,6 +13,7 @@
 - Adaptation des chemins Lua vers les fichiers auxiliaires et les ressources LiveCPK du paquet isolé. Les archives et les sources en staging restent intactes.
 - Réapplication des corrections de déploiement aux installations existantes, une fois au démarrage. Un échec est journalisé et la migration sera retentée.
 - Installation d’un paquet déjà présent dans un autre profil : activation dans le profil courant, sans duplication des fichiers.
+- Déploiement incrémental : un fichier déjà en place à l’identique n’est plus ni sauvegardé ni réécrit. Chaque installation recopiait auparavant la totalité du contenu géré de tous les mods actifs, ce qui faisait passer une installation pour un blocage dès que le catalogue installé pesait quelques gigaoctets.
 
 ## Vérifications effectuées
 
