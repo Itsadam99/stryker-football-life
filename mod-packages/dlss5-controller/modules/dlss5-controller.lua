@@ -42,7 +42,7 @@ local FIELDS = {
     { key = "intensity", label = "Intensite", ini = "DirectNeuralRenderingIntensity", kind = "range", min = 0, max = 1, step = 0.05, default = 1 },
     { key = "auto_mask", label = "Masque automatique", ini = "DirectNeuralRenderingAutoMask", kind = "bool", default = true },
     { key = "nits", label = "Blanc diffus (nits)", ini = "DirectNeuralRenderingDiffuseWhiteNits", kind = "range", min = 80, max = 1000, step = 20, default = 500, decimals = 0 },
-    { key = "ui_correction", label = "Correction interface", ini = "DirectNeuralRenderingUICorrectionMode", kind = "choice", names = UI_CORRECTION_NAMES, count = 3, default = 2 },
+    { key = "ui_correction", label = "Correction interface", ini = "DirectNeuralRenderingUiCorrectionMode", kind = "choice", names = UI_CORRECTION_NAMES, count = 3, default = 2 },
     { key = "global_tone", label = "Tonalite globale", ini = "DirectNeuralRenderingGlobalToneStrength", kind = "range", min = 0, max = 1, step = 0.05, default = 1 },
     { key = "local_tone", label = "Tonalite locale", ini = "DirectNeuralRenderingLocalToneStrength", kind = "range", min = 0, max = 1, step = 0.05, default = 1 },
     { key = "local_structure", label = "Structure locale", ini = "DirectNeuralRenderingLocalStructureStrength", kind = "range", min = 0, max = 1, step = 0.05, default = 1 },

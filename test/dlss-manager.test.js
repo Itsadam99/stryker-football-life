@@ -25,6 +25,32 @@ test("lit et met à jour uniquement la section RenoDX DLSS", () => {
   assert.match(updated, /PresetPath=keep\.ini/);
 });
 
+test("écrit la clé RenoDX de correction d’interface et fusionne les doublons de casse", () => {
+  // Relevé sur une installation réelle : STRYKER écrivait « UICorrectionMode »
+  // là où RenoDX écrit « UiCorrectionMode ». Les deux lignes cohabitaient dans
+  // la section, dont une avec une valeur que ReShade avait dédoublée.
+  const original = [
+    "[RENODX-DLSS]",
+    "DirectNeuralRenderingUiCorrectionMode=0",
+    "DirectNeuralRenderingEnabled=1",
+    "DirectNeuralRenderingUICorrectionMode=2,2",
+    "",
+    "[SCREENSHOT]",
+    "SavePath=keep",
+  ].join("\r\n");
+
+  const updated = updateIniSection(original, "RENODX-DLSS", {
+    DirectNeuralRenderingUiCorrectionMode: 1,
+    DirectNeuralRenderingEnabled: 1,
+  });
+
+  const lines = updated.split("\r\n");
+  const correction = lines.filter((line) => /^DirectNeuralRendering[Uu]i?CorrectionMode=/i.test(line));
+  assert.deepEqual(correction, ["DirectNeuralRenderingUiCorrectionMode=1"]);
+  assert.equal(readIniValue(updated, "RENODX-DLSS", "DirectNeuralRenderingUiCorrectionMode"), "1");
+  assert.match(updated, /\[SCREENSHOT\]\r\nSavePath=keep/);
+});
+
 test("configure une installation DLSS liée avec sauvegarde", (t) => {
   const gamePath = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-dlss-"));
   t.after(() => fs.rmSync(gamePath, { recursive: true, force: true }));
