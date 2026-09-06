@@ -17,3 +17,33 @@ Version 0.1.1 : correction de l’appel à pcall, absent des fonctions Lua expos
 Depuis la racine du projet, node research/team-identity-probe/build-and-check.mjs construit l’archive dans artifacts/team-identity-research et vérifie son installation, activation/désactivation et désinstallation dans un jeu simulé isolé. Le test ne vise jamais le dossier du jeu réel.
 
 inspect-database.py lit quatre tables déjà décompressées (--teams, --coaches, --tactics, --formations) et crée un inventaire JSON neuf (--output). Il vérifie tailles de lignes, unicité des identifiants et groupes de formation, et signale les correspondances absentes. Les bits de tactique restent bruts : aucune signification possession/pressing/passes longues n’est encore attribuée. Il n’écrit jamais dans les tables.
+
+## Essai sur une copie de carrière BAL
+
+`career_format.py` repère une équipe par nom exact unique et identifiant de coach attendu, contrôle la structure de quatre plans, et modifie uniquement leur octet de construction courte/longue dans une copie de données décodées. Le format a été observé dans deux états d’une même carrière FL26 26.2.0.3 ; ce n’est pas un éditeur universel et aucun offset ML n’est supposé compatible.
+
+`build_career_trial.py` reçoit les six blocs décodés d’une copie, prépare un dossier neuf, attribue un titre de test, chiffre puis déchiffre le résultat avec les exécutables PES 2021 de [pesXdecrypter 6.0.0](https://github.com/the4chancup/pesXdecrypter/releases/tag/6.0.0). Il exige l’égalité exacte des six blocs après ce cycle et vérifie que les sources restent inchangées. Les outils externes et sauvegardes ne sont pas inclus dans Git. Ce script n’installe jamais lui-même de sauvegarde dans le jeu.
+
+Exemple avec des dossiers de copies locales :
+
+```powershell
+python research/team-identity-probe/build_career_trial.py --decoded CHEMIN_COPIE_DECODEE --output NOUVEAU_DOSSIER --crypto-tools DOSSIER_PESX --team "Paris FC" --coach 101358 --title "STRYKER TEST - Paris FC"
+```
+
+Un essai a été ajouté manuellement au troisième emplacement BAL libre, sans remplacer les deux sauvegardes existantes. Son chargement et ses consignes affichées restent à vérifier dans FL. Un cycle de chiffrement correct ne prouve pas la validité en jeu.
+
+## Simulation des entraîneurs hors jeu
+
+`career_coaches.py` calcule un nouvel instantané JSON à partir d’un état de carrière et des résultats de **tous** les clubs en fin de saison. Contrats, renouvellements, mauvais résultats prolongés, retraites et entrants fictifs suivent la date explicitement fournie. Les résultats manquants, sélections nationales, doubles affectations et biographies réelles sans source sont refusés. Les seuils de performance/retraite sont des paramètres de prototype ; ils ne reproduisent pas encore la politique de chaque club.
+
+Les préférences combinent huit dimensions du coach et du club, ainsi que les systèmes favoris du coach. Elles sont des intentions : aucun rôle de joueur, composition ou curseur PES n’est encore écrit par ce moteur. Aucune intention automatique n’est émise pour le club du joueur en ML ; elle est émise en BAL. Les âges fictifs ne servent jamais à compléter une biographie réelle inconnue. Le vivier fictif actuel emploie des noms de test et ne prétend pas identifier d’anciens joueurs du jeu.
+
+Le moteur retourne une copie et utilise un hasard déterministe propre à la carrière. Un événement répété ne recrée pas de coachs ; repartir du même ancien instantané produit le même futur. **La liaison des instantanés aux fichiers du jeu, le calendrier interne, les résultats de toutes les équipes, les changements en cours de saison, les effets tactiques en match et la sélection des joueurs restent à implémenter.** Ce code est exclu de l’archive Sider de diagnostic et du catalogue public.
+
+Tests des outils de carrière, sans dépendances Python externes :
+
+```powershell
+python -m unittest discover -s research/team-identity-probe -p "test_career*.py" -v
+```
+
+16 tests réussis, dont une population entièrement fictive de 749 clubs / 980 entraîneurs initiaux sur 25 saisons. Il s’agit d’une simulation de code, pas de 25 saisons jouées dans FL.

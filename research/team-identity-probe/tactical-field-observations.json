@@ -30,10 +30,41 @@
     "validationScope": "one controlled in-game edit of the primary tactic for Paris FC",
     "notValidated": ["other tactic presets", "Tactics.bin bit layout", "BAL or ML save offsets", "live match memory", "long-pass frequency during play"]
   },
-  "careerCandidates": {
+  "initialCareerCandidates": {
     "pattern": "99 formation bytes following the EDIT record team ID",
     "occurrenceOffsets": [123840, 1303944, 1304264],
-    "meaning": "matching sequences only; not proof of unique team ownership or active game-plan location",
+    "meaning": "historical initial observation; superseded by the table mapping below",
     "writesPerformed": false
+  },
+  "careerTableObservation": {
+    "format": "FL26 BAL decoded data.dat; observed in two snapshots of the same career",
+    "headerSize": 84,
+    "slots": 750,
+    "teamRecordSize": 1680,
+    "teamNameOffset": 0,
+    "teamPlanOffset": 1116,
+    "coachTableOffset": 1260084,
+    "coachRecordSize": 600,
+    "coachIdOffset": 0,
+    "coachNameOffset": 4,
+    "coachPlansOffset": 60,
+    "coachPlanCount": 3,
+    "planSize": 160,
+    "buildUpOffsetWithinPlan": 100,
+    "parisFcSlot": 73,
+    "parisFcCoachId": 101358,
+    "parisFcBuildUpOffsets": [123940, 1304044, 1304204, 1304364],
+    "evidence": "all three Paris FC coach plans exactly match the corresponding EDIT baseline plans; team plan also matches its first EDIT plan",
+    "trial": {
+      "title": "STRYKER TEST - Paris FC",
+      "originalSavesModified": false,
+      "separateSlot": "BL00000002",
+      "dataBytesChanged": 4,
+      "displayTitleModified": true,
+      "allSixDecodedBlocksRoundTripExact": true,
+      "inGameLoadValidated": false,
+      "matchBehaviourValidated": false
+    },
+    "notValidated": ["other careers and game versions", "ML layout", "which plan is selected by the live engine", "runtime application without reloading"]
   }
 }
