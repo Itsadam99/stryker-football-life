@@ -14,7 +14,7 @@ export const BUNDLED_CATALOG_MODS: CatalogMod[] = [
     category: "menu",
     compatibility: ["PES 2021", "Football Life 2026", "Sider 7.3.4"],
     size: "127,1 Mo",
-    thumbnail: "/stryker-logo.png",
+    thumbnail: "/mods/eferq-graphic-menu-epl-2526.jpg",
     downloadUrl: "",
     screenshots: [],
     installationType: "automatic",

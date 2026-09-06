@@ -207,6 +207,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "fl26-pyro-supporters-v0-9a",
+    thumbnail: "/mods/fl26-pyro-supporters-v0-9a.jpg",
     title: "FL26 Pyro Supporters",
     author: "heazebell666",
     version: "0.9a",
@@ -311,6 +312,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "option-file-transfers-v7-2026",
+    thumbnail: "/mods/option-file-transfers-v7-2026.jpg",
     title: "Transferts joueurs — Option File V7",
     author: "Prayudi StarGames / communauté SmokePatch",
     version: "7.0.0",
