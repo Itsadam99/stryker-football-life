@@ -240,6 +240,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-ligue-1-2026-27",
+    thumbnail: "/mods/kitpack-ligue-1-2026-27.jpg",
     title: "Kitpack officiel Ligue 1 2026/27",
     author: "Prayudi StarGames / communauté Kitmakers",
     version: "1.0.0",
@@ -257,6 +258,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-bundesliga-2026-27",
+    thumbnail: "/mods/kitpack-bundesliga-2026-27.jpg",
     title: "Kitpack officiel Bundesliga 2026/27",
     author: "Prayudi StarGames / communauté Kitmakers",
     version: "1.0.0",
@@ -274,6 +276,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-premier-league-2026-27",
+    thumbnail: "/mods/kitpack-premier-league-2026-27.jpg",
     title: "Kitpack officiel Premier League V3 2026/27",
     author: "Prayudi StarGames / communauté Kitmakers",
     version: "3.0.0",
