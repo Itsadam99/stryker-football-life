@@ -1,0 +1,39 @@
+{
+  "status": "experimental-observation-not-a-general-purpose-patcher",
+  "gameFileVersion": "26.2.0.3",
+  "format": "decrypted EDIT00000000 data.dat",
+  "experiment": {
+    "teamId": 4211,
+    "teamName": "Paris FC",
+    "userConfirmedNewValue": "short_pass",
+    "beforeBytes": 10995800,
+    "afterBytes": 10995800,
+    "changedByteCount": 33,
+    "otherChangedRegion": {
+      "offset": 48,
+      "length": 32,
+      "meaning": "unknown header data; not classified as a tactical setting"
+    }
+  },
+  "observedField": {
+    "name": "primary_build_up",
+    "byteWidth": 1,
+    "relativeOffsetWithinTeamTacticsRecord": 104,
+    "recordSize": 628,
+    "recordTeamIdOffset": 0,
+    "recordTeamIdType": "uint32-little-endian",
+    "values": { "0": "long_pass", "1": "short_pass" },
+    "evidenceRecordStart": 10878364,
+    "evidenceAbsoluteOffset": 10878468,
+    "before": 0,
+    "after": 1,
+    "validationScope": "one controlled in-game edit of the primary tactic for Paris FC",
+    "notValidated": ["other tactic presets", "Tactics.bin bit layout", "BAL or ML save offsets", "live match memory", "long-pass frequency during play"]
+  },
+  "careerCandidates": {
+    "pattern": "99 formation bytes following the EDIT record team ID",
+    "occurrenceOffsets": [123840, 1303944, 1304264],
+    "meaning": "matching sequences only; not proof of unique team ownership or active game-plan location",
+    "writesPerformed": false
+  }
+}
