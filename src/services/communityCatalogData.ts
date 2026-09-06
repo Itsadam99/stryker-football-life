@@ -295,6 +295,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-laliga-2026-27",
+    thumbnail: "/mods/kitpack-laliga-2026-27.jpg",
     title: "Kitpack LaLiga 2026/27",
     author: "Nono Kitmaker",
     version: "1.0.0",
