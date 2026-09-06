@@ -153,17 +153,27 @@ export function updateIniSection(content, sectionName, values) {
   }
 
   const seen = new Set();
+  // Une casse divergente a laissé deux lignes pour un même réglage dans des
+  // ReShade.ini existants. La correspondance étant insensible à la casse, on
+  // garde la première occurrence et on retire les suivantes : ReShade lirait
+  // sinon deux valeurs pour une seule clé.
+  const duplicates = [];
   for (let index = start + 1; index < end; index += 1) {
     const match = lines[index].match(/^\s*([^=;#]+?)\s*=/);
     if (!match) continue;
     const normalizedKey = match[1].trim().toLowerCase();
     const replacement = normalizedValues.get(normalizedKey);
     if (!replacement) continue;
+    if (seen.has(normalizedKey)) {
+      duplicates.push(index);
+      continue;
+    }
     lines[index] = `${replacement.key}=${replacement.value}`;
     seen.add(normalizedKey);
   }
   const missing = [...normalizedValues.entries()].filter(([key]) => !seen.has(key)).map(([, item]) => `${item.key}=${item.value}`);
   if (missing.length > 0) lines.splice(end, 0, ...missing);
+  for (const index of duplicates.reverse()) lines.splice(index, 1);
   return lines.join("\r\n");
 }
 
@@ -273,7 +283,7 @@ export class DlssManager {
       intensity: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingIntensity", DLSS_DEFAULTS.intensity),
       autoMask: readBoolean(content, "RENODX-DLSS", "DirectNeuralRenderingAutoMask", DLSS_DEFAULTS.autoMask),
       diffuseWhiteNits: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingDiffuseWhiteNits", DLSS_DEFAULTS.diffuseWhiteNits),
-      uiCorrectionMode: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingUICorrectionMode", DLSS_DEFAULTS.uiCorrectionMode),
+      uiCorrectionMode: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingUiCorrectionMode", DLSS_DEFAULTS.uiCorrectionMode),
       globalToneStrength: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingGlobalToneStrength", DLSS_DEFAULTS.globalToneStrength),
       localToneStrength: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingLocalToneStrength", DLSS_DEFAULTS.localToneStrength),
       localStructureStrength: readNumber(content, "RENODX-DLSS", "DirectNeuralRenderingLocalStructureStrength", DLSS_DEFAULTS.localStructureStrength),
@@ -407,7 +417,7 @@ export class DlssManager {
       DirectNeuralRenderingIntensity: intensity,
       DirectNeuralRenderingAutoMask: autoMask ? 1 : 0,
       DirectNeuralRenderingDiffuseWhiteNits: diffuseWhiteNits,
-      DirectNeuralRenderingUICorrectionMode: uiCorrectionMode,
+      DirectNeuralRenderingUiCorrectionMode: uiCorrectionMode,
       DirectNeuralRenderingGlobalToneStrength: globalToneStrength,
       DirectNeuralRenderingLocalToneStrength: localToneStrength,
       DirectNeuralRenderingLocalStructureStrength: localStructureStrength,
