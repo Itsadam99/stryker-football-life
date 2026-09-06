@@ -7,7 +7,11 @@
     "shortDesc": "Cérémonie Joueur du match avec trophées et animations pour 15 compétitions.",
     "fullDesc": "Paquet complet POTM : racine LiveCPK, données Sider content/POTM et module Lua. STRYKER a conservé un seul module — la révision corrigée du 22/03/2026 qui règle le score 1-0 affiché en coupe de Master League — et retiré le doublon modules/common livré par l’auteur, afin que Sider ne charge pas deux fois le même serveur POTM.",
     "category": "other",
-    "compatibility": ["Football Life 2026", "PES 2021", "Sider 7"],
+    "compatibility": [
+      "Football Life 2026",
+      "PES 2021",
+      "Sider 7"
+    ],
     "size": "108,3 Mo",
     "thumbnail": "/stryker-logo.png",
     "screenshots": [],

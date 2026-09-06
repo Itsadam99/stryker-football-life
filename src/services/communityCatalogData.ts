@@ -3,9 +3,10 @@ import type { CatalogMod } from "../types";
 const STRYKER_MOD_REPOSITORY = "https://raw.githubusercontent.com/Itsadam99/stryker-football-life/main/public/repository/";
 const STRYKER_MOD_RELEASE = "https://github.com/Itsadam99/stryker-football-life/releases/download/mods-2026.09/";
 
-const preview = (mod: Omit<CatalogMod, "thumbnail" | "downloadUrl" | "screenshots" | "rating" | "downloadsCount" | "installationType" | "legalStatus" | "verificationDate" | "status">): CatalogMod => ({
+const preview = (mod: Omit<CatalogMod, "thumbnail" | "downloadUrl" | "screenshots" | "rating" | "downloadsCount" | "installationType" | "legalStatus" | "verificationDate" | "status"> & { thumbnail?: string }): CatalogMod => ({
   ...mod,
-  thumbnail: "/stryker-logo.png",
+  // Sans visuel propre, la carte garde le filigrane STRYKER.
+  thumbnail: mod.thumbnail || "/stryker-logo.png",
   downloadUrl: `${STRYKER_MOD_RELEASE}${mod.id}.zip`,
   screenshots: [],
   rating: 0,
@@ -30,6 +31,7 @@ const hosted = (mod: Parameters<typeof preview>[0], archiveFile: string): Catalo
 export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   preview({
     id: "ficabre-goalnets-module-v1",
+    thumbnail: "/mods/ficabre-goalnets-module-v1.jpg",
     title: "Ficabre Goalnets Module",
     author: "Ficabre",
     version: "1.0.0",
@@ -46,6 +48,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "shirtless-celebration-v4-1",
+    thumbnail: "/mods/shirtless-celebration-v4-1.jpg",
     title: "Shirtless Celebration",
     author: "alston2016",
     version: "4.1.0",
@@ -62,6 +65,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "facepack-update-vol-204",
+    thumbnail: "/mods/facepack-update-vol-204.jpg",
     title: "Facepack Update Vol. 204",
     author: "Communauté FaceMaker",
     version: "204",

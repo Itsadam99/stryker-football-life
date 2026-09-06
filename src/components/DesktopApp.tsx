@@ -12,6 +12,7 @@ import {
   CatalogMod, HealthCheck, HealthReport, LogContent, LogSource, ManagedMod, ModItem, Profile, UpdateStatus,
 } from "../types";
 import { StrykerLogo } from "./StrykerLogo";
+import { ModCover } from "./ModCover";
 import { Language, LanguageSwitcher, useI18n } from "../i18n";
 import { DLSS_COPY } from "../services/dlssCopy";
 import { LOG_COPY, logLineLevel } from "../services/logCopy";
@@ -1352,15 +1353,10 @@ function ModCard({ mod, installed, pending, badge, badgeTone, installedLabel, me
     <article className={`sk-panel group flex flex-col overflow-hidden ${installed ? "border-emerald-500/35" : ""}`}>
       {pending && <ProgressBar value={null} />}
       <div className="relative h-32 shrink-0 overflow-hidden border-b border-white/[0.07] bg-[radial-gradient(circle_at_75%_20%,rgba(130,27,110,.34),transparent_46%),var(--sk-ink)]">
-        <img
-          src="/stryker-logo.png"
-          alt=""
-          aria-hidden="true"
-          width={1536}
-          height={1024}
-          loading="lazy"
-          decoding="async"
-          className="sk-watermark -right-8 -top-10 w-56 max-w-none opacity-[0.13] transition-transform duration-700 group-hover:scale-105"
+        <ModCover
+          mod={mod}
+          watermarkClassName="sk-watermark -right-8 -top-10 w-56 max-w-none opacity-[0.13] transition-transform duration-700 group-hover:scale-105"
+          coverClassName="transition-transform duration-700 group-hover:scale-105"
         />
         <span className="sk-chip absolute left-3 top-3" data-tone={badgeTone}>{badge}</span>
         {installed && <span className="sk-chip absolute right-3 top-3" data-tone="ok">{installedLabel}</span>}
