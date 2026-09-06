@@ -207,6 +207,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "fl26-pyro-supporters-v0-9a",
+    thumbnail: "/mods/fl26-pyro-supporters-v0-9a.jpg",
     title: "FL26 Pyro Supporters",
     author: "heazebell666",
     version: "0.9a",
@@ -240,6 +241,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-ligue-1-2026-27",
+    thumbnail: "/mods/kitpack-ligue-1-2026-27.jpg",
     title: "Kitpack officiel Ligue 1 2026/27",
     author: "Prayudi StarGames / communauté Kitmakers",
     version: "1.0.0",
@@ -257,6 +259,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-bundesliga-2026-27",
+    thumbnail: "/mods/kitpack-bundesliga-2026-27.jpg",
     title: "Kitpack officiel Bundesliga 2026/27",
     author: "Prayudi StarGames / communauté Kitmakers",
     version: "1.0.0",
@@ -274,6 +277,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-premier-league-2026-27",
+    thumbnail: "/mods/kitpack-premier-league-2026-27.jpg",
     title: "Kitpack officiel Premier League V3 2026/27",
     author: "Prayudi StarGames / communauté Kitmakers",
     version: "3.0.0",
@@ -291,6 +295,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-laliga-2026-27",
+    thumbnail: "/mods/kitpack-laliga-2026-27.jpg",
     title: "Kitpack LaLiga 2026/27",
     author: "Nono Kitmaker",
     version: "1.0.0",
@@ -308,6 +313,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "option-file-transfers-v7-2026",
+    thumbnail: "/mods/option-file-transfers-v7-2026.jpg",
     title: "Transferts joueurs — Option File V7",
     author: "Prayudi StarGames / communauté SmokePatch",
     version: "7.0.0",
@@ -325,6 +331,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   {
     ...preview({
       id: "potm-server-2-4-aio",
+      thumbnail: "/mods/potm-server-2-4-aio.jpg",
       title: "POTM Server 2.4 AIO",
       author: "D4NT / Aboutpes / OOP-04",
       version: "2.4",
