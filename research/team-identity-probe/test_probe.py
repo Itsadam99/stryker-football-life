@@ -33,7 +33,21 @@ class ProbeTests(unittest.TestCase):
                 for i=1,count do handlers.display_frame(ctx) end
             end
         """)
-        self.lua.globals().probe = self.lua.execute(SOURCE)
+        self.lua.globals().source = SOURCE
+        self.lua.execute("""
+            -- Same global allowlist as Sider's documented module environment.
+            local allowed = {}
+            for key in string.gmatch('assert ipairs pairs tostring tonumber table string math unpack type error io os _VERSION log memory fs zlib audio match input _FILE', '%S+') do
+                allowed[key] = true
+            end
+            module_env = setmetatable({}, {__index=function(_, key)
+                if allowed[key] then return _G[key] end
+            end})
+            module_env._G = module_env
+            local chunk = assert(loadstring(source))
+            setfenv(chunk, module_env)
+            probe = chunk()
+        """)
 
     def test_only_documented_events_no_game_mutation(self):
         self.lua.execute("""
@@ -70,11 +84,22 @@ class ProbeTests(unittest.TestCase):
         self.lua.execute("""
             match=nil; probe.init(ctx); frames(120)
             assert(contains('match.stats not exposed'))
-            match={stats=function() error('unsupported runtime') end}
-            frames(120); assert(contains('polling disabled'))
-            local n=#messages; frames(120); assert(#messages == n)
+            calls=0
+            match={stats=function() calls=calls+1; error('unsupported runtime') end}
+            local ok = pcall(frames, 120) -- Sider catches callback errors at this boundary.
+            assert(not ok and calls == 1)
+            local n=#messages; frames(1200); assert(#messages == n and calls == 1)
             handlers.livecpk_data_ready(ctx, 'Tactics.bin', nil, 12, 12, 0)
             assert(contains('file=Tactics.bin'))
+        """)
+
+    def test_sider_sandbox_omits_pcall_but_stats_are_collected(self):
+        self.lua.execute("""
+            assert(module_env.pcall == nil and module_env.xpcall == nil)
+            probe.init(ctx)
+            frames(120)
+            assert(calls == 1 and contains('snapshot'))
+            assert(contains('home_score=0') and contains('clock_minutes=0'))
         """)
 
     def test_resource_filter_deduplication_and_no_pointer_access(self):

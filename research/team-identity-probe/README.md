@@ -12,4 +12,8 @@ Désinstallation : désactiver/désinstaller dans STRYKER si importé par l’ap
 
 Tests hors jeu : test_probe.py utilise Lupa 2.8 et son interpréteur LuaJIT 2.1 (API Lua 5.1). Ils vérifient l’exécution des callbacks, l’absence de modifications du contexte, le traitement des statistiques absentes et la limitation des journaux. Ces essais ne remplacent pas un lancement avec le Sider réel.
 
+Version 0.1.1 : correction de l’appel à pcall, absent des fonctions Lua exposées aux modules par Sider. Les tests chargent maintenant le module avec la liste restreinte des fonctions documentées. Une erreur de match.stats désactive les essais suivants pour la session, en laissant Sider journaliser la première erreur. Le correctif a également été observé dans le jeu : journal du 6 septembre 2026, Algérie–Maroc, trois instantanés de score/horloge et aucune erreur du diagnostic.
+
 Depuis la racine du projet, node research/team-identity-probe/build-and-check.mjs construit l’archive dans artifacts/team-identity-research et vérifie son installation, activation/désactivation et désinstallation dans un jeu simulé isolé. Le test ne vise jamais le dossier du jeu réel.
+
+inspect-database.py lit quatre tables déjà décompressées (--teams, --coaches, --tactics, --formations) et crée un inventaire JSON neuf (--output). Il vérifie tailles de lignes, unicité des identifiants et groupes de formation, et signale les correspondances absentes. Les bits de tactique restent bruts : aucune signification possession/pressing/passes longues n’est encore attribuée. Il n’écrit jamais dans les tables.

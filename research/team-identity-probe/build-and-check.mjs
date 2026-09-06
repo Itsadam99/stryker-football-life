@@ -9,7 +9,8 @@ import { startServer } from '../../server/index.js';
 const source = path.dirname(fileURLToPath(import.meta.url));
 const output = path.resolve(source, '../../artifacts/team-identity-research');
 fs.mkdirSync(output, { recursive: true });
-const archive = path.join(output, 'STRYKER-Team-Identity-Diagnostic-0.1.0.zip');
+const version = JSON.parse(fs.readFileSync(path.join(source, 'stryker.mod.json'), 'utf8')).version;
+const archive = path.join(output, `STRYKER-Team-Identity-Diagnostic-${version}.zip`);
 const names = ['stryker.mod.json', 'README.md', 'modules/team-identity-probe.lua'];
 fs.writeFileSync(archive, createZip(names.map(name => ({ name, data: fs.readFileSync(path.join(source, name)) }))));
 

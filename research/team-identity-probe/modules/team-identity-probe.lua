@@ -28,12 +28,11 @@ end
 
 local function sample(ctx, reason)
     if stats_failed or type(match) ~= "table" or type(match.stats) ~= "function" then return end
-    local ok, stats = pcall(match.stats)
-    if not ok then
-        stats_failed = true
-        emit("stats_unavailable", {"reason=API error; polling disabled for this session"})
-        return
-    end
+    -- Sider deliberately omits pcall from module globals. Its callback dispatcher
+    -- catches errors. Latch before calling so a failing API is tried only once.
+    stats_failed = true
+    local stats = match.stats()
+    stats_failed = false
     if type(stats) ~= "table" then
         if previous_stats ~= nil then emit("stats_unavailable", {"reason=no snapshot; not a final result"}) end
         previous_stats = nil
@@ -90,14 +89,14 @@ function m.display_frame(ctx)
 end
 
 function m.overlay_on(ctx)
-    return "STRYKER : diagnostic tactiques 0.1.0\nAucun effet gameplay. Observations dans sider.log.\n"
+    return "STRYKER : diagnostic tactiques 0.1.1\nAucun effet gameplay. Observations dans sider.log.\n"
         .. "Ressources observees : " .. resource_count .. " / " .. MAX_RESOURCES
 end
 
 function m.init(ctx)
     seen, resource_count, frame, emitted = {}, 0, 0, 0
     previous_stats, stats_failed = nil, false
-    emit("start", {"version=0.1.0", "mode=read-only", "career_detection=unavailable"})
+    emit("start", {"version=0.1.1", "mode=read-only", "career_detection=unavailable"})
     if type(match) ~= "table" or type(match.stats) ~= "function" then
         emit("stats_unavailable", {"reason=match.stats not exposed"})
     end

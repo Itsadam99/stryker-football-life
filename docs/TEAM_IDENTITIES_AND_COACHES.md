@@ -72,3 +72,28 @@ Le prototype de diagnostic est dans research/team-identity-probe. Il reste hors 
 Six tests exécutés avec LuaJIT 2.1 via Lupa 2.8 : réussis. Archive construite, installation/déploiement à l’identique, désactivation/réactivation et désinstallation contrôlés via le moteur STRYKER dans un dossier temporaire isolé : réussis.
 
 Le diagnostic 0.1.0 a été installé manuellement dans le SiderAddons local, avec une copie préalable de sider.ini conservée dans artifacts/team-identity-research. Le journal local-installation.json y décrit les deux fichiers concernés et la sauvegarde. Aucun jeu n’a été lancé pour ce contrôle. Prochaine étape nécessaire : une session de jeu utilisateur pour vérifier le chargement du module et examiner ses observations.
+
+## Observations du 6 septembre 2026
+
+La session du 5 septembre à 23:22 contient 63 événements, dont le chargement de Coach.bin, Tactics.bin, TacticsFormation.bin et Team.bin, ainsi que Lorient–Paris FC. La collecte de statistiques a échoué : pcall n’est pas une fonction globale disponible dans les modules Sider (1 130 erreurs répétées). La version 0.1.1 supprime cette dépendance et bloque toute répétition en cas d’échec de l’API de statistiques. Sept tests passent désormais dans un environnement Lua limité aux fonctions documentées de Sider ; le cycle d’installation/désinstallation de l’archive passe aussi.
+
+Une session plus récente, datée du 6 septembre à 10:59:56, charge bien 0.1.1 : 42 événements, aucune erreur du diagnostic, Algérie (1040)–Maroc (32), score 0–0 aux instantanés 0:26, 5:17 et 10:12. Cela valide la lecture en jeu du score et de l’horloge. Ces instantanés ne constituent pas un résultat final et ne mesurent pas la possession.
+
+Extraction en lecture seule des tables locales avec [pes-file-tools](https://github.com/the4chancup/pes-file-tools). Les tailles compressées observées correspondent à :
+
+| Table | Archive candidate | Taille observée | Taille décompressée |
+| --- | --- | ---: | ---: |
+| Tactics.bin | data_s25262.cpk | 11 120 | 18 672 |
+| TacticsFormation.bin | data_s25262.cpk | 154 104 | 616 968 |
+| Coach.bin | data_s25262b.cpk | 17 355 | 98 000 |
+| Team.bin | data_s25262b.cpk | 50 159 | 1 147 468 |
+
+La correspondance de taille est un indice de la version chargée, pas une comparaison d’empreinte avec la mémoire. Aucun CPK original n’a été modifié.
+
+Le format Team/Coach décrit par [pes-db-generator](https://github.com/the4chancup/pes-db-generator) permet de lire 749 équipes uniques et 980 entraîneurs. Chacune des 749 équipes possède une référence de coach résolue et des lignes tactiques. On recense 1 556 lignes tactiques et 1 558 groupes de formation de 33 entrées. Les relations identifiants tactiques/équipes/formations sont recoupées ; les bits des consignes ne sont pas encore interprétés. Une ligne de World Selection n’a pas de groupe de formation correspondant ; ne pas assimiler cela à un bug sans essai. Huit identifiants d’équipe de la table tactique sont absents de la table des équipes sélectionnée.
+
+Exemples dans cette base locale : Barça 108 / coach 102080 (Hansi Flick), Atlético 172 / coach 52 (Diego Simeone), Paris FC 4211 / coach 101358 (Antoine Kombouaré). Ce sont les données installées, pas une vérification des postes réels actuels de ces personnes.
+
+Une copie de BL00000000, sauvegardée le 6 septembre 2026 à 11:03, a été ouverte avec [pesXdecrypter 6.0.0, outil PES 2021](https://github.com/the4chancup/pesXdecrypter/releases/tag/6.0.0). Sa description donne Paris FC / Ligue 1 et 2/9/2025. Cette date textuelle est un premier repère de calendrier ; le champ interne utilisé par le moteur reste à identifier. Les noms d’équipes et de coachs apparaissent dans les données de carrière, mais les lignes tactiques de base recherchées ne sont pas retrouvées à l’identique : il faut analyser la structure propre à la sauvegarde, sans supposer une propagation des tables de base.
+
+Une copie et un décodage d’EDIT00000000 sont également prêts pour une comparaison contrôlée. Les empreintes des originaux BL et EDIT ont été vérifiées inchangées. Les copies privées, inventaires et journaux restent dans artifacts/team-identity-research, hors Git. Étape suivante : inverser un seul réglage passes courtes/longues dans la tactique principale de Paris FC via l’éditeur du jeu, enregistrer puis comparer la nouvelle copie au point de référence. Ne pas changer les autres consignes pendant cette comparaison.
