@@ -28,6 +28,20 @@ def results(state, points=61, matches=38):
 
 
 class CoachingTests(unittest.TestCase):
+    def test_unavailable_results_do_not_invent_a_bad_season(self):
+        state = fixture()
+        for coach in state['coaches'].values():
+            coach['birth_date'] = '1980-01-01'
+        recorded = results(state, points=0)
+        recorded['club:0'] = {'status': 'unavailable', 'reason': 'no_native_results'}
+        output = advance_season(state, '2026-07-01', recorded)
+        self.assertEqual(output['clubs']['club:0']['coach'], state['clubs']['club:0']['coach'])
+        self.assertTrue(any(e['type'] == 'performance_not_evaluated' and e['club'] == 'club:0'
+                            for e in output['last_event']['events']))
+        recorded['club:0']['points'] = 0
+        with self.assertRaises(ValueError):
+            advance_season(state, '2026-07-01', recorded)
+
     def test_installing_midseason_requires_an_explicit_season_calendar(self):
         state = fixture()
         state['date'] = '2025-10-24'

@@ -150,6 +150,13 @@ def advance_season(state, boundary, results, *, season_start=None):
     if set(results) != set(state['clubs']):
         raise ValueError('Complete club results required; player-match statistics are insufficient.')
     for outcome in results.values():
+        if outcome.get('status') == 'unavailable':
+            if (outcome.get('reason') not in ('no_native_results', 'unsupported_competition_phase')
+                    or 'matches' in outcome or 'points' in outcome):
+                raise ValueError('Unavailable results need an explicit reason and no invented totals.')
+            continue
+        if outcome.get('status', 'recorded') != 'recorded':
+            raise ValueError('Unknown results availability status.')
         matches, points = outcome['matches'], outcome['points']
         if type(matches) is not int or type(points) is not int or matches < 0 or not 0 <= points <= 3 * matches:
             raise ValueError('Invalid league results.')
@@ -168,9 +175,12 @@ def advance_season(state, boundary, results, *, season_start=None):
         coach_id = club['coach']
         retired = output['coaches'][coach_id]['retired']
         record = results[club_id]
-        enough = record['matches'] >= POLICY['minimum_matches']
+        unavailable = record.get('status') == 'unavailable'
+        if unavailable:
+            events.append({'type': 'performance_not_evaluated', 'club': club_id, 'reason': record['reason']})
+        enough = not unavailable and record['matches'] >= POLICY['minimum_matches']
         tenure = (target - _date(club['appointed'])).days
-        deficit = club['expected_ppg'] - record['points'] / max(1, record['matches'])
+        deficit = 0 if unavailable else club['expected_ppg'] - record['points'] / max(1, record['matches'])
         underperformed = enough and tenure >= POLICY['minimum_tenure_days'] and deficit >= POLICY['sacking_deficit_ppg']
         expired = _date(club['contract_end']) <= target
         if retired or underperformed:

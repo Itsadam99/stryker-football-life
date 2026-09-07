@@ -63,3 +63,19 @@ Le fichier produit a été ajouté en sauvegarde 4, titre « STRYKER TEST - Coac
 Le code reste séparé du catalogue Striker. L’archive de développement conserve les sources, pas les sauvegardes, tables de jeu, clés ou exécutables externes. Il faut toujours le dépôt STRYKER pour le test du module de diagnostic, et les outils PES 2021 externes pour chiffrer une nouvelle copie de carrière.
 
 La suite complète comprend maintenant 29 tests de carrière, couvrant aussi l’application d’un changement de coach, les formations, la protection des champs non déclarés, le calendrier et l’initialisation en cours de saison (qui exige un calendrier de saison explicite). `build_source_archive.py --output NOUVELLE_ARCHIVE.zip --revision REVISION_GIT` conserve les sources et les notes avec un inventaire d’empreintes, puis vérifie le contenu de l’archive.
+
+## Résultats natifs et historique — 8 septembre 2026
+
+`career_results.py` lit les compétitions à partir de quinze lignes de vingt octets par équipe, à +744 du bloc BAL. Paris FC est recoupé avec les chiffres utilisateur corrigés : six matchs, deux victoires, deux nuls, deux défaites, huit points. Les trois références locales montrent 843 lignes / 78 compétitions aux deux premières dates, puis 1 403 lignes / 128 compétitions le 21 février 2026. Les totaux de victoires/défaites et les champs candidats de buts s’équilibrent sur toutes ces compétitions.
+
+Les phases 148 et 175 de la troisième référence ont des points qui ne suivent pas la formule habituelle, notamment des points présents sans matchs comptés. Leur sens n’est pas inventé : elles sont signalées et refusées par l’évaluation standard. Les équipes sans résultats sont listées séparément. Le moteur peut recevoir une indisponibilité explicitement motivée ; il continue alors à gérer l’âge et les contrats, mais n’invente aucune mauvaise saison. Le connecteur automatique n’active pas encore cette politique pour des compétitions non identifiées.
+
+```powershell
+python research/team-identity-probe/career_results.py --decoded COPIE_DECODEE --output NOUVEAU_RAPPORT.json
+```
+
+`career_cycle.py` relie les résultats décodés à la simulation annuelle, en exigeant un choix explicite de compétition par club, les membres de la ligue et le nombre prévu de matchs. Une table cohérente mais provisoire ne suffit pas à déclencher un changement de saison. Les calendriers réels restent à raccorder ; aucun événement annuel de la carrière utilisateur n’a été lancé.
+
+`career_history.py` conserve des instantanés immuables : résultats, état facultatif des coachs et parent explicite. Les empreintes détectent un fichier altéré ; des branches distinctes peuvent repartir du même ancien état. L’identification automatique d’une carrière ou d’un retour arrière n’est pas supposée résolue par le nom BL00000003. Deux checkpoints d’observations, sans état de coach inventé, ont été conservés pour la base et sa copie d’essai.
+
+La suite comprend désormais **40 tests de carrière réussis**, dont le raccordement résultats/simulation, les saisons incomplètes, les points non standards, l’indisponibilité de résultats et la restauration des états. Les sauvegardes du jeu n’ont pas été modifiées lors de cette étape.
