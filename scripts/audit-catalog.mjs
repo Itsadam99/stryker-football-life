@@ -5,8 +5,13 @@ import path from "node:path";
 import { startServer } from "../server/index.js";
 
 const project = process.cwd();
-const archiveDirs = ["artifacts/new-mod-packages-v2/output", "artifacts/new-mod-packages-v3/output", "bundled-mods"];
-const archives = archiveDirs.flatMap((dir) => fs.readdirSync(dir).filter((name) => /\.zip$/i.test(name)).map((name) => path.resolve(dir, name)));
+const archiveDirs = ["artifacts/new-mod-packages-v2/output", "artifacts/new-mod-packages-v3/output", "artifacts/new-mod-packages-v4/output", "bundled-mods"];
+// Sans argument, tout le catalogue est audité ; un chemin d'archive permet de
+// contrôler un seul paquet sans réinstaller les 780 Mo des autres.
+const selected = process.argv.slice(2);
+const archives = selected.length
+  ? selected.map((name) => path.resolve(name))
+  : archiveDirs.filter((dir) => fs.existsSync(dir)).flatMap((dir) => fs.readdirSync(dir).filter((name) => /\.zip$/i.test(name)).map((name) => path.resolve(dir, name)));
 const bundled = JSON.parse(fs.readFileSync("bundled-mods/catalog.json", "utf8"));
 const results = [];
 for (const archive of archives) {

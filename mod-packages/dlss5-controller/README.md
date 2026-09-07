@@ -21,16 +21,15 @@ STRYKER refuse toute autre empreinte, sauvegarde la DLL présente en `nvngx_dlss
 
 ## Utilisation en jeu
 
-1. Appuyer sur `F10` pour ouvrir directement **STRYKER DLSS 5 Controller**.
-2. Utiliser les flèches `Haut` et `Bas` pour choisir un réglage.
-3. Utiliser les flèches `Gauche` et `Droite` pour modifier et enregistrer sa valeur.
-4. Appuyer sur `Entrée` pour relire la configuration actuelle, ou sur `F10` pour fermer.
-5. Redémarrer Football Life pour appliquer le changement au moteur DLSS.
+1. Lancer Football Life depuis STRYKER.
+2. Appuyer sur `F10` : le **Centre de contrôle DLSS 5** de STRYKER s'affiche par-dessus le jeu.
+3. Régler, puis **Appliquer**. Les changements DLSS prennent effet au lancement suivant.
+4. `Origine` ouvre l'overlay RenoDX complet, qui applique ses réglages en direct.
 
-STRYKER place automatiquement ce contrôleur en premier dans l'overlay et réserve `F10` lors de son activation. La touche d'overlay précédente est restaurée si le mod est désactivé.
+STRYKER ne capte `F10` que pendant une partie et seulement si ce paquet est installé : un raccourci global permanent volerait la touche aux autres applications. C'est aussi pour cela que l'overlay RenoDX est déplacé sur `Origine` à l'installation, et rendu à `F10` si le paquet est retiré.
 
-Les modes proposés suivent l'énumération Streamline : Jeu/automatique, Performance, Équilibré, Qualité, Ultra Performance, Ultra Qualité et DLAA.
+Le module Lua ne dessine rien dans l'overlay de Sider : il sert de marqueur d'installation.
 
-Une sauvegarde `ReShade.ini.sider-dlss.bak` est créée avant chaque écriture.
+Une sauvegarde `ReShade.ini.stryker-dlss.bak` est créée avant la première écriture.
 
 Projet communautaire expérimental, à utiliser uniquement hors ligne.

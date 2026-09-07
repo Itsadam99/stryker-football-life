@@ -133,7 +133,10 @@ export function createRuntime({
   const migratedFaceComponents = [];
   store.update((draft) => {
     for (const [modId, mod] of Object.entries(draft.mods || {})) {
-      if (mod.packageId === "stryker-dlss5-controller" && mod.siderOverlay) {
+      // Les installations d'avant la 3.9.6 ont un module réduit à un marqueur :
+      // leur rendre F10 ouvrirait un panneau vide. Elles gardent donc ReShade sur
+      // F10 jusqu'à la réinstallation du paquet, qui apporte le module complet.
+      if (mod.packageId === "stryker-dlss5-controller" && mod.siderOverlay && !mod.siderOverlay.primary) {
         mod.siderOverlay = null;
         dlssControllerMigrated = true;
       }
@@ -179,7 +182,7 @@ export function createRuntime({
       store.addActivity("migration", facepackDeploymentChanged
         ? "Facepacks déplacés dans le dossier LiveCPK de Football Life"
         : dlssControllerMigrated
-          ? "Contrôleur DLSS migré vers le panneau RenoDX instantané sur F10"
+          ? "Contrôleur DLSS : overlay Sider incomplet retiré"
           : modPathsChanged ? "Chemins des modules et fusion des maillots mis à jour"
           : "Mods redéployés vers l’installation Sider réellement utilisée par Football Life", {
         previousSiderPath: existingSettings.siderPath,
@@ -204,7 +207,10 @@ export function createRuntime({
   if (store.snapshot().settings.isLinked
     && Object.values(store.snapshot().mods || {}).some((mod) => mod.packageId === "stryker-dlss5-controller")) {
     try {
-      dlssManager.configureOverlay(store.snapshot().settings);
+      dlssManager.configureOverlay(store.snapshot().settings, {
+        strykerHotkey: Object.values(store.snapshot().mods || {})
+          .some((mod) => mod.packageId === "stryker-dlss5-controller"),
+      });
     } catch (error) {
       store.addActivity("error", "La configuration du panneau DLSS F10 sera retentée", { message: error.message });
     }
@@ -224,13 +230,21 @@ export function createApp(runtime = createRuntime()) {
 
   // Effet de bord d'une installation de mod : un panneau non configurable ne
   // doit jamais faire échouer l'installation elle-même, qui a réussi.
+  // C'est l'application qui ouvre le centre de contrôle sur F10, pas un module
+  // Lua : la présence du paquet suffit à justifier de libérer la touche.
+  function dlssControllerInstalled() {
+    return modEngine.list().some((item) => item.packageId === "stryker-dlss5-controller");
+  }
+
   function syncDlssController(mod = null) {
     const isController = mod?.packageId === "stryker-dlss5-controller";
     const isInstalled = modEngine.list().some((item) => item.packageId === "stryker-dlss5-controller");
     if (!(isController || isInstalled) || !store.snapshot().settings.isLinked) return null;
     try {
       const current = dlssManager.status(store.snapshot().settings);
-      return current.configurable ? dlssManager.configureOverlay(store.snapshot().settings) : current;
+      return current.configurable
+        ? dlssManager.configureOverlay(store.snapshot().settings, { strykerHotkey: dlssControllerInstalled() })
+        : current;
     } catch (error) {
       store.addActivity("error", "La configuration du panneau DLSS F10 sera retentée", { message: error.message });
       return null;
@@ -375,8 +389,11 @@ export function createApp(runtime = createRuntime()) {
         return res.status(409).json({ success: false, error: "Fermez Football Life une seule fois pour installer le nouveau panneau F10." });
       }
       // force : un clic explicite réapplique le thème même s'il est déjà en place.
-      const dlss = dlssManager.configureOverlay(store.snapshot().settings, { force: true });
-      store.addActivity("dlss", "Panneau DLSS instantané configuré sur F10");
+      const strykerHotkey = dlssControllerInstalled();
+      const dlss = dlssManager.configureOverlay(store.snapshot().settings, { force: true, strykerHotkey });
+      store.addActivity("dlss", strykerHotkey
+        ? "Centre de contrôle STRYKER sur F10, overlay RenoDX sur Origine"
+        : "Panneau DLSS instantané configuré sur F10");
       res.json({ success: true, dlss });
     } catch (error) { next(error); }
   });

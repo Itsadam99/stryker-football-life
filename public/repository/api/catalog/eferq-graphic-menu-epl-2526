@@ -7,9 +7,13 @@
     "shortDesc": "Menu graphique Premier League 2025/26 pour PES 2021 et Football Life 2026.",
     "fullDesc": "Pack contrôlé par STRYKER avec Menu EPL, UIColors, module Lua et données content.",
     "category": "menu",
-    "compatibility": ["PES 2021", "Football Life 2026", "Sider 7.3.4"],
+    "compatibility": [
+      "PES 2021",
+      "Football Life 2026",
+      "Sider 7.3.4"
+    ],
     "size": "127,1 Mo",
-    "thumbnail": "/stryker-logo.png",
+    "thumbnail": "/mods/eferq-graphic-menu-epl-2526.jpg",
     "screenshots": [],
     "downloadUrl": "",
     "installationType": "manual",

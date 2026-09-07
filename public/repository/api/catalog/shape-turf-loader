@@ -1,0 +1,19 @@
+{
+  "mod": {
+    "id": "shape-turf-loader",
+    "title": "Shape Turf Loader v3.3",
+    "author": "Parigo-57",
+    "version": "3.3",
+    "category": "turf",
+    "compatibility": [
+      "Football Life 2026",
+      "PES 2021",
+      "Sider 7"
+    ],
+    "downloadUrl": "https://github.com/Itsadam99/stryker-football-life/releases/download/mods-2026.09/shape-turf-loader.rar",
+    "archiveHash": "c4f186643edb5df8a159afc4a2bb9231de9c382119f73f2eefb549ca50098410",
+    "archiveSize": 1253357278,
+    "fileCount": 438,
+    "status": "published"
+  }
+}

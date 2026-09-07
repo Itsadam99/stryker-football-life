@@ -3,9 +3,10 @@ import type { CatalogMod } from "../types";
 const STRYKER_MOD_REPOSITORY = "https://raw.githubusercontent.com/Itsadam99/stryker-football-life/main/public/repository/";
 const STRYKER_MOD_RELEASE = "https://github.com/Itsadam99/stryker-football-life/releases/download/mods-2026.09/";
 
-const preview = (mod: Omit<CatalogMod, "thumbnail" | "downloadUrl" | "screenshots" | "rating" | "downloadsCount" | "installationType" | "legalStatus" | "verificationDate" | "status">): CatalogMod => ({
+const preview = (mod: Omit<CatalogMod, "thumbnail" | "downloadUrl" | "screenshots" | "rating" | "downloadsCount" | "installationType" | "legalStatus" | "verificationDate" | "status"> & { thumbnail?: string }): CatalogMod => ({
   ...mod,
-  thumbnail: "/stryker-logo.png",
+  // Sans visuel propre, la carte garde le filigrane STRYKER.
+  thumbnail: mod.thumbnail || "/stryker-logo.png",
   downloadUrl: `${STRYKER_MOD_RELEASE}${mod.id}.zip`,
   screenshots: [],
   rating: 0,
@@ -30,6 +31,7 @@ const hosted = (mod: Parameters<typeof preview>[0], archiveFile: string): Catalo
 export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   preview({
     id: "ficabre-goalnets-module-v1",
+    thumbnail: "/mods/ficabre-goalnets-module-v1.jpg",
     title: "Ficabre Goalnets Module",
     author: "Ficabre",
     version: "1.0.0",
@@ -46,6 +48,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "shirtless-celebration-v4-1",
+    thumbnail: "/mods/shirtless-celebration-v4-1.jpg",
     title: "Shirtless Celebration",
     author: "alston2016",
     version: "4.1.0",
@@ -62,6 +65,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "facepack-update-vol-204",
+    thumbnail: "/mods/facepack-update-vol-204.jpg",
     title: "Facepack Update Vol. 204",
     author: "Communauté FaceMaker",
     version: "204",
@@ -108,6 +112,66 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
     fileCount: 12,
     license: "Crédits conservés — redistribution publique confirmée par l’éditeur STRYKER.",
   }),
+  {
+    ...preview({
+      id: "facepack-update-vol-159",
+      title: "Facepack Update Vol. 159",
+      author: "Communauté FaceMaker",
+      version: "159",
+      shortDesc: "Cinq visages convertis depuis le CPK d’origine vers la racine LiveCPK.",
+      fullDesc: "Le pack est distribué en CPK, un format que STRYKER n’installe pas. L’archive publiée ici en est la conversion fidèle : les fichiers sont replacés dans Asset/model/character/face/real, installés dans la racine LiveCPK de Football Life et retirés à la désactivation. Joueurs inclus : 46235, 130319, 132155, 139679, 140051.",
+      category: "face",
+      compatibility: ["Football Life 2026", "PES 2021", "Sider 7", "LiveCPK"],
+      size: "25,5 Mo",
+      tags: ["5 joueurs", "visages", "LiveCPK", "converti depuis un CPK"],
+      archiveHash: "409065cad2d186319373a5df6894acf212de8870e3ec226f33f2b55980448a3c",
+      archiveSize: 26697084,
+      fileCount: 69,
+      license: "Crédits conservés — redistribution publique confirmée par l’éditeur STRYKER.",
+    }),
+    verificationDate: "2026-09-06",
+    publishedAt: "2026-09-06T09:00:00.000Z",
+  },
+  {
+    ...preview({
+      id: "facepack-update-vol-202",
+      title: "Facepack Update Vol. 202",
+      author: "Communauté FaceMaker",
+      version: "202",
+      shortDesc: "Cinq visages convertis depuis le CPK d’origine vers la racine LiveCPK.",
+      fullDesc: "Le pack est distribué en CPK, un format que STRYKER n’installe pas. L’archive publiée ici en est la conversion fidèle : les fichiers sont replacés dans Asset/model/character/face/real, installés dans la racine LiveCPK de Football Life et retirés à la désactivation. Joueurs inclus : 116751, 128281, 135039, 135067, 155214.",
+      category: "face",
+      compatibility: ["Football Life 2026", "PES 2021", "Sider 7", "LiveCPK"],
+      size: "35,7 Mo",
+      tags: ["5 joueurs", "visages", "LiveCPK", "converti depuis un CPK"],
+      archiveHash: "c91fff7296fcf555560362b0302ad1f05d621b5060114a89d40232a9f263cd02",
+      archiveSize: 37406933,
+      fileCount: 64,
+      license: "Crédits conservés — redistribution publique confirmée par l’éditeur STRYKER.",
+    }),
+    verificationDate: "2026-09-06",
+    publishedAt: "2026-09-06T09:00:00.000Z",
+  },
+  {
+    ...preview({
+      id: "facepack-update-vol-219",
+      title: "Facepack Update Vol. 219",
+      author: "Communauté FaceMaker",
+      version: "219",
+      shortDesc: "Cinq visages convertis depuis le CPK d’origine vers la racine LiveCPK.",
+      fullDesc: "Le pack est distribué en CPK, un format que STRYKER n’installe pas. L’archive publiée ici en est la conversion fidèle : les fichiers sont replacés dans Asset/model/character/face/real, installés dans la racine LiveCPK de Football Life et retirés à la désactivation. Joueurs inclus : 126337, 127038, 128986, 157643, 158568.",
+      category: "face",
+      compatibility: ["Football Life 2026", "PES 2021", "Sider 7", "LiveCPK"],
+      size: "53,4 Mo",
+      tags: ["5 joueurs", "visages", "LiveCPK", "converti depuis un CPK"],
+      archiveHash: "c25504914d3f9d4003a0e0e8ca18eea5bb4149bc81bafa90728dac5b924ef801",
+      archiveSize: 55952961,
+      fileCount: 74,
+      license: "Crédits conservés — redistribution publique confirmée par l’éditeur STRYKER.",
+    }),
+    verificationDate: "2026-09-06",
+    publishedAt: "2026-09-06T09:00:00.000Z",
+  },
   hosted({
     id: "premier-league-facepack-vol-1",
     title: "Premier League Facepack Vol. 1",
@@ -127,6 +191,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }, "premier-league-facepack-vol-1.zip"),
   preview({
     id: "realism-menu-light-v2",
+    thumbnail: "/mods/realism-menu-light-v2.jpg",
     title: "Realism Menu Light Mod",
     author: "Communauté Football Life",
     version: "2.0.0",
@@ -143,6 +208,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "fl26-pyro-supporters-v0-9a",
+    thumbnail: "/mods/fl26-pyro-supporters-v0-9a.jpg",
     title: "FL26 Pyro Supporters",
     author: "heazebell666",
     version: "0.9a",
@@ -159,6 +225,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "fl26-pyro-no-spectator-patch",
+    thumbnail: "/mods/fl26-pyro-no-spectator-patch.jpg",
     dependencies: [{ id: "fl26-pyro-supporters-v0-9a" }],
     title: "FL26 Pyro — No Spectator Patch",
     author: "heazebell666",
@@ -176,6 +243,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-ligue-1-2026-27",
+    thumbnail: "/mods/kitpack-ligue-1-2026-27.jpg",
     title: "Kitpack officiel Ligue 1 2026/27",
     author: "Prayudi StarGames / communauté Kitmakers",
     version: "1.0.0",
@@ -193,6 +261,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-bundesliga-2026-27",
+    thumbnail: "/mods/kitpack-bundesliga-2026-27.jpg",
     title: "Kitpack officiel Bundesliga 2026/27",
     author: "Prayudi StarGames / communauté Kitmakers",
     version: "1.0.0",
@@ -210,6 +279,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-premier-league-2026-27",
+    thumbnail: "/mods/kitpack-premier-league-2026-27.jpg",
     title: "Kitpack officiel Premier League V3 2026/27",
     author: "Prayudi StarGames / communauté Kitmakers",
     version: "3.0.0",
@@ -227,6 +297,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "kitpack-laliga-2026-27",
+    thumbnail: "/mods/kitpack-laliga-2026-27.jpg",
     title: "Kitpack LaLiga 2026/27",
     author: "Nono Kitmaker",
     version: "1.0.0",
@@ -244,6 +315,7 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
   }),
   preview({
     id: "option-file-transfers-v7-2026",
+    thumbnail: "/mods/option-file-transfers-v7-2026.jpg",
     title: "Transferts joueurs — Option File V7",
     author: "Prayudi StarGames / communauté SmokePatch",
     version: "7.0.0",
@@ -258,6 +330,53 @@ export const DESKTOP_COMMUNITY_MODS: CatalogMod[] = [
     fileCount: 2,
     license: "Crédits Prayudi StarGames et communauté SmokePatch — redistribution publique confirmée par l’éditeur STRYKER.",
   }),
+  {
+    ...preview({
+      id: "potm-server-2-4-aio",
+      thumbnail: "/mods/potm-server-2-4-aio.jpg",
+      title: "POTM Server 2.4 AIO",
+      author: "D4NT / Aboutpes / OOP-04",
+      version: "2.4",
+      shortDesc: "Cérémonie du Joueur du match avec trophée et animations pour quinze compétitions.",
+      fullDesc: "Racine LiveCPK, données Sider content/POTM et module Lua installés ensemble. STRYKER ne conserve qu’un seul module — la révision du 22/03/2026 qui corrige le score 1-0 affiché dans les coupes de Master League — et retire le doublon modules/common livré par l’auteur, afin que Sider ne charge jamais deux fois le serveur POTM.",
+      category: "other",
+      compatibility: ["Football Life 2026", "PES 2021", "Sider 7"],
+      size: "108,3 Mo",
+      tags: ["POTM", "cérémonie", "trophée", "Sider", "LiveCPK"],
+      archiveHash: "3c7827eaa7ba9a47f19ab26f12169eccb15eacee3fd73ab19705c5205a903c1b",
+      archiveSize: 113546159,
+      fileCount: 1833,
+      license: "Crédits : D4NT, Aboutpes et OOP-04 — redistribution publique confirmée par l’éditeur STRYKER.",
+    }),
+    verificationDate: "2026-09-05",
+    publishedAt: "2026-09-05T21:00:00.000Z",
+  },
+  {
+    ...preview({
+      id: "soccer-revolution-11-gameplay",
+    thumbnail: "/mods/soccer-revolution-11-gameplay.webp",
+      title: "Soccer Revolution 11 Gameplay — constantes et animations",
+      author: "elijio876",
+      version: "1.1",
+      shortDesc: "Constantes de match et base d’animations du gameplay Soccer Revolution 11. Le correctif de l’exécutable n’est pas inclus.",
+      fullDesc: "Le mod d’origine remplace deux CPK du jeu et son exécutable. STRYKER a comparé dt13_all.cpk et dt18_all.cpk à ceux de Football Life : sur 427 fichiers, 14 seulement diffèrent. Ce sont eux qui sont publiés, en racine LiveCPK — les neuf constant_*.bin de common/match/constant, quatre binaires FHSequence et la base anim_infos.json. Sider les sert par-dessus les CPK du jeu : aucun fichier de Football Life n’est écrasé et la désactivation suffit à tout annuler. Les FL_2026.exe et PES2021.exe modifiés livrés par l’auteur ne sont pas redistribués.",
+      category: "gameplay",
+      compatibility: ["Football Life 2026", "PES 2021", "Sider 7"],
+      size: "5,0 Mo",
+      tags: ["gameplay", "constantes de match", "animations", "LiveCPK", "elijio876"],
+      archiveHash: "a1f0a5666a2f7739a9f346c19260e702d0e33959803a94e9f233fe54d8f32111",
+      archiveSize: 5236882,
+      fileCount: 15,
+      sourceUrl: "https://pes-files.com/pes-2021-gameplay-soccer-revolution-2026-update-v11/",
+      license: "Crédits : elijio876 — seules les données du mod sont redistribuées ; les exécutables du jeu restent chez l’auteur.",
+    }),
+    // Retiré de Découvrir : activé, ce paquet fait planter Football Life avec
+    // une corruption du tas ; désactivé, le crash disparaît. Voir MODS_AUDIT.
+    status: "pending_review",
+    installationType: "manual",
+    verificationDate: "2026-09-06",
+    publishedAt: "2026-09-06T10:00:00.000Z",
+  },
 ];
 
 type CommunityLanguage = "en" | "pt" | "es";
@@ -267,6 +386,9 @@ export const DESKTOP_COMMUNITY_TRANSLATIONS: Record<CommunityLanguage, Record<st
   en: {
     "ficabre-goalnets-module-v1": { shortDesc: "Complete 2025/26 nets with physics, shapes, sounds and presets by club, competition and stadium.", fullDesc: "The Sider module includes its maps, presets and LiveCPK resources. STRYKER removed the batch script found in the source and converted the 41,000-file pack to its verified solid format.", size: "745.6 MB", tags: ["nets", "physics", "Sider", "LiveCPK", "2025/26"] },
     "shirtless-celebration-v4-1": { shortDesc: "R3-triggered shirtless celebration with four outfit modes and automatic skin-tone handling.", fullDesc: "Sider module with LiveCPK resources, player profiles and compatibility safeguards. It validates the Football Life executable before applying in-memory changes and never replaces the game file.", size: "27.7 MB", tags: ["celebration", "R3", "Sider", "overlay"] },
+    "facepack-update-vol-159": { shortDesc: "Five faces converted from the original CPK into the LiveCPK root.", fullDesc: "The pack ships as a CPK, a format STRYKER does not install. The archive published here is its faithful conversion: the files are placed back under Asset/model/character/face/real, installed into Football Life’s LiveCPK root and removed when disabled. Players included: 46235, 130319, 132155, 139679, 140051.", size: "25.5 MB", tags: ["5 players", "faces", "LiveCPK", "converted from CPK"] },
+    "facepack-update-vol-202": { shortDesc: "Five faces converted from the original CPK into the LiveCPK root.", fullDesc: "The pack ships as a CPK, a format STRYKER does not install. The archive published here is its faithful conversion: the files are placed back under Asset/model/character/face/real, installed into Football Life’s LiveCPK root and removed when disabled. Players included: 116751, 128281, 135039, 135067, 155214.", size: "35.7 MB", tags: ["5 players", "faces", "LiveCPK", "converted from CPK"] },
+    "facepack-update-vol-219": { shortDesc: "Five faces converted from the original CPK into the LiveCPK root.", fullDesc: "The pack ships as a CPK, a format STRYKER does not install. The archive published here is its faithful conversion: the files are placed back under Asset/model/character/face/real, installed into Football Life’s LiveCPK root and removed when disabled. Players included: 126337, 127038, 128986, 157643, 158568.", size: "53.4 MB", tags: ["5 players", "faces", "LiveCPK", "converted from CPK"] },
     "facepack-update-vol-204": { shortDesc: "Five faces: Rashford, Olise, Schmidt, Bouaddi and Querfeld.", fullDesc: "STRYKER installs the optimized #Win files directly into Football Life's LiveCPK root.", size: "2.3 MB", tags: ["5 players", "faces", "LiveCPK"] },
     "facepack-update-vol-222": { shortDesc: "Five faces: N. Mendy, L. Dunk, C. Kouamé, Vinícius Jr and B. Mbeumo.", fullDesc: "STRYKER installs the optimized #Win files directly into Football Life's LiveCPK root.", size: "1.1 MB", tags: ["5 players", "faces", "LiveCPK"] },
     "facepack-update-vol-223": { shortDesc: "Five faces: Klimowicz, Pedrosa, Sava, Sangaré and Espart.", fullDesc: "STRYKER installs the optimized #Win files directly into Football Life's LiveCPK root.", size: "1.5 MB", tags: ["5 players", "faces", "LiveCPK"] },
@@ -279,10 +401,15 @@ export const DESKTOP_COMMUNITY_TRANSLATIONS: Record<CommunityLanguage, Record<st
     "kitpack-premier-league-2026-27": { shortDesc: "Third edition of the 2026/27 Premier League kit pack.", fullDesc: "Complete Sider/Kitserver pack with configurations, numbers and maps; the duplicate CPK is excluded.", size: "156.7 MB", tags: ["Premier League", "V3", "2026/27", "Kitserver"] },
     "kitpack-laliga-2026-27": { shortDesc: "Complete LaLiga EA Sports 2026/27 pack ready for Kitserver.", fullDesc: "Club kits, goalkeepers, numbers and configurations in the official Sider version, without the redundant CPK.", size: "184.9 MB", tags: ["LaLiga", "Nono Kitmaker", "2026/27", "Kitserver"] },
     "option-file-transfers-v7-2026": { shortDesc: "Updated transfer and squad Option File for Football Life 2026.", fullDesc: "STRYKER backs up the current EDIT00000000, installs V7 in the 2026 save folder and restores the original when disabled. In-game changes are preserved in backup history.", size: "10.5 MB", tags: ["transfers", "squads", "Option File", "automatic backup"] },
+    "potm-server-2-4-aio": { shortDesc: "Player of the Match ceremony with trophy and animations for fifteen competitions.", fullDesc: "LiveCPK root, Sider content/POTM data and the Lua module are installed together. STRYKER keeps a single module — the 22/03/2026 revision that fixes the 1-0 score shown in Master League cup matches — and drops the duplicate modules/common copy so Sider never loads the POTM server twice.", size: "108.3 MB", tags: ["POTM", "ceremony", "trophy", "Sider", "LiveCPK"] },
+    "soccer-revolution-11-gameplay": { shortDesc: "Match constants and animation database from the Soccer Revolution 11 gameplay. The executable patch is not included.", fullDesc: "The original mod replaces two of the game’s CPKs and its executable. STRYKER compared dt13_all.cpk and dt18_all.cpk against Football Life’s own: out of 427 files, only 14 differ. Those are what ships here, as a LiveCPK root — the nine constant_*.bin files from common/match/constant, four FHSequence binaries and the anim_infos.json database. Sider serves them on top of the game’s CPKs, so no Football Life file is overwritten and disabling the mod undoes everything. The modified FL_2026.exe and PES2021.exe shipped by the author are not redistributed.", size: "5.0 MB", tags: ["gameplay", "match constants", "animations", "LiveCPK", "elijio876"] },
   },
   pt: {
     "ficabre-goalnets-module-v1": { shortDesc: "Redes 2025/26 completas com física, formas, sons e predefinições por clube, competição e estádio.", fullDesc: "O módulo Sider inclui mapas, predefinições e recursos LiveCPK. O STRYKER removeu o script batch das fontes e converteu os 41 000 ficheiros para o seu formato sólido verificado.", size: "745,6 MB", tags: ["redes", "física", "Sider", "LiveCPK", "2025/26"] },
     "shirtless-celebration-v4-1": { shortDesc: "Celebração sem camisola acionada com R3, quatro modos e gestão automática de tons de pele.", fullDesc: "Módulo Sider com recursos LiveCPK, perfis de jogadores e proteções de compatibilidade. Valida o executável antes de alterar a memória e nunca substitui o ficheiro do jogo.", size: "27,7 MB", tags: ["celebração", "R3", "Sider", "overlay"] },
+    "facepack-update-vol-159": { shortDesc: "Cinco rostos convertidos do CPK original para a raiz LiveCPK.", fullDesc: "O pacote é distribuído em CPK, um formato que o STRYKER não instala. O arquivo publicado aqui é a sua conversão fiel: os ficheiros voltam para Asset/model/character/face/real, são instalados na raiz LiveCPK do Football Life e retirados ao desativar. Jogadores incluídos: 46235, 130319, 132155, 139679, 140051.", size: "25,5 MB", tags: ["5 jogadores", "rostos", "LiveCPK", "convertido de CPK"] },
+    "facepack-update-vol-202": { shortDesc: "Cinco rostos convertidos do CPK original para a raiz LiveCPK.", fullDesc: "O pacote é distribuído em CPK, um formato que o STRYKER não instala. O arquivo publicado aqui é a sua conversão fiel: os ficheiros voltam para Asset/model/character/face/real, são instalados na raiz LiveCPK do Football Life e retirados ao desativar. Jogadores incluídos: 116751, 128281, 135039, 135067, 155214.", size: "35,7 MB", tags: ["5 jogadores", "rostos", "LiveCPK", "convertido de CPK"] },
+    "facepack-update-vol-219": { shortDesc: "Cinco rostos convertidos do CPK original para a raiz LiveCPK.", fullDesc: "O pacote é distribuído em CPK, um formato que o STRYKER não instala. O arquivo publicado aqui é a sua conversão fiel: os ficheiros voltam para Asset/model/character/face/real, são instalados na raiz LiveCPK do Football Life e retirados ao desativar. Jogadores incluídos: 126337, 127038, 128986, 157643, 158568.", size: "53,4 MB", tags: ["5 jogadores", "rostos", "LiveCPK", "convertido de CPK"] },
     "facepack-update-vol-204": { shortDesc: "Cinco rostos: Rashford, Olise, Schmidt, Bouaddi e Querfeld.", fullDesc: "O STRYKER instala os ficheiros #Win otimizados diretamente na raiz LiveCPK do Football Life.", size: "2,3 MB", tags: ["5 jogadores", "rostos", "LiveCPK"] },
     "facepack-update-vol-222": { shortDesc: "Cinco rostos: N. Mendy, L. Dunk, C. Kouamé, Vinícius Jr e B. Mbeumo.", fullDesc: "O STRYKER instala os ficheiros #Win otimizados diretamente na raiz LiveCPK do Football Life.", size: "1,1 MB", tags: ["5 jogadores", "rostos", "LiveCPK"] },
     "facepack-update-vol-223": { shortDesc: "Cinco rostos: Klimowicz, Pedrosa, Sava, Sangaré e Espart.", fullDesc: "O STRYKER instala os ficheiros #Win otimizados diretamente na raiz LiveCPK do Football Life.", size: "1,5 MB", tags: ["5 jogadores", "rostos", "LiveCPK"] },
@@ -295,10 +422,15 @@ export const DESKTOP_COMMUNITY_TRANSLATIONS: Record<CommunityLanguage, Record<st
     "kitpack-premier-league-2026-27": { shortDesc: "Terceira edição do kitpack Premier League 2026/27.", fullDesc: "Pack Sider/Kitserver com configurações, números e mapas, sem o CPK duplicado.", size: "156,7 MB", tags: ["Premier League", "V3", "2026/27", "Kitserver"] },
     "kitpack-laliga-2026-27": { shortDesc: "Pack LaLiga EA Sports 2026/27 completo para Kitserver.", fullDesc: "Equipamentos, guarda-redes, números e configurações por clube na versão Sider oficial.", size: "184,9 MB", tags: ["LaLiga", "Nono Kitmaker", "2026/27", "Kitserver"] },
     "option-file-transfers-v7-2026": { shortDesc: "Option File com transferências e plantéis atualizados para Football Life 2026.", fullDesc: "O STRYKER guarda o EDIT00000000 atual, instala a V7 e restaura o original ao desativar. As alterações feitas no jogo também ficam arquivadas.", size: "10,5 MB", tags: ["transferências", "plantéis", "Option File", "cópia automática"] },
+    "potm-server-2-4-aio": { shortDesc: "Cerimónia de Jogador do Jogo com troféu e animações para quinze competições.", fullDesc: "Raiz LiveCPK, dados Sider content/POTM e módulo Lua instalados em conjunto. O STRYKER mantém um único módulo — a revisão de 22/03/2026 que corrige o resultado 1-0 mostrado nas taças da Master League — e remove a cópia duplicada modules/common, para que o Sider nunca carregue duas vezes o servidor POTM.", size: "108,3 MB", tags: ["POTM", "cerimónia", "troféu", "Sider", "LiveCPK"] },
+    "soccer-revolution-11-gameplay": { shortDesc: "Constantes de jogo e base de animações do gameplay Soccer Revolution 11. O patch do executável não está incluído.", fullDesc: "O mod original substitui dois CPK do jogo e o seu executável. O STRYKER comparou dt13_all.cpk e dt18_all.cpk com os do Football Life: em 427 ficheiros, apenas 14 diferem. São esses que são publicados, como raiz LiveCPK — os nove constant_*.bin de common/match/constant, quatro binários FHSequence e a base anim_infos.json. O Sider serve-os por cima dos CPK do jogo: nenhum ficheiro do Football Life é substituído e desativar o mod anula tudo. Os FL_2026.exe e PES2021.exe modificados do autor não são redistribuídos.", size: "5,0 MB", tags: ["gameplay", "constantes de jogo", "animações", "LiveCPK", "elijio876"] },
   },
   es: {
     "ficabre-goalnets-module-v1": { shortDesc: "Redes 2025/26 completas con físicas, formas, sonidos y ajustes por club, competición y estadio.", fullDesc: "El módulo Sider incluye mapas, ajustes y recursos LiveCPK. STRYKER eliminó el script batch de las fuentes y convirtió los 41 000 archivos a su formato sólido verificado.", size: "745,6 MB", tags: ["redes", "física", "Sider", "LiveCPK", "2025/26"] },
     "shirtless-celebration-v4-1": { shortDesc: "Celebración sin camiseta con R3, cuatro modos y gestión automática de tonos de piel.", fullDesc: "Módulo Sider con recursos LiveCPK, perfiles de jugadores y protecciones de compatibilidad. Valida el ejecutable antes de cambiar la memoria y nunca reemplaza el archivo del juego.", size: "27,7 MB", tags: ["celebración", "R3", "Sider", "overlay"] },
+    "facepack-update-vol-159": { shortDesc: "Cinco caras convertidas desde el CPK original a la raíz LiveCPK.", fullDesc: "El pack se distribuye en CPK, un formato que STRYKER no instala. El archivo publicado aquí es su conversión fiel: los ficheros vuelven a Asset/model/character/face/real, se instalan en la raíz LiveCPK de Football Life y se retiran al desactivar. Jugadores incluidos: 46235, 130319, 132155, 139679, 140051.", size: "25,5 MB", tags: ["5 jugadores", "caras", "LiveCPK", "convertido de CPK"] },
+    "facepack-update-vol-202": { shortDesc: "Cinco caras convertidas desde el CPK original a la raíz LiveCPK.", fullDesc: "El pack se distribuye en CPK, un formato que STRYKER no instala. El archivo publicado aquí es su conversión fiel: los ficheros vuelven a Asset/model/character/face/real, se instalan en la raíz LiveCPK de Football Life y se retiran al desactivar. Jugadores incluidos: 116751, 128281, 135039, 135067, 155214.", size: "35,7 MB", tags: ["5 jugadores", "caras", "LiveCPK", "convertido de CPK"] },
+    "facepack-update-vol-219": { shortDesc: "Cinco caras convertidas desde el CPK original a la raíz LiveCPK.", fullDesc: "El pack se distribuye en CPK, un formato que STRYKER no instala. El archivo publicado aquí es su conversión fiel: los ficheros vuelven a Asset/model/character/face/real, se instalan en la raíz LiveCPK de Football Life y se retiran al desactivar. Jugadores incluidos: 126337, 127038, 128986, 157643, 158568.", size: "53,4 MB", tags: ["5 jugadores", "caras", "LiveCPK", "convertido de CPK"] },
     "facepack-update-vol-204": { shortDesc: "Cinco caras: Rashford, Olise, Schmidt, Bouaddi y Querfeld.", fullDesc: "STRYKER instala los archivos #Win optimizados directamente en la raíz LiveCPK de Football Life.", size: "2,3 MB", tags: ["5 jugadores", "caras", "LiveCPK"] },
     "facepack-update-vol-222": { shortDesc: "Cinco caras: N. Mendy, L. Dunk, C. Kouamé, Vinícius Jr y B. Mbeumo.", fullDesc: "STRYKER instala los archivos #Win optimizados directamente en la raíz LiveCPK de Football Life.", size: "1,1 MB", tags: ["5 jugadores", "caras", "LiveCPK"] },
     "facepack-update-vol-223": { shortDesc: "Cinco caras: Klimowicz, Pedrosa, Sava, Sangaré y Espart.", fullDesc: "STRYKER instala los archivos #Win optimizados directamente en la raíz LiveCPK de Football Life.", size: "1,5 MB", tags: ["5 jugadores", "caras", "LiveCPK"] },
@@ -311,5 +443,7 @@ export const DESKTOP_COMMUNITY_TRANSLATIONS: Record<CommunityLanguage, Record<st
     "kitpack-premier-league-2026-27": { shortDesc: "Tercera edición del kitpack Premier League 2026/27.", fullDesc: "Pack Sider/Kitserver con configuraciones, números y mapas, sin el CPK duplicado.", size: "156,7 MB", tags: ["Premier League", "V3", "2026/27", "Kitserver"] },
     "kitpack-laliga-2026-27": { shortDesc: "Pack completo LaLiga EA Sports 2026/27 listo para Kitserver.", fullDesc: "Equipaciones, porteros, dorsales y configuraciones por club en la versión Sider oficial.", size: "184,9 MB", tags: ["LaLiga", "Nono Kitmaker", "2026/27", "Kitserver"] },
     "option-file-transfers-v7-2026": { shortDesc: "Option File con fichajes y plantillas actualizadas para Football Life 2026.", fullDesc: "STRYKER guarda el EDIT00000000 actual, instala V7 y restaura el original al desactivar. Los cambios hechos en el juego también quedan archivados.", size: "10,5 MB", tags: ["fichajes", "plantillas", "Option File", "copia automática"] },
+    "potm-server-2-4-aio": { shortDesc: "Ceremonia de Jugador del Partido con trofeo y animaciones para quince competiciones.", fullDesc: "Raíz LiveCPK, datos Sider content/POTM y módulo Lua se instalan juntos. STRYKER conserva un solo módulo — la revisión del 22/03/2026 que corrige el 1-0 mostrado en las copas de Master League — y retira la copia duplicada modules/common, para que Sider nunca cargue dos veces el servidor POTM.", size: "108,3 MB", tags: ["POTM", "ceremonia", "trofeo", "Sider", "LiveCPK"] },
+    "soccer-revolution-11-gameplay": { shortDesc: "Constantes de partido y base de animaciones del gameplay Soccer Revolution 11. El parche del ejecutable no está incluido.", fullDesc: "El mod original reemplaza dos CPK del juego y su ejecutable. STRYKER comparó dt13_all.cpk y dt18_all.cpk con los de Football Life: de 427 ficheros, solo 14 difieren. Son esos los que se publican, como raíz LiveCPK — los nueve constant_*.bin de common/match/constant, cuatro binarios FHSequence y la base anim_infos.json. Sider los sirve por encima de los CPK del juego: ningún fichero de Football Life se sobrescribe y desactivar el mod lo deshace todo. Los FL_2026.exe y PES2021.exe modificados del autor no se redistribuyen.", size: "5,0 MB", tags: ["gameplay", "constantes de partido", "animaciones", "LiveCPK", "elijio876"] },
   },
 };

@@ -25,6 +25,32 @@ test("lit et met à jour uniquement la section RenoDX DLSS", () => {
   assert.match(updated, /PresetPath=keep\.ini/);
 });
 
+test("écrit la clé RenoDX de correction d’interface et fusionne les doublons de casse", () => {
+  // Relevé sur une installation réelle : STRYKER écrivait « UICorrectionMode »
+  // là où RenoDX écrit « UiCorrectionMode ». Les deux lignes cohabitaient dans
+  // la section, dont une avec une valeur que ReShade avait dédoublée.
+  const original = [
+    "[RENODX-DLSS]",
+    "DirectNeuralRenderingUiCorrectionMode=0",
+    "DirectNeuralRenderingEnabled=1",
+    "DirectNeuralRenderingUICorrectionMode=2,2",
+    "",
+    "[SCREENSHOT]",
+    "SavePath=keep",
+  ].join("\r\n");
+
+  const updated = updateIniSection(original, "RENODX-DLSS", {
+    DirectNeuralRenderingUiCorrectionMode: 1,
+    DirectNeuralRenderingEnabled: 1,
+  });
+
+  const lines = updated.split("\r\n");
+  const correction = lines.filter((line) => /^DirectNeuralRendering[Uu]i?CorrectionMode=/i.test(line));
+  assert.deepEqual(correction, ["DirectNeuralRenderingUiCorrectionMode=1"]);
+  assert.equal(readIniValue(updated, "RENODX-DLSS", "DirectNeuralRenderingUiCorrectionMode"), "1");
+  assert.match(updated, /\[SCREENSHOT\]\r\nSavePath=keep/);
+});
+
 test("configure une installation DLSS liée avec sauvegarde", (t) => {
   const gamePath = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-dlss-"));
   t.after(() => fs.rmSync(gamePath, { recursive: true, force: true }));
@@ -44,6 +70,36 @@ test("configure une installation DLSS liée avec sauvegarde", (t) => {
   assert.match(fs.readFileSync(path.join(gamePath, "ReShade.ini"), "utf-8"), /PresetPath=keep\.ini/);
   assert.throws(() => manager.save(settings, { qualityMode: 99 }), /invalide/i);
   assert.throws(() => manager.save(settings, { enabled: true, unexpected: true }), /non autorisé/i);
+});
+
+test("laisse F10 à ReShade tant que le contrôleur STRYKER n’est pas installé, puis le lui rend", (t) => {
+  const gamePath = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-overlay-"));
+  t.after(() => fs.rmSync(gamePath, { recursive: true, force: true }));
+  for (const name of ["d3d11.dll", "renodx-dlss.addon64", "nvngx_dlss.dll", "nvngx_dlssnr.dll", "sl.interposer.dll"]) {
+    fs.writeFileSync(path.join(gamePath, name), "fixture");
+  }
+  const configPath = path.join(gamePath, "ReShade.ini");
+  fs.writeFileSync(configPath, "[GENERAL]\nPresetPath=keep.ini\n", "utf-8");
+  const settings = { isLinked: true, gamePath };
+  const manager = new DlssManager();
+
+  // Sans le contrôleur installé, STRYKER ne répond pas à F10 : déplacer
+  // l’overlay laisserait la touche sans effet.
+  const withoutPanel = manager.configureOverlay(settings);
+  assert.equal(readIniValue(fs.readFileSync(configPath, "utf-8"), "INPUT", "KeyOverlay"), "121,0,0,0");
+  assert.equal(withoutPanel.overlay.configured, true);
+  assert.equal(withoutPanel.overlay.shortcut, "F10");
+  assert.equal(withoutPanel.overlay.advancedShortcut, "F10");
+
+  const withHotkey = manager.configureOverlay(settings, { strykerHotkey: true });
+  assert.equal(readIniValue(fs.readFileSync(configPath, "utf-8"), "INPUT", "KeyOverlay"), "36,0,0,0");
+  assert.equal(withHotkey.overlay.shortcut, "F10");
+  assert.equal(withHotkey.overlay.advancedShortcut, "Origine");
+
+  // Le thème STRYKER et le fichier d’origine survivent au déplacement.
+  assert.match(fs.readFileSync(configPath, "utf-8"), /PresetPath=keep\.ini/);
+  assert.ok(fs.existsSync(`${configPath}.stryker-ui.bak`));
+  assert.match(fs.readFileSync(`${configPath}.stryker-ui.bak`, "utf-8"), /PresetPath=keep\.ini/);
 });
 
 test("détecte les générations GeForce RTX prises en charge", () => {

@@ -1,7 +1,7 @@
 {
   "id": "stryker-dlss5-controller",
   "name": "STRYKER DLSS 5 Universal RTX Controller",
-  "version": "2.0.0",
+  "version": "3.1.0",
   "author": "STRYKER",
   "category": "other",
   "compatibility": [
@@ -18,7 +18,11 @@
       "fileName": "nvngx_dlssnr.dll",
       "version": "310.8.0.0",
       "sha256": "e67dee209320cdafe0e93e45675d7aa34323a53acc57a72b2e40a181581c989a",
-      "requiredFor": ["RTX 20", "RTX 30", "RTX 40"],
+      "requiredFor": [
+        "RTX 20",
+        "RTX 30",
+        "RTX 40"
+      ],
       "sourceUrl": "https://discord.com/channels/1408098019194310818/1543976771920330884",
       "bundled": false
     }

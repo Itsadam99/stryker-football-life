@@ -2,6 +2,9 @@ import type { Language } from "../i18n";
 
 type SiteCopy = {
   heroKicker: string;
+  spotlightEyebrow: string;
+  spotlightTitle: string;
+  spotlightBody: string;
   dropsEyebrow: string;
   dropsTitle: string;
   dropsDescription: string;
@@ -39,6 +42,9 @@ type SiteCopy = {
 export const SITE_COPY: Record<Language, SiteCopy> = {
   fr: {
     heroKicker: "Football Life Mod Culture",
+    spotlightEyebrow: "En vedette / rendu",
+    spotlightTitle: "Le rendu du jeu, réglé depuis le jeu",
+    spotlightBody: "Le contrôleur DLSS 5 de STRYKER ouvre son panneau sur F10, pendant le match : onze réglages Neural Rendering, sans quitter la partie ni éditer un fichier. Origine garde l’overlay RenoDX complet pour ajuster en direct.",
     dropsEyebrow: "Drops sélectionnés / 01—03",
     dropsTitle: "Les mods ne sont plus des dossiers. Ce sont des drops.",
     dropsDescription: "Chaque fiche montre ce que le mod change, d’où il vient et comment STRYKER l’installe. Aucun compteur inventé, aucune source cachée.",
@@ -83,6 +89,9 @@ export const SITE_COPY: Record<Language, SiteCopy> = {
   },
   en: {
     heroKicker: "Football Life Mod Culture",
+    spotlightEyebrow: "Spotlight / rendering",
+    spotlightTitle: "Tune the way the game looks, from inside the game",
+    spotlightBody: "STRYKER’s DLSS 5 controller opens its panel on F10, mid-match: eleven Neural Rendering settings, without leaving the game or editing a file. Home keeps the full RenoDX overlay for live tweaking.",
     dropsEyebrow: "Selected drops / 01—03",
     dropsTitle: "Mods are no longer folders. They are drops.",
     dropsDescription: "Every page explains what changes, where the mod comes from and how STRYKER installs it. No invented counters, no hidden sources.",
@@ -127,6 +136,9 @@ export const SITE_COPY: Record<Language, SiteCopy> = {
   },
   pt: {
     heroKicker: "Cultura de Mods Football Life",
+    spotlightEyebrow: "Em destaque / imagem",
+    spotlightTitle: "A imagem do jogo, ajustada de dentro do jogo",
+    spotlightBody: "O controlador DLSS 5 do STRYKER abre o seu painel em F10, a meio do jogo: onze definições de Neural Rendering, sem sair da partida nem editar um ficheiro. A tecla Home mantém o overlay RenoDX completo para ajustar em direto.",
     dropsEyebrow: "Drops selecionados / 01—03",
     dropsTitle: "Os mods deixaram de ser pastas. São drops.",
     dropsDescription: "Cada página explica o que muda, de onde vem o mod e como o STRYKER o instala. Sem contadores inventados nem fontes escondidas.",
@@ -171,6 +183,9 @@ export const SITE_COPY: Record<Language, SiteCopy> = {
   },
   es: {
     heroKicker: "Cultura de Mods Football Life",
+    spotlightEyebrow: "Destacado / imagen",
+    spotlightTitle: "El aspecto del juego, ajustado desde el juego",
+    spotlightBody: "El controlador DLSS 5 de STRYKER abre su panel con F10, en pleno partido: once ajustes de Neural Rendering, sin salir de la partida ni editar un fichero. La tecla Inicio conserva el overlay RenoDX completo para ajustar en directo.",
     dropsEyebrow: "Drops seleccionados / 01—03",
     dropsTitle: "Los mods ya no son carpetas. Son drops.",
     dropsDescription: "Cada ficha explica qué cambia, de dónde viene el mod y cómo lo instala STRYKER. Sin contadores inventados ni fuentes ocultas.",

@@ -4,6 +4,7 @@ import type { CatalogMod } from "../types";
 import { useI18n } from "../i18n";
 import { STRYKER_DOWNLOAD_URL } from "../services/distribution";
 import { SITE_COPY } from "../services/siteCopy";
+import { ModCover } from "./ModCover";
 
 interface HomePageProps {
   mods: CatalogMod[];
@@ -14,8 +15,9 @@ interface HomePageProps {
   onDownloadExe: () => void;
 }
 
+const SPOTLIGHT_ID = "stryker-dlss5-controller";
 const FEATURED_IDS = [
-  "premier-league-facepack-vol-1",
+  SPOTLIGHT_ID,
   "ficabre-goalnets-module-v1",
   "fl26-pyro-supporters-v0-9a",
 ];
@@ -41,6 +43,8 @@ export const HomePage: React.FC<HomePageProps> = ({
     const chosen = FEATURED_IDS.map((id) => mods.find((mod) => mod.id === id)).filter(Boolean) as CatalogMod[];
     return chosen.length === FEATURED_IDS.length ? chosen : mods.slice(0, 3);
   }, [mods]);
+
+  const spotlight = useMemo(() => mods.find((mod) => mod.id === SPOTLIGHT_ID), [mods]);
 
   useEffect(() => {
     const elements = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
@@ -102,6 +106,35 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
+      {spotlight && (
+        <section className="px-5 pt-24 sm:px-8 lg:px-12 lg:pt-32">
+          <article data-reveal className="brand-mod-card group relative mx-auto grid max-w-[1380px] overflow-hidden rounded-[1.8rem] border border-white/10 lg:grid-cols-2">
+            <div className="relative order-1 min-h-[15rem] overflow-hidden lg:order-2 lg:min-h-[26rem]">
+              <ModCover
+                mod={spotlight}
+                watermarkClassName="pointer-events-none absolute -right-16 -top-10 w-[24rem] max-w-none opacity-[0.1] mix-blend-screen"
+                coverClassName="transition duration-700 group-hover:scale-[1.04]"
+                overlayClassName="bg-[linear-gradient(to_top,rgba(7,5,7,.72),rgba(7,5,7,.1)_55%,rgba(7,5,7,.3))] lg:bg-[linear-gradient(to_right,rgba(7,5,7,.95),rgba(7,5,7,.25)_45%,rgba(7,5,7,.15))]"
+              />
+            </div>
+            <div className="relative z-10 order-2 flex flex-col justify-center gap-5 p-7 sm:p-10 lg:order-1 lg:p-14">
+              <p className="editorial-kicker">{copy.spotlightEyebrow}</p>
+              <h2 className="text-[clamp(2rem,4.4vw,3.6rem)] font-black uppercase leading-[0.88] tracking-[-0.055em]">{copy.spotlightTitle}</h2>
+              <p className="max-w-xl text-sm leading-7 text-white/55">{copy.spotlightBody}</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#d76bc5]">{spotlight.author} / {spotlight.version} / {spotlight.size}</p>
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <button onClick={() => triggerModAction(spotlight)} className="motion-button inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-black">
+                  <Download className="h-4 w-4" /> {t("home.install")}
+                </button>
+                <button onClick={() => onSelectMod(spotlight)} className="motion-button group/action inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/25 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.13em] text-white backdrop-blur">
+                  {copy.openDrop} <ArrowRight className="h-4 w-4 transition-transform group-hover/action:translate-x-1" />
+                </button>
+              </div>
+            </div>
+          </article>
+        </section>
+      )}
+
       <section id="featured-drops" className="px-5 pb-20 pt-28 sm:px-8 lg:px-12 lg:pb-32 lg:pt-40">
         <div className="mx-auto max-w-[1380px]" data-reveal>
           <p className="editorial-kicker">{copy.dropsEyebrow}</p>
@@ -116,7 +149,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="mx-auto grid max-w-[1380px] gap-5 lg:grid-cols-3">
           {featured.map((mod, index) => (
             <article key={mod.id} data-reveal className="brand-mod-card group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[1.8rem] border border-white/10 p-6 sm:p-8">
-              <img src="/stryker-logo.png" alt="" aria-hidden="true" width={1536} height={1024} loading="lazy" decoding="async" className="pointer-events-none absolute -right-20 -top-12 w-[25rem] max-w-none opacity-[0.075] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.12]" />
+              <ModCover mod={mod} watermarkClassName="pointer-events-none absolute -right-20 -top-12 w-[25rem] max-w-none opacity-[0.075] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.12]" coverClassName="opacity-70 transition duration-700 group-hover:scale-105 group-hover:opacity-80" overlayClassName="bg-[linear-gradient(to_top,rgba(7,5,7,.96),rgba(7,5,7,.62)_58%,rgba(7,5,7,.5))]" />
               <div className="relative z-10 flex items-start justify-between gap-4">
                 <span className="rounded-full border border-white/15 bg-black/30 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.16em]">{statusLabel(mod, { hosted: t("home.hosted"), verified: t("home.verified"), community: t("home.community") })}</span>
                 <span className="text-4xl font-black tracking-[-0.08em] text-white/16">{String(index + 1).padStart(2, "0")}</span>

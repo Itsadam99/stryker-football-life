@@ -1,0 +1,30 @@
+{
+  "mod": {
+    "id": "soccer-revolution-11-gameplay",
+    "title": "Soccer Revolution 11 Gameplay — constantes et animations",
+    "author": "elijio876",
+    "version": "1.1",
+    "shortDesc": "Constantes de match et base d’animations du gameplay Soccer Revolution 11. Le correctif de l’exécutable n’est pas inclus.",
+    "fullDesc": "Retiré de Découvrir le 06/09/2026. Sur une installation réelle, ce paquet activé fait planter Football Life avec une corruption du tas (0xc0000374) ; désactivé, le crash disparaît. Le suspect est anim_infos.json, que l’auteur livre à 534 Mo au lieu de 15 Mo en gonflant ses valeurs numériques avec des entiers de 38 chiffres. Les neuf constant_*.bin, eux, portent l’essentiel du réglage de gameplay : une version sans la base d’animations reste à vérifier avant toute republication.",
+    "category": "gameplay",
+    "compatibility": [
+      "Football Life 2026",
+      "PES 2021",
+      "Sider 7"
+    ],
+    "size": "5,0 Mo",
+    "thumbnail": "/mods/soccer-revolution-11-gameplay.webp",
+    "screenshots": [],
+    "downloadUrl": "https://github.com/Itsadam99/stryker-football-life/releases/download/mods-2026.09/soccer-revolution-11-gameplay.zip",
+    "installationType": "manual",
+    "legalStatus": "verified_package",
+    "verificationDate": "2026-09-06",
+    "archiveHash": "a1f0a5666a2f7739a9f346c19260e702d0e33959803a94e9f233fe54d8f32111",
+    "archiveSize": 5236882,
+    "fileCount": 15,
+    "status": "pending_review",
+    "publishedAt": "2026-09-06T10:00:00.000Z",
+    "sourceUrl": "https://pes-files.com/pes-2021-gameplay-soccer-revolution-2026-update-v11/",
+    "license": "Crédits : elijio876 — seules les données du mod sont redistribuées ; les exécutables du jeu restent chez l’auteur."
+  }
+}

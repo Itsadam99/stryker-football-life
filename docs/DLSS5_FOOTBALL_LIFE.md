@@ -70,16 +70,13 @@ STRYKER 3.6 ajoute un panneau **DLSS 5 Neural Rendering** dans la page Paramètr
 
 Sur RTX 20/30/40, le panneau propose **Sélectionner et installer**. L'utilisateur télécharge lui-même la DLL du message épinglé ; STRYKER exige la version 310.8.0.0 et son SHA-256 exact, sauvegarde la DLL d'origine sous `nvngx_dlssnr.dll.stryker-original.bak`, copie la version vérifiée puis permet une restauration. Sur RTX 50, ce bouton est désactivé et la branche NVIDIA d'origine est conservée. La DLL patchée porte une signature NVIDIA devenue `HashMismatch` après modification et n'est donc jamais incluse dans le ZIP public.
 
-Le catalogue contient également **STRYKER DLSS 5 Universal RTX Controller**, un petit ZIP Lua installable automatiquement. STRYKER le place en première position et affecte `F10` à son panneau dédié : il n'est plus nécessaire d'ouvrir l'overlay avec Espace ni de faire défiler les modules. Utiliser :
+Le catalogue contient également **STRYKER DLSS 5 Universal RTX Controller**, un petit ZIP Lua installable automatiquement. Une fois installé, STRYKER capte `F10` pendant la partie et affiche son **Centre de contrôle DLSS 5** par-dessus le jeu — la même fenêtre que depuis l'application, avec ses onze réglages.
 
-- `F10` pour ouvrir ou fermer directement le panneau DLSS ;
-- les flèches `Haut` / `Bas` pour sélectionner Neural Rendering, le niveau de qualité ou l'exposition automatique ;
-- les flèches `Gauche` / `Droite` pour changer la valeur et l'enregistrer ;
-- `Entrée` pour relire la configuration présente dans `ReShade.ini`.
+La touche n'est captée que pendant une partie et seulement si le paquet est installé : un raccourci global permanent volerait `F10` aux autres applications. La fenêtre s'ouvre au-dessus du jeu ; en plein écran exclusif, passer Football Life en fenêtré sans bordure évite de sortir du jeu.
 
-La touche Sider précédente est sauvegardée et restaurée si le contrôleur est désactivé ou désinstallé dans STRYKER.
+`Origine` ouvre l'overlay RenoDX complet. Lui applique ses changements pendant la partie, ce que le Centre de contrôle ne peut pas faire : il écrit `ReShade.ini`, donc ses réglages prennent effet au lancement suivant. STRYKER ne déplace l'overlay RenoDX que si le contrôleur est installé — sinon `F10` n'ouvrirait plus rien.
 
-Le contrôleur en jeu sauvegarde `ReShade.ini.sider-dlss.bak`. Les changements prennent effet au prochain lancement, car Sider ne peut pas recréer en toute sécurité le moteur NVIDIA déjà chargé pendant une partie.
+Le module Lua livré dans le paquet ne dessine rien dans l'overlay de Sider : il sert de marqueur d'installation.
 
 Le ZIP Controller est publié sous licence MIT et ne contient que le module Lua, son manifeste, son guide et sa licence. Il ne contient aucune DLL tierce : les dépendances ReShade/RenoDX/NVIDIA restent à obtenir depuis leurs sources respectives.
 

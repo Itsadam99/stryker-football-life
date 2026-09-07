@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stryker.local/schemas/stryker.catalog.schema.json",
+  "title": "STRYKER catalogue collection",
+  "description": "Une collection est une liste de fiches. Une fiche décrit un mod et la manière de l'installer ; elle ne contient pas le mod. Tant que download.sha256 et download.url ne sont pas renseignés, la fiche reste consultable mais non installable automatiquement — c'est volontaire : rien ici ne doit être deviné.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["collection", "title", "entries"],
+  "properties": {
+    "collection": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "description": { "type": "string", "maxLength": 2000 },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 500,
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "category", "game", "descriptionShort", "installation", "download", "redistribution"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,79}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "author": {
+          "description": "Auteur réel du mod. Jamais STRYKER : l'application distribue, elle ne crée pas.",
+          "type": ["string", "null"],
+          "maxLength": 160
+        },
+        "version": {
+          "description": "null tant que la version n'a pas été relevée sur la source officielle.",
+          "type": ["string", "null"],
+          "maxLength": 40
+        },
+        "category": {
+          "enum": ["graphics", "turf", "lighting", "weather", "audio", "camera", "kits", "immersion", "player-graphics", "player-models", "stadium-graphics", "post-processing"]
+        },
+        "engineCategory": {
+          "description": "Correspondance vers la catégorie du moteur de mods, plus grossière.",
+          "enum": ["gameplay", "turf", "menu", "audio", "kit", "face", "scoreboard", "other"]
+        },
+        "descriptionShort": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "descriptionFull": { "type": "string", "maxLength": 4000 },
+        "game": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "enum": ["PES2021", "FL26"] }
+        },
+        "screenshots": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "type": "string", "format": "uri", "maxLength": 1000 }
+        },
+        "sourcePage": { "type": ["string", "null"], "maxLength": 1000 },
+        "sourceDomain": { "type": ["string", "null"], "maxLength": 200 },
+        "authorPage": { "type": ["string", "null"], "maxLength": 1000 },
+        "credits": {
+          "description": "Contributeurs à créditer en plus de l'auteur principal.",
+          "type": "array",
+          "maxItems": 20,
+          "items": { "type": "string", "maxLength": 120 }
+        },
+        "download": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "description": "direct : URL téléchargeable telle quelle. upstream : page tierce, lien stable et autorisé. mirror : copie hébergée par STRYKER, autorisée par l'auteur. manual : l'utilisateur télécharge lui-même puis importe.",
+              "enum": ["direct", "upstream", "mirror", "manual"]
+            },
+            "url": { "type": ["string", "null"], "maxLength": 1000 },
+            "mirrors": { "type": "array", "maxItems": 10, "items": { "type": "string", "maxLength": 1000 } },
+            "filename": { "type": ["string", "null"], "maxLength": 200 },
+            "archiveType": { "enum": ["zip", "rar", "7z", null] },
+            "size": { "type": ["integer", "null"], "minimum": 0 },
+            "sha256": {
+              "description": "Calculé sur le fichier réellement récupéré. Jamais recopié depuis une page web.",
+              "type": ["string", "null"],
+              "pattern": "^[a-fA-F0-9]{64}$"
+            }
+          }
+        },
+        "redistribution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allowed"],
+          "properties": {
+            "allowed": {
+              "description": "unknown est la valeur par défaut honnête : gratuit ne veut pas dire redistribuable. Seul true autorise un miroir STRYKER.",
+              "enum": [true, false, "unknown"]
+            },
+            "permissionSource": { "type": ["string", "null"], "maxLength": 1000 },
+            "creditsRequired": { "type": "boolean" }
+          }
+        },
+        "installation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["livecpk", "module", "content", "reshade", "hybrid"] },
+            "copy": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["from", "to"],
+                "properties": {
+                  "from": { "type": "string", "minLength": 1, "maxLength": 300 },
+                  "to": { "type": "string", "minLength": 1, "maxLength": 300 }
+                }
+              }
+            },
+            "siderIni": {
+              "type": "array",
+              "maxItems": 30,
+              "items": { "type": "string", "minLength": 1, "maxLength": 400 }
+            },
+            "loadOrder": {
+              "description": "Contraintes d'ordre des lignes lua.module dans sider.ini. Un module chargé au mauvais moment est silencieusement inopérant.",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "before": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 200 } },
+                "after": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 200 } }
+              }
+            },
+            "deleteOld": { "type": "array", "maxItems": 50, "items": { "type": "string", "maxLength": 300 } },
+            "dependencies": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 80 } },
+            "conflicts": {
+              "type": "array",
+              "maxItems": 30,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "risk"],
+                "properties": {
+                  "id": {
+                    "description": "Identifiant d'une autre fiche, ou une famille comme other-goalnet-mods.",
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "risk": { "enum": ["low", "medium", "high"] },
+                  "reason": { "type": "string", "maxLength": 500 }
+                }
+              }
+            }
+          }
+        },
+        "notes": { "type": "string", "maxLength": 2000 }
+      }
+    }
+  }
+}

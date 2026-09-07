@@ -1,0 +1,30 @@
+{
+  "mod": {
+    "id": "facepack-update-vol-219",
+    "title": "Facepack Update Vol. 219",
+    "author": "Communauté FaceMaker",
+    "version": "219",
+    "shortDesc": "Cinq visages convertis depuis le CPK d’origine vers la racine LiveCPK.",
+    "fullDesc": "Le pack est distribué en CPK, un format que STRYKER n’installe pas. L’archive publiée ici en est la conversion fidèle : les fichiers du CPK sont replacés dans l’arborescence Asset/model/character/face/real, installée dans la racine LiveCPK de Football Life et retirée à la désactivation. Joueurs inclus : 126337, 127038, 128986, 157643, 158568.",
+    "category": "face",
+    "compatibility": [
+      "Football Life 2026",
+      "PES 2021",
+      "Sider 7",
+      "LiveCPK"
+    ],
+    "size": "53,4 Mo",
+    "thumbnail": "/stryker-logo.png",
+    "screenshots": [],
+    "downloadUrl": "https://github.com/Itsadam99/stryker-football-life/releases/download/mods-2026.09/facepack-update-vol-219.zip",
+    "installationType": "automatic",
+    "legalStatus": "verified_package",
+    "verificationDate": "2026-09-06",
+    "archiveHash": "c25504914d3f9d4003a0e0e8ca18eea5bb4149bc81bafa90728dac5b924ef801",
+    "archiveSize": 55952961,
+    "fileCount": 74,
+    "status": "published",
+    "publishedAt": "2026-09-06T09:00:00.000Z",
+    "license": "Crédits conservés — redistribution publique confirmée par l’éditeur STRYKER."
+  }
+}

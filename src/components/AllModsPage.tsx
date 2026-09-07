@@ -3,6 +3,8 @@ import { ArrowLeft, ArrowRight, Download, ExternalLink, Search, ShieldCheck } fr
 import type { CatalogMod } from "../types";
 import { useI18n } from "../i18n";
 import { SITE_COPY } from "../services/siteCopy";
+import { hasCover, ModCover } from "./ModCover";
+import { downloadsFor, formatDownloadCount, useDownloadCounts } from "../services/downloadCounts";
 
 interface AllModsPageProps {
   mods: CatalogMod[];
@@ -19,6 +21,7 @@ export const AllModsPage: React.FC<AllModsPageProps> = ({ mods, onBackToHome, on
   const copy = SITE_COPY[language];
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("all");
+  const downloadCounts = useDownloadCounts();
   const categoryLabels: Record<(typeof CATEGORIES)[number], string> = {
     all: t("catalog.all"), gameplay: "Gameplay", turf: t("catalog.stadiums"), menu: t("catalog.menus"),
     audio: "Audio", kit: t("catalog.kits"), face: t("catalog.faces"), scoreboard: t("catalog.scoreboards"), other: t("catalog.other"),
@@ -54,8 +57,8 @@ export const AllModsPage: React.FC<AllModsPageProps> = ({ mods, onBackToHome, on
             <article key={mod.id} className="brand-mod-card group flex min-h-[27rem] flex-col overflow-hidden rounded-[1.7rem] border border-white/10 transition duration-500 hover:-translate-y-1 hover:border-[#8f277f]/70 hover:shadow-[0_22px_70px_rgba(105,20,88,0.18)]">
               <button type="button" onClick={() => onSelectMod(mod)} className="flex flex-1 flex-col text-left">
                 <div className="relative h-40 overflow-hidden border-b border-white/8 bg-[#100a0e]">
-                  <img src="/stryker-logo.png" alt="" aria-hidden="true" width={1536} height={1024} loading="lazy" decoding="async" className="absolute -right-12 -top-16 w-80 max-w-none opacity-[0.09] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.14]" />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(140,35,119,.24),transparent_45%)]" />
+                  <ModCover mod={mod} watermarkClassName="absolute -right-12 -top-16 w-80 max-w-none opacity-[0.09] mix-blend-screen transition duration-700 group-hover:scale-105 group-hover:opacity-[0.14]" coverClassName="transition duration-700 group-hover:scale-105" />
+                  {!hasCover(mod) && <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(140,35,119,.24),transparent_45%)]" />}
                   <span className="absolute left-4 top-4 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.14em] backdrop-blur">{mod.status === "pending_review" ? "Preview" : mod.installationType === "automatic" ? t("home.hosted") : mod.legalStatus === "verified_source" ? t("home.verified") : t("catalog.community")}</span>
                   <span className="absolute right-4 top-4 text-3xl font-black tracking-[-0.08em] text-white/28">{String(index + 1).padStart(2, "0")}</span>
                   <span className="absolute bottom-4 left-4 text-[9px] font-black uppercase tracking-[0.18em] text-[#c75ab5]">{categoryLabels[mod.category as keyof typeof categoryLabels] || categoryLabels.other}</span>
@@ -65,6 +68,11 @@ export const AllModsPage: React.FC<AllModsPageProps> = ({ mods, onBackToHome, on
                   <h2 className="mt-3 text-2xl font-black uppercase leading-[0.92] tracking-[-0.045em]">{mod.title}</h2>
                   <p className="mt-4 line-clamp-3 text-xs leading-6 text-white/45">{mod.shortDesc}</p>
                   <div className="mt-auto flex flex-wrap gap-1.5 pt-6">{mod.compatibility.slice(0, 3).map((value) => <span key={value} className="rounded-full border border-white/10 px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-white/38">{value}</span>)}</div>
+                  {(() => {
+                    const downloads = downloadsFor(mod, downloadCounts);
+                    if (downloads === null) return null;
+                    return <p className="mt-4 text-[9px] font-black uppercase tracking-[0.14em] text-white/32">{formatDownloadCount(downloads, language)} {downloads === 1 ? t("desktop.downloadsOne") : t("desktop.downloads")}</p>;
+                  })()}
                 </div>
               </button>
               <div className="mx-6 flex items-center justify-between gap-3 border-t border-white/10 py-5">

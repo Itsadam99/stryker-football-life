@@ -1,11 +1,14 @@
 import path from "path";
-import { app, BrowserWindow, dialog, Menu, shell } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, Menu, shell } from "electron";
 import { startServer } from "../server/index.js";
 import { parseProtocolLink } from "./protocol-links.mjs";
 import { createUpdateManager } from "./update-manager.mjs";
 
 let mainWindow = null;
+let dlssWindow = null;
 let localServer = null;
+let gameHotkeyRegistered = false;
+let gameHotkeyTimer = null;
 let allowedOrigin = "";
 let pendingDeepLink = process.argv.find((argument) => /^stryker:\/\//i.test(argument)) || null;
 // Vrai quand l'utilisateur a accepté la mise à jour proposée au démarrage :
@@ -118,6 +121,88 @@ async function handleProtocolLink(value) {
   }
 }
 
+const DLSS_WINDOW_OPTIONS = {
+  title: "Centre de contrôle DLSS 5 — STRYKER",
+  width: 1060,
+  height: 880,
+  minWidth: 720,
+  minHeight: 600,
+  autoHideMenuBar: true,
+  backgroundColor: "#050405",
+  webPreferences: {
+    nodeIntegration: false,
+    contextIsolation: true,
+    sandbox: true,
+    webSecurity: true,
+  },
+};
+
+function dlssWindowOptions() {
+  return {
+    ...DLSS_WINDOW_OPTIONS,
+    icon: path.join(app.getAppPath(), "dist", "stryker.ico"),
+    webPreferences: { ...DLSS_WINDOW_OPTIONS.webPreferences, devTools: !app.isPackaged },
+  };
+}
+
+/**
+ * Ouvre — ou ramène — le centre de contrôle DLSS.
+ *
+ * `overGame` le place au-dessus du jeu : sans cela, la fenêtre s'ouvre bien
+ * mais reste derrière une fenêtre de jeu sans bordure, et l'utilisateur croit
+ * que rien ne s'est passé.
+ */
+function openDlssStudio({ overGame = false } = {}) {
+  if (!allowedOrigin) return null;
+  if (dlssWindow && !dlssWindow.isDestroyed()) {
+    if (dlssWindow.isMinimized()) dlssWindow.restore();
+    dlssWindow.setAlwaysOnTop(overGame, "screen-saver");
+    dlssWindow.show();
+    dlssWindow.focus();
+    return dlssWindow;
+  }
+  dlssWindow = new BrowserWindow({ ...dlssWindowOptions(), alwaysOnTop: overGame });
+  guardWindowNavigation(dlssWindow);
+  dlssWindow.on("closed", () => { dlssWindow = null; });
+  void dlssWindow.loadURL(`${allowedOrigin}/?mode=dlss`);
+  return dlssWindow;
+}
+
+/**
+ * F10 n'est capté que pendant une partie et avec le contrôleur installé. Un
+ * raccourci global permanent volerait la touche à toutes les autres
+ * applications, y compris à l'explorateur de fichiers.
+ */
+function refreshGameHotkey() {
+  const runtime = localServer?.runtime;
+  let wanted = false;
+  try {
+    wanted = Boolean(runtime?.processManager?.status()?.isRunning)
+      && runtime.modEngine.list().some((mod) => mod.packageId === "stryker-dlss5-controller");
+  } catch {
+    wanted = false;
+  }
+  if (wanted === gameHotkeyRegistered) return;
+  if (!wanted) {
+    globalShortcut.unregister("F10");
+    gameHotkeyRegistered = false;
+    return;
+  }
+  gameHotkeyRegistered = globalShortcut.register("F10", () => openDlssStudio({ overGame: true }));
+}
+
+function guardWindowNavigation(target) {
+  target.webContents.setWindowOpenHandler(({ url }) => {
+    void openExternal(url);
+    return { action: "deny" };
+  });
+  target.webContents.on("will-navigate", (event, url) => {
+    if (isTrustedLocalUrl(url)) return;
+    event.preventDefault();
+    void openExternal(url);
+  });
+}
+
 async function createWindow() {
   localServer = await startServer({
     port: 0,
@@ -190,39 +275,16 @@ async function createWindow() {
       void openExternal(url);
       return { action: "deny" };
     }
-    return {
-      action: "allow",
-      overrideBrowserWindowOptions: {
-        title: "STRYKER — DLSS",
-        width: 1060,
-        height: 880,
-        minWidth: 720,
-        minHeight: 600,
-        autoHideMenuBar: true,
-        backgroundColor: "#050405",
-        icon: path.join(app.getAppPath(), "dist", "stryker.ico"),
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-          sandbox: true,
-          webSecurity: true,
-          devTools: !app.isPackaged,
-        },
-      },
-    };
+    return { action: "allow", overrideBrowserWindowOptions: dlssWindowOptions() };
   });
 
-  // La fenêtre enfant hérite des mêmes garde-fous de navigation.
-  mainWindow.webContents.on("did-create-window", (childWindow) => {
-    childWindow.webContents.setWindowOpenHandler(({ url }) => {
-      void openExternal(url);
-      return { action: "deny" };
-    });
-    childWindow.webContents.on("will-navigate", (event, url) => {
-      if (isTrustedLocalUrl(url)) return;
-      event.preventDefault();
-      void openExternal(url);
-    });
+  // La fenêtre enfant hérite des mêmes garde-fous, et devient celle que F10
+  // ramènera au premier plan au lieu d'en ouvrir une seconde.
+  mainWindow.webContents.on("did-create-window", (childWindow, { url }) => {
+    guardWindowNavigation(childWindow);
+    if (!url.includes("mode=dlss")) return;
+    dlssWindow = childWindow;
+    childWindow.on("closed", () => { if (dlssWindow === childWindow) dlssWindow = null; });
   });
 
   mainWindow.webContents.on("will-navigate", (event, url) => {
@@ -230,6 +292,9 @@ async function createWindow() {
     event.preventDefault();
     void openExternal(url);
   });
+
+  gameHotkeyTimer = setInterval(refreshGameHotkey, 2000);
+  refreshGameHotkey();
 
   mainWindow.once("ready-to-show", () => mainWindow?.show());
   mainWindow.on("closed", () => { mainWindow = null; });
@@ -269,6 +334,12 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => app.quit());
+
+app.on("will-quit", () => {
+  if (gameHotkeyTimer) clearInterval(gameHotkeyTimer);
+  gameHotkeyTimer = null;
+  globalShortcut.unregisterAll();
+});
 
 app.on("before-quit", (event) => {
   if (!localServer) return;

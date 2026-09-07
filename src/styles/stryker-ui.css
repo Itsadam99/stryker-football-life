@@ -125,6 +125,164 @@
     padding: 20px;
   }
 
+  /* --- Carte de mod ------------------------------------------------------
+     Un seul bloc : l'illustration se fond dans le corps au lieu d'être une
+     vignette posée dessus, et le filet vertical porte l'état d'installation.  */
+  .sk-mod {
+    background: var(--sk-block);
+    border: 1px solid var(--sk-line);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    transition: border-color 300ms var(--sk-ease), transform 300ms var(--sk-ease);
+  }
+
+  .sk-mod::before {
+    background: var(--sk-accent);
+    content: "";
+    inset: 0 auto 0 0;
+    opacity: 0;
+    position: absolute;
+    transition: opacity 300ms var(--sk-ease);
+    width: 3px;
+    z-index: 2;
+  }
+
+  .sk-mod:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: translateY(-2px);
+  }
+
+  .sk-mod:hover::before,
+  .sk-mod[data-installed="true"]::before {
+    opacity: 1;
+  }
+
+  .sk-mod[data-installed="true"]::before {
+    background: var(--sk-ok);
+  }
+
+  .sk-mod-cover {
+    aspect-ratio: 16 / 7;
+    background:
+      radial-gradient(circle at 78% 18%, rgba(130, 27, 110, 0.32), transparent 46%),
+      var(--sk-ink);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* L'image perd un peu de saturation au repos : le titre reste l'élément
+     le plus vif de la carte tant qu'on ne la survole pas. */
+  .sk-mod-cover img {
+    filter: saturate(0.82);
+    transition: filter 500ms var(--sk-ease), transform 700ms var(--sk-ease);
+  }
+
+  .sk-mod:hover .sk-mod-cover img {
+    filter: saturate(1);
+    transform: scale(1.04);
+  }
+
+  .sk-mod-cover::after {
+    background: linear-gradient(to top, var(--sk-block) 2%, rgba(0, 0, 0, 0) 58%);
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  .sk-mod-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 2px 18px 0;
+  }
+
+  .sk-mod-author {
+    color: var(--sk-accent-soft);
+    font-family: var(--sk-font-label);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .sk-mod-title {
+    font-size: 21px;
+    margin-top: 6px;
+  }
+
+  .sk-mod-desc {
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    color: var(--sk-muted);
+    display: -webkit-box;
+    flex: 1;
+    font-size: 12px;
+    line-height: 1.55;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+
+  /* Bande de méta : les valeurs se lisent en ligne, séparées par un filet. */
+  .sk-mod-meta {
+    align-items: stretch;
+    border-top: 1px solid var(--sk-line);
+    display: flex;
+    margin: 16px -18px 0;
+  }
+
+  .sk-mod-meta > * {
+    border-left: 1px solid var(--sk-line);
+    flex: 1;
+    min-width: 0;
+    padding: 10px 12px 11px;
+  }
+
+  .sk-mod-meta > *:first-child {
+    border-left: 0;
+    padding-left: 18px;
+  }
+
+  .sk-mod-meta dt {
+    color: var(--sk-ghost);
+    font-family: var(--sk-font-label);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .sk-mod-meta dd {
+    color: var(--sk-text);
+    font-family: var(--sk-font-label);
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sk-mod-actions {
+    border-top: 1px solid var(--sk-line);
+    display: flex;
+    gap: 1px;
+  }
+
+  /* Les boutons remplissent le pied de carte, séparés par un simple filet :
+     pas de marges flottantes qui décollent l'action du bloc. */
+  .sk-mod-actions > * {
+    border-radius: 0;
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+  }
+
   /* --- Cartes de métrique : filet d'accent qui monte au survol ----------- */
   .sk-metric {
     background: var(--sk-block);
