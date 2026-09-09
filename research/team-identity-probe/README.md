@@ -79,3 +79,22 @@ python research/team-identity-probe/career_results.py --decoded COPIE_DECODEE --
 `career_history.py` conserve des instantanés immuables : résultats, état facultatif des coachs et parent explicite. Les empreintes détectent un fichier altéré ; des branches distinctes peuvent repartir du même ancien état. L’identification automatique d’une carrière ou d’un retour arrière n’est pas supposée résolue par le nom BL00000003. Deux checkpoints d’observations, sans état de coach inventé, ont été conservés pour la base et sa copie d’essai.
 
 La suite comprend désormais **40 tests de carrière réussis**, dont le raccordement résultats/simulation, les saisons incomplètes, les points non standards, l’indisponibilité de résultats et la restauration des états. Les sauvegardes du jeu n’ont pas été modifiées lors de cette étape.
+# Runtime intégré — état du 9 septembre 2026
+
+Le codec, les opérations BAL, les coachs fictifs natifs, le moteur de carrière,
+le lecteur des rencontres programmées et la gestion sûre des sauvegardes sont
+maintenant dans `server/career/`. L’application propose l’atelier « Coachs et
+styles » pour appliquer et retirer les consignes. Les coachs automatiques ne
+sont pas activés ; leur moteur et le raccordement des décisions aux données
+natives sont testés séparément et en chaîne sur des données synthétiques.
+
+104 tests Node et 46 tests Python réussissent. Le test long simule 25 saisons ;
+il ne représente pas 25 saisons jouées dans FL. L’essai natif du coach fictif
+Alexis Valmont est installé dans l’emplacement 5, en attente de validation dans
+le jeu. Les 4 sauvegardes précédentes sont intactes. Voir les détails et les
+limites dans `docs/TEAM_IDENTITIES_AND_COACHES.md` et `season_observations.md`.
+
+L’archive de sources inclut désormais le runtime Node et ses licences ; aucun
+exécutable externe ni Python n’est requis par le code de carrière intégré à
+l’app. Les anciens outils Python/C restent utiles pour la vérification
+indépendante. Les sauvegardes et Coach.bin de l’essai restent privés.

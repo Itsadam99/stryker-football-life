@@ -12,10 +12,20 @@ def build_archive(output, revision):
     files = sorted(path for path in source.rglob('*') if path.is_file()
                    and '__pycache__' not in path.parts and path.suffix in ('.py', '.lua', '.mjs', '.md', '.json'))
     files.append(repository / 'docs' / 'TEAM_IDENTITIES_AND_COACHES.md')
+    files.extend(path for path in (repository / 'server' / 'career').rglob('*')
+                 if path.is_file() and path.suffix in ('.js', '.txt'))
+    for relative in ('src/components/CareerStudio.tsx', 'src/services/careerApi.ts',
+                     'test/career.test.js', 'test/career-api.test.js', 'test/bal-adapter.test.js',
+                     'test/coach-table.test.js', 'test/coaching.test.js', 'test/coaching-bridge.test.js',
+                     'test/schedule.test.js', 'test/helpers/career.js', 'test/cpk-reader.test.js',
+                     'test/fixtures/career-native-table.cpk'):
+        files.append(repository / relative)
     payloads = {path.relative_to(repository).as_posix(): path.read_bytes() for path in files}
     inventory = {'revision': revision, 'type': 'development sources, not a public installable gameplay mod',
         'files': {name: hashlib.sha256(data).hexdigest() for name, data in payloads.items()},
-        'externalRequirements': ['STRYKER repository for diagnostic deployment tests', 'PES 2021 pesXdecrypter for save encryption',
+        'externalRequirements': ['STRYKER repository for app integration and diagnostic deployment tests',
+                                 'Node.js >=20 for native runtime (no Python or external executable needed by app)',
+                                 'PES 2021 pesXdecrypter only for independent legacy research verification',
                                  'local game data supplied separately; no user saves or game tables included']}
     payloads['SOURCE-INVENTORY.json'] = json.dumps(inventory, ensure_ascii=False, indent=2).encode('utf-8')
     output = Path(output)

@@ -13,6 +13,7 @@ import {
 } from "../types";
 import { StrykerLogo } from "./StrykerLogo";
 import { ModCover } from "./ModCover";
+import { CareerStudio } from "./CareerStudio";
 import { downloadsFor, formatDownloadCount, useDownloadCounts } from "../services/downloadCounts";
 
 const SPOTLIGHT_MOD_ID = "stryker-dlss5-controller";
@@ -21,7 +22,7 @@ import { DLSS_COPY } from "../services/dlssCopy";
 import { LOG_COPY, logLineLevel } from "../services/logCopy";
 import { installableCatalog, installedCatalogMod, searchCatalog, catalogInstallPlan } from "../services/installableCatalog";
 
-type DesktopPage = "dashboard" | "mods" | "catalog" | "profiles" | "conflicts" | "logs" | "settings";
+type DesktopPage = "dashboard" | "mods" | "catalog" | "careers" | "profiles" | "conflicts" | "logs" | "settings";
 
 const EMPTY_CONFIG: GameConfig = {
   gamePath: "",
@@ -117,6 +118,7 @@ export function DesktopApp() {
     { id: "dashboard", label: t("desktop.dashboard"), icon: CircleGauge },
     { id: "mods", label: t("desktop.mods"), icon: Layers3 },
     { id: "catalog", label: t("desktop.discover"), icon: Library },
+    { id: "careers", label: "Coachs et styles", icon: UserRoundCog },
     { id: "profiles", label: t("desktop.profiles"), icon: UserRoundCog },
     { id: "conflicts", label: t("desktop.conflicts"), icon: Wrench },
     { id: "logs", label: logCopy.nav, icon: ScrollText },
@@ -898,6 +900,7 @@ export function DesktopApp() {
           )}
 
           {/* ----------------------------------------------------------- CATALOG */}
+          {page === "careers" && <CareerStudio />}
           {page === "catalog" && (
             <div className="space-y-5">
               <div className="flex flex-col justify-between gap-3 rounded-[var(--sk-r-lg)] border border-emerald-400/25 bg-emerald-500/[0.08] p-4 sm:flex-row sm:items-center">

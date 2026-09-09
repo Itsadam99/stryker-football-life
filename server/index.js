@@ -17,6 +17,7 @@ import { RemoteInstaller } from "./remote-installer.js";
 import { listLogs, readLog } from "./log-reader.js";
 import { SiderManager, fileHash } from "./sider-manager.js";
 import { StateStore } from "./storage.js";
+import { CareerManager } from "./career/manager.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -221,7 +222,8 @@ export function createRuntime({
     onActivity: (type, message, details) => store.addActivity(type, message, details),
     launcherScriptPath: pickerScript("launchExecutable.ps1"),
   });
-  return { rootDir, dataRoot, dataDirectories, store, siderManager, modEngine, dlssManager, repositoryManager, remoteInstaller, processManager, updateManager, sessionToken, nativeDialogs, publicHub, adminToken };
+  const careerManager = new CareerManager({ dataRoot });
+  return { rootDir, dataRoot, dataDirectories, store, siderManager, modEngine, dlssManager, repositoryManager, remoteInstaller, processManager, careerManager, updateManager, sessionToken, nativeDialogs, publicHub, adminToken };
 }
 
 export function createApp(runtime = createRuntime()) {
@@ -708,8 +710,27 @@ export function createApp(runtime = createRuntime()) {
     } catch (error) { next(error); }
   });
   app.get("/api/launcher/status", (req, res) => res.json(processManager.status()));
+  app.use("/api/careers", (req, res, next) => publicHub ? res.sendStatus(404) : next());
+  app.get("/api/careers", (req, res, next) => {
+    try { res.json(runtime.careerManager.list()); } catch (error) { next(error); }
+  });
+  app.get("/api/careers/:id", (req, res, next) => {
+    try { res.json(runtime.careerManager.inspect(req.params.id)); } catch (error) { next(error); }
+  });
+  app.post("/api/careers/:id/:action", async (req, res, next) => {
+    try {
+      const settings = store.snapshot().settings;
+      if (!settings.isLinked || !/Football Life 2026/i.test(settings.detectedVersion)) throw new Error("Liez Football Life 2026 avant d’appliquer des consignes à une carrière.");
+      const result = await runtime.careerManager.mutate(req.params.id, req.body.hash, req.params.action);
+      store.addActivity("career", result.message, { save: req.params.id, changedBytes: result.changedBytes });
+      res.json(result);
+    } catch (error) { next(error); }
+  });
   app.post("/api/launcher/launch", async (req, res, next) => {
-    try { res.json({ success: true, ...await processManager.launch(store.snapshot().settings) }); }
+    try {
+      if (runtime.careerManager.busy) throw new Error("Attendez la fin de la mise à jour de carrière avant de lancer Football Life.");
+      res.json({ success: true, ...await processManager.launch(store.snapshot().settings) });
+    }
     catch (error) { next(error); }
   });
   app.post("/api/launcher/stop", async (req, res, next) => {

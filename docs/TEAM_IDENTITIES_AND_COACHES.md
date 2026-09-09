@@ -1,6 +1,6 @@
 # Identités d’équipes et entraîneurs — conception et faisabilité
 
-Statut : recherche et diagnostic, pas encore un mod de gameplay fonctionnel.
+Statut : atelier intégré pour les styles manuels, moteur de coachs testé hors jeu et essais natifs. L’activation automatique et la publication restent en développement. Voir l’état détaillé du 9 septembre en fin de document.
 Périmètre demandé : Football Life 2026, puis adaptations distinctes PES 2021 et FL2027.
 
 ## Comportement attendu
@@ -165,3 +165,69 @@ Les deux premières copies contiennent 843 lignes sur 78 compétitions ; la troi
 `career_history.py` stocke des checkpoints immuables contenant les observations et, lorsqu’il existe, l’état du moteur. La restauration d’un ancien état, les branches, l’idempotence et la détection d’altération sont testées. L’identité de carrière et le parent sont explicites ; la découverte automatique des branches depuis les fichiers du jeu reste à développer. Deux checkpoints d’observations ont été créés pour la copie de référence et l’essai qui en dérive, sans inventer un état de coach pour les données réelles.
 
 **40 tests de carrière passent.** Le code et les observations restent sur la branche du mod ; les rapports détaillés et checkpoints privés restent dans les artifacts. Travail restant : calendrier et phases des compétitions, biographies et identités natives des entrants, connexion persistante au chargement/enregistrement, adaptation à la ML et validation du comportement en match. La sauvegarde 4 précédemment validée est inchangée.
+# État actuel — 9 septembre 2026
+
+La première version vise **Vers une légende FL26 26.2.0.3**. L’utilisateur a
+reporté la Ligue des Masters ; elle ne doit plus bloquer cette version ni être
+annoncée compatible sans essai.
+
+La branche du mod contient maintenant un atelier « Coachs et styles » dans
+l’application. Il détecte les carrières, permet de rechercher les équipes et
+entraîneurs, affiche la progression de 14 championnats à partir de leurs
+rencontres programmées, applique les consignes et les retire avec sauvegarde
+de sécurité. Les deux profils dédiés restent Barça/Flick et Atlético/Simeone ;
+les autres équipes conservent leur base native avec correction des relances
+longues orientées possession. Ce n’est pas une analyse réelle distincte de
+730 clubs. Les instructions n’imposent pas une statistique de possession.
+
+Le codec Node `server/career/save-codec.js` reproduit les six blocs et le fichier
+chiffré de l’implémentation C de pesXdecrypter. Un vecteur entièrement synthétique
+est chiffré indépendamment par cet outil : SHA256
+`241b38da5fad6670b06a1d709bfe5e314a3b02c1e6e7e1e5858b8acced7bafde`.
+Les avis de licence sont inclus dans l’application. Les archives de mods
+continuent de refuser les exécutables ; le codec est du code approuvé de l’app.
+
+L’application n’écrit que jeu et Sider fermés, avec contrôle du fichier juste
+avant remplacement atomique, copie vérifiée et journal de reprise après
+interruption. La désinstallation conserve les résultats joués depuis
+l’installation. Les formations sont restaurées par blocs cohérents et les
+consignes modifiées ensuite par le jeu sont conservées. La lignée ne peut pas
+encore distinguer avec certitude deux nouvelles carrières portant le même nom
+de joueur, avec la même table d’équipes et une progression compatible : aucune
+écriture automatique au lancement n’est donc activée.
+
+`coaching.js` porte le moteur de contrats, performances, retraites et entrants
+fictifs dans Node. Les tests font vivre 749 clubs et 980 entraîneurs initiaux sur
+25 saisons **synthétiques**. Les dates de naissance connues doivent être sourcées.
+Pour un coach réel d’âge inconnu, le moteur accepte une date de retraite
+explicitement choisie par une politique du mod, sans inventer d’âge ni de date
+de naissance. Le scénario long teste un horizon de 8 à 14 années de carrière ;
+ce n’est pas une biographie ni une prédiction sur la personne réelle.
+
+`coaching-bridge.js` relie des résultats natifs et des calendriers complets à un
+événement annuel explicitement identifié, puis traduit les décisions en
+références de coach et en quatre plans tactiques. Le test de chaîne complète
+inclut la création des identités natives fictives, les permutations de coachs
+et le chiffrement final. Le calendrier annuel et la lignée restent des entrées
+explicites : le lecteur de journées ne prétend pas encore détecter le passage
+global à la saison suivante. Voir `research/team-identity-probe/season_observations.md`.
+
+Un nouvel essai privé est **installé dans l’emplacement 5**, titre
+« STRYKER TEST - Nouveau coach », à partir de la copie du 18 novembre 2025.
+Paris FC y reçoit **Alexis Valmont**, identité fictive 2000000 ajoutée à une copie
+locale de Coach.bin, et un **4-2-3-1** principal. Les 980 enregistrements d’origine
+sont conservés octet pour octet ; les quatre sauvegardes existantes sont
+inchangées. L’ajout LiveCPK est hors du bloc géré par STRYKER avec copie de
+sécurité du sider.ini. Le chargement dans le jeu reste à confirmer par
+l’utilisateur. L’essai et sa table de jeu sont privés, exclus du dépôt et des
+archives de sources.
+
+**Encore nécessaire avant activation automatique et catalogue public :**
+validation de l’identité fictive dans le jeu ; comparaison d’une carrière à la
+fin d’un championnat puis après génération de la saison suivante ; initialisation
+et persistance des véritables états de coachs dans l’application ; gestion des
+autres phases de championnat et des conflits de base ; validation du comportement
+en match. L’atelier expose donc honnêtement l’application manuelle des styles,
+avec les coachs automatiques désactivés. Aucune version finale n’a été publiée.
+
+---
