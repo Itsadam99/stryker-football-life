@@ -4,6 +4,7 @@ import type { CatalogMod } from "../types";
 import { useI18n } from "../i18n";
 import { SITE_COPY } from "../services/siteCopy";
 import { hasCover, ModCover } from "./ModCover";
+import { downloadsFor, formatDownloadCount, useDownloadCounts } from "../services/downloadCounts";
 
 interface AllModsPageProps {
   mods: CatalogMod[];
@@ -20,6 +21,7 @@ export const AllModsPage: React.FC<AllModsPageProps> = ({ mods, onBackToHome, on
   const copy = SITE_COPY[language];
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("all");
+  const downloadCounts = useDownloadCounts();
   const categoryLabels: Record<(typeof CATEGORIES)[number], string> = {
     all: t("catalog.all"), gameplay: "Gameplay", turf: t("catalog.stadiums"), menu: t("catalog.menus"),
     audio: "Audio", kit: t("catalog.kits"), face: t("catalog.faces"), scoreboard: t("catalog.scoreboards"), other: t("catalog.other"),
@@ -66,6 +68,11 @@ export const AllModsPage: React.FC<AllModsPageProps> = ({ mods, onBackToHome, on
                   <h2 className="mt-3 text-2xl font-black uppercase leading-[0.92] tracking-[-0.045em]">{mod.title}</h2>
                   <p className="mt-4 line-clamp-3 text-xs leading-6 text-white/45">{mod.shortDesc}</p>
                   <div className="mt-auto flex flex-wrap gap-1.5 pt-6">{mod.compatibility.slice(0, 3).map((value) => <span key={value} className="rounded-full border border-white/10 px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-white/38">{value}</span>)}</div>
+                  {(() => {
+                    const downloads = downloadsFor(mod, downloadCounts);
+                    if (downloads === null) return null;
+                    return <p className="mt-4 text-[9px] font-black uppercase tracking-[0.14em] text-white/32">{formatDownloadCount(downloads, language)} {downloads === 1 ? t("desktop.downloadsOne") : t("desktop.downloads")}</p>;
+                  })()}
                 </div>
               </button>
               <div className="mx-6 flex items-center justify-between gap-3 border-t border-white/10 py-5">

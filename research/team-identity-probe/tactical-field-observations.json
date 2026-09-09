@@ -1,0 +1,113 @@
+{
+  "status": "experimental-observation-not-a-general-purpose-patcher",
+  "gameFileVersion": "26.2.0.3",
+  "format": "decrypted EDIT00000000 data.dat",
+  "experiment": {
+    "teamId": 4211,
+    "teamName": "Paris FC",
+    "userConfirmedNewValue": "short_pass",
+    "beforeBytes": 10995800,
+    "afterBytes": 10995800,
+    "changedByteCount": 33,
+    "otherChangedRegion": {
+      "offset": 48,
+      "length": 32,
+      "meaning": "unknown header data; not classified as a tactical setting"
+    }
+  },
+  "observedField": {
+    "name": "primary_build_up",
+    "byteWidth": 1,
+    "relativeOffsetWithinTeamTacticsRecord": 104,
+    "recordSize": 628,
+    "recordTeamIdOffset": 0,
+    "recordTeamIdType": "uint32-little-endian",
+    "values": { "0": "long_pass", "1": "short_pass" },
+    "evidenceRecordStart": 10878364,
+    "evidenceAbsoluteOffset": 10878468,
+    "before": 0,
+    "after": 1,
+    "validationScope": "one controlled in-game edit of the primary tactic for Paris FC",
+    "notValidated": ["other tactic presets individually", "Tactics.bin bit layout", "ML save offsets", "live match memory", "long-pass frequency during play"]
+  },
+  "initialCareerCandidates": {
+    "pattern": "99 formation bytes following the EDIT record team ID",
+    "occurrenceOffsets": [123840, 1303944, 1304264],
+    "meaning": "historical initial observation; superseded by the table mapping below",
+    "writesPerformed": false
+  },
+  "careerTableObservation": {
+    "format": "FL26 BAL decoded data.dat; observed in two snapshots of the same career",
+    "headerSize": 84,
+    "slots": 750,
+    "teamRecordSize": 1680,
+    "teamNameOffset": 0,
+    "teamPlanOffset": 1116,
+    "teamSlotReferenceOffset": 648,
+    "teamCoachReferenceOffset": 652,
+    "teamCoachReferenceMatches": "730 of 730 named teams in the observed BAL snapshot",
+    "coachTableOffset": 1260084,
+    "coachRecordSize": 600,
+    "coachIdOffset": 0,
+    "coachNameOffset": 4,
+    "coachPlansOffset": 60,
+    "coachPlanCount": 3,
+    "planSize": 160,
+    "buildUpOffsetWithinPlan": 100,
+    "parisFcSlot": 73,
+    "parisFcCoachId": 101358,
+    "parisFcBuildUpOffsets": [123940, 1304044, 1304204, 1304364],
+    "evidence": "all three Paris FC coach plans exactly match the corresponding EDIT baseline plans; team plan also matches its first EDIT plan",
+    "trial": {
+      "title": "STRYKER TEST - Paris FC",
+      "originalSavesModified": false,
+      "separateSlot": "BL00000002",
+      "dataBytesChanged": 4,
+      "displayTitleModified": true,
+      "allSixDecodedBlocksRoundTripExact": true,
+      "inGameLoadValidated": true,
+      "displayedShortPassValidated": true,
+      "userConfirmation": "save 3 displays short passes; original save 1 still displays long passes",
+      "matchBehaviourValidated": false
+    },
+    "notValidated": ["other careers and game versions", "ML layout", "which plan is selected by the live engine", "runtime application without reloading"]
+  },
+  "extendedTrial": {
+    "title": "STRYKER TEST - Coach et styles",
+    "slot": "BL00000003",
+    "teamsProcessed": 730,
+    "teamsSkipped": 0,
+    "changedDataBytes": 1189,
+    "forcedTestAppointment": {"team": "Paris FC", "oldCoach": 101358, "newCoach": 18, "name": "Laurent Blanc"},
+    "allSixDecodedBlocksRoundTripExact": true,
+    "inGameLoadValidated": true,
+    "userConfirmedCoachAndMainFormation": "Laurent Blanc and 4-3-3 are both displayed in slot 4",
+    "revision2": {"changedDataBytes": 1200, "installed": false, "change": "4-2-3-1 uses LM/RM roles instead of wing forwards; main Paris FC 4-3-3 unchanged"},
+    "automaticSeasonSimulationEnabled": false
+  },
+  "standingsObservation": {
+    "teamRecordRelativeOffset": 744,
+    "recordCountPerTeam": 15,
+    "recordSize": 20,
+    "fields": {"competitionId": "uint16 LE at 0", "points": "uint8 at 2", "matches": "uint8 at 3", "wins": "uint8 at 4", "draws": "uint8 at 5", "losses": "uint8 at 6"},
+    "unclassifiedFields": ["byte 7", "uint32 LE at 16"],
+    "candidateGoalFields": {"for": "uint32 LE at 8", "against": "uint32 LE at 12"},
+    "emptyCompetitionId": 65535,
+    "userConfirmedParisFc": {"competitionId": 20, "matches": 6, "wins": 2, "draws": 2, "losses": 2, "points": 8},
+    "correction": "Initial user count of 8 matches was corrected to 6 before interpreting the bytes.",
+    "snapshots": [
+      {"date": "2025-09-02", "records": 843, "competitions": 78, "teamsWithoutRecords": 379, "nonstandardCompetitions": [], "parisFc": {"matches": 2, "wins": 0, "draws": 0, "losses": 2, "points": 0}},
+      {"date": "2025-10-24", "records": 843, "competitions": 78, "teamsWithoutRecords": 379, "nonstandardCompetitions": [], "parisFc": {"matches": 6, "wins": 2, "draws": 2, "losses": 2, "points": 8}},
+      {"date": "2026-02-21", "records": 1403, "competitions": 128, "teamsWithoutRecords": 194, "nonstandardCompetitions": [148, 175], "parisFc": {"matches": 23, "wins": 9, "draws": 3, "losses": 11, "points": 30}}
+    ],
+    "validation": "All competition win/loss and candidate goal totals balance in all three snapshots; phases 148 and 175 have nonstandard points and are excluded from standard performance evaluation.",
+    "notValidated": ["meaning of all competition IDs", "actual season-completion schedules", "automatic save lineage", "native ML layout"]
+  },
+  "calendarObservation": {
+    "offsets": [11322908, 11516880],
+    "encoding": "uint16 little-endian year, uint8 month, uint8 day",
+    "threeMatchingSnapshotDates": ["2025-09-02", "2025-10-24", "2026-02-21"],
+    "guard": "both binary copies and D/M/Y description must agree",
+    "seasonBoundaryDetectionValidated": false
+  }
+}

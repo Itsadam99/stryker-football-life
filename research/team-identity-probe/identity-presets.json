@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "status": "authored experimental gameplay profiles; not measured match behaviour",
+  "clubs": {
+    "FC Barcelona": {
+      "expected_coach": 102080,
+      "label": "Possession avec pressing haut",
+      "formations": ["4-2-3-1", "4-3-3", "4-3-3"],
+      "settings": {"attacking_style": 1, "build_up": 1, "attacking_area": 0, "positioning": 0, "defensive_style": 0, "containment_area": 1, "pressuring": 0, "support_range": 3, "defensive_line": 8, "compactness": 7}
+    },
+    "Atlético Madrid": {
+      "expected_coach": 52,
+      "label": "Bloc compact et transitions courtes",
+      "formations": ["3-5-2", "4-4-2", "3-4-2-1"],
+      "settings": {"attacking_style": 0, "build_up": 1, "attacking_area": 1, "positioning": 0, "defensive_style": 1, "containment_area": 1, "pressuring": 1, "support_range": 4, "defensive_line": 4, "compactness": 9}
+    }
+  },
+  "coach_trial": {
+    "team": "Paris FC", "expected_coach": 101358, "new_coach": 18,
+    "purpose": "Controlled appointment test using Laurent Blanc's existing native ID, free in the observed career. Not an automatic dismissal or a claim about a real appointment.",
+    "formations": ["4-3-3", "4-1-4-1", "4-2-3-1"],
+    "settings": {"attacking_style": 1, "build_up": 1, "attacking_area": 0, "positioning": 0, "defensive_style": 0, "containment_area": 1, "pressuring": 0, "support_range": 4, "defensive_line": 6, "compactness": 7}
+  }
+}

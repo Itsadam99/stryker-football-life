@@ -13,12 +13,16 @@ import {
 } from "../types";
 import { StrykerLogo } from "./StrykerLogo";
 import { ModCover } from "./ModCover";
+import { CareerStudio } from "./CareerStudio";
+import { downloadsFor, formatDownloadCount, useDownloadCounts } from "../services/downloadCounts";
+
+const SPOTLIGHT_MOD_ID = "stryker-dlss5-controller";
 import { Language, LanguageSwitcher, useI18n } from "../i18n";
 import { DLSS_COPY } from "../services/dlssCopy";
 import { LOG_COPY, logLineLevel } from "../services/logCopy";
 import { installableCatalog, installedCatalogMod, searchCatalog, catalogInstallPlan } from "../services/installableCatalog";
 
-type DesktopPage = "dashboard" | "mods" | "catalog" | "profiles" | "conflicts" | "logs" | "settings";
+type DesktopPage = "dashboard" | "mods" | "catalog" | "careers" | "profiles" | "conflicts" | "logs" | "settings";
 
 const EMPTY_CONFIG: GameConfig = {
   gamePath: "",
@@ -114,6 +118,7 @@ export function DesktopApp() {
     { id: "dashboard", label: t("desktop.dashboard"), icon: CircleGauge },
     { id: "mods", label: t("desktop.mods"), icon: Layers3 },
     { id: "catalog", label: t("desktop.discover"), icon: Library },
+    { id: "careers", label: "Coachs et styles", icon: UserRoundCog },
     { id: "profiles", label: t("desktop.profiles"), icon: UserRoundCog },
     { id: "conflicts", label: t("desktop.conflicts"), icon: Wrench },
     { id: "logs", label: logCopy.nav, icon: ScrollText },
@@ -204,10 +209,20 @@ export function DesktopApp() {
     return query ? lines.filter((line) => line.toLowerCase().includes(query)) : lines;
   }, [logContent, logSearch]);
   const availableCatalog = useMemo(
-    () => installableCatalog(catalogMods, VERIFIED_CATALOG_MODS).map((mod) => localizeCatalogMod(mod, language)),
+    () => installableCatalog(catalogMods, VERIFIED_CATALOG_MODS)
+      .map((mod) => localizeCatalogMod(mod, language))
+      // Même ordre que sur le site : le contrôleur DLSS ouvre le catalogue.
+      .sort((a, b) => Number(b.id === SPOTLIGHT_MOD_ID) - Number(a.id === SPOTLIGHT_MOD_ID)),
     [catalogMods, language],
   );
   const filteredCatalog = useMemo(() => searchCatalog(availableCatalog, catalogSearch), [availableCatalog, catalogSearch]);
+  // Compteurs réels des assets de Release : un paquet livré avec l'application
+  // n'en a pas, et sa carte n'affiche alors aucun chiffre.
+  const downloadCounts = useDownloadCounts();
+  const catalogDownloads = (mod: CatalogMod) => {
+    const value = downloadsFor(mod, downloadCounts);
+    return value === null ? null : formatDownloadCount(value, language);
+  };
 
   const announce = (message: string, type: "success" | "error" = "success") => {
     setNotice({ message, type });
@@ -885,6 +900,7 @@ export function DesktopApp() {
           )}
 
           {/* ----------------------------------------------------------- CATALOG */}
+          {page === "careers" && <CareerStudio />}
           {page === "catalog" && (
             <div className="space-y-5">
               <div className="flex flex-col justify-between gap-3 rounded-[var(--sk-r-lg)] border border-emerald-400/25 bg-emerald-500/[0.08] p-4 sm:flex-row sm:items-center">
@@ -909,7 +925,10 @@ export function DesktopApp() {
                       const installedMod = installedCatalogMod(mod, mods);
                       return (
                         <ModCard key={mod.id} mod={mod} installed={Boolean(installedMod)} pending={pendingId === mod.id}
-                          badge={t("desktop.hosted")} badgeTone="brand" installedLabel={t("desktop.installedState")} meta={mod.size}>
+                          installedLabel={t("desktop.installedState")}
+                          sizeLabel={t("desktop.size")}
+                          downloads={catalogDownloads(mod)}
+                          downloadsLabel={t("desktop.downloads")}>
                           {installedMod ? <>
                             <button onClick={() => runAction(() => api.toggleManagedMod(installedMod.id, !installedMod.enabled), installedMod.enabled ? t("desktop.disabled") : t("desktop.enabled"), { label: mod.title, itemId: mod.id })} disabled={busy} className="sk-btn sk-btn-ghost flex-1">
                               {installedMod.enabled ? t("desktop.disable") : t("desktop.enable")}
@@ -1339,35 +1358,51 @@ function Metric({ index, icon: Icon, label, value, detail, warning }: { index: s
   );
 }
 
-function ModCard({ mod, installed, pending, badge, badgeTone, installedLabel, meta, children }: {
+/**
+ * Carte du catalogue.
+ *
+ * Les méta sont réduites à ce qui aide vraiment à choisir : le poids, le
+ * nombre réel de téléchargements et l'état. La mention « hébergé par STRYKER »
+ * a disparu — toutes les cartes de cette page le sont.
+ */
+function ModCard({ mod, installed, pending, installedLabel, sizeLabel, downloads, downloadsLabel, children }: {
   mod: CatalogMod;
   installed: boolean;
   pending?: boolean;
-  badge: string;
-  badgeTone?: "ok" | "warn" | "brand";
   installedLabel: string;
-  meta?: string;
+  sizeLabel: string;
+  downloads: string | null;
+  downloadsLabel: string;
   children: React.ReactNode;
 }) {
   return (
-    <article className={`sk-panel group flex flex-col overflow-hidden ${installed ? "border-emerald-500/35" : ""}`}>
+    <article className="sk-mod" data-installed={installed ? "true" : undefined}>
       {pending && <ProgressBar value={null} />}
-      <div className="relative h-32 shrink-0 overflow-hidden border-b border-white/[0.07] bg-[radial-gradient(circle_at_75%_20%,rgba(130,27,110,.34),transparent_46%),var(--sk-ink)]">
+      <div className="sk-mod-cover">
         <ModCover
           mod={mod}
-          watermarkClassName="sk-watermark -right-8 -top-10 w-56 max-w-none opacity-[0.13] transition-transform duration-700 group-hover:scale-105"
-          coverClassName="transition-transform duration-700 group-hover:scale-105"
+          watermarkClassName="sk-watermark -right-8 -top-10 w-56 max-w-none opacity-[0.13]"
         />
-        <span className="sk-chip absolute left-3 top-3" data-tone={badgeTone}>{badge}</span>
-        {installed && <span className="sk-chip absolute right-3 top-3" data-tone="ok">{installedLabel}</span>}
+        {installed && <span className="sk-chip absolute right-3 top-3 z-[2]" data-tone="ok">{installedLabel}</span>}
       </div>
-      <div className="flex flex-1 flex-col p-4">
-        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[color:var(--sk-brand-glow)]">{mod.author}{mod.version ? ` · ${mod.version}` : ""}</p>
-        <h2 className="sk-display mt-2 text-base">{mod.title}</h2>
-        <p className="mt-2.5 line-clamp-3 flex-1 text-[11px] leading-relaxed text-[color:var(--sk-faint)]">{mod.shortDesc}</p>
-        {meta && <p className="mt-3 truncate font-mono text-[9px] text-[color:var(--sk-ghost)]">{meta}</p>}
-        <div className="mt-4 flex gap-2">{children}</div>
+      <div className="sk-mod-body">
+        <p className="sk-mod-author">{mod.author}{mod.version ? ` · ${mod.version}` : ""}</p>
+        <h2 className="sk-display sk-mod-title">{mod.title}</h2>
+        <p className="sk-mod-desc">{mod.shortDesc}</p>
+        <dl className="sk-mod-meta">
+          <div>
+            <dt>{sizeLabel}</dt>
+            <dd>{mod.size}</dd>
+          </div>
+          {downloads && (
+            <div>
+              <dt>{downloadsLabel}</dt>
+              <dd>{downloads}</dd>
+            </div>
+          )}
+        </dl>
       </div>
+      <div className="sk-mod-actions">{children}</div>
     </article>
   );
 }

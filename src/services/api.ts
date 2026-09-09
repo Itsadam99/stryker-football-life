@@ -16,6 +16,7 @@ import {
   CatalogMod,
   UpdateStatus,
 } from "../types";
+import type { CareerList, CareerPreview } from "./careerApi";
 
 const BASE_URL = "/api";
 let sessionTokenPromise: Promise<string> | null = null;
@@ -92,6 +93,9 @@ async function uploadWithProgress<T>(route: string, file: File, onProgress?: (pe
 }
 
 export const api = {
+  getCareers: () => request<CareerList>("/careers"),
+  inspectCareer: (id: string) => request<CareerPreview>(`/careers/${encodeURIComponent(id)}`),
+  changeCareer: (id: string, hash: string, action: "apply" | "remove") => request<{ success: boolean; message: string }>(`/careers/${encodeURIComponent(id)}/${action}`, { method: "POST", body: JSON.stringify({ hash }) }),
   getConfig: () => request<GameConfig>("/config"),
   saveConfig: (config: Pick<GameConfig, "autoStartSider" | "launchMode">) =>
     request<{ success: boolean; config: GameConfig }>("/config", { method: "POST", body: JSON.stringify(config) }),
