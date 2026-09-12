@@ -5,7 +5,8 @@ import path from 'node:path';
 import test from 'node:test';
 import { startServer } from '../server/index.js';
 import { CareerManager } from '../server/career/manager.js';
-import { careerFixture } from './helpers/career.js';
+import { careerFixture, addThreeTeamSchedule } from './helpers/career.js';
+import { encodeSave } from '../server/career/save-codec.js';
 
 test('career API requires a session and linked FL26, applies and removes through the full HTTP path', async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'stryker-career-api-'));
@@ -38,4 +39,34 @@ test('public Hub never exposes local careers or their contents', async t => {
   t.after(() => service.close());
   service.runtime.careerManager = { list: () => { throw new Error('Must not access local careers'); } };
   assert.equal((await fetch(`http://127.0.0.1:${service.port}/api/careers`)).status, 404);
+  assert.equal((await fetch(`http://127.0.0.1:${service.port}/api/careers/${'a'.repeat(64)}/coaching`, { method: 'POST' })).status === 200, false);
+});
+
+test('coach tracking requires a session, persists through HTTP and never writes the save', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'stryker-coaching-api-')), saves = path.join(root, 'saves'); fs.mkdirSync(saves);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const blocks = addThreeTeamSchedule(careerFixture().blocks);
+  blocks.description.fill(0, 128); blocks.description.write('Synthetic Player\nTest FC 0 / League\n24/10/2025', 128);
+  const encrypted = encodeSave(blocks), file = path.join(saves, 'BL00000000'); fs.writeFileSync(file, encrypted);
+  const dataRoot = path.join(root, 'app'), service = await startServer({ rootDir: root, dataRoot, port: 0 });
+  t.after(() => service.close());
+  service.runtime.careerManager = new CareerManager({ dataRoot, directories: [saves], gameClosed: async () => { throw new Error('Read-only tracking should work while the game runs.'); } });
+  const base = `http://127.0.0.1:${service.port}/api`, { token } = await (await fetch(`${base}/session`)).json();
+  const { saves: list } = await (await fetch(`${base}/careers`)).json(), route = `${base}/careers/${list[0].id}`;
+  const before = await (await fetch(route)).json(); assert.equal(before.coaching.tracked, false);
+  const track = (hash, session = true) => fetch(`${route}/coaching`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(session ? { 'X-STRYKER-Token': token } : {}) }, body: JSON.stringify({ hash }) });
+  assert.equal((await track(before.hash, false)).status, 403);
+  assert.equal((await track('a'.repeat(64))).status, 400);
+  assert.equal((await track(before.hash)).status, 200);
+  const after = await (await fetch(route)).json();
+  assert.equal(after.coaching.clubs, 3); assert.equal(after.coaching.fictionalCoaches, 24);
+  assert.equal(after.coaching.seasonPlan.ready, false);
+  assert.ok(fs.readFileSync(file).equals(encrypted));
+  service.runtime.careerManager = new CareerManager({ dataRoot, directories: [saves], gameClosed: async () => {} });
+  assert.equal((await (await fetch(route)).json()).coaching.checkpoint, after.coaching.checkpoint);
+  blocks.data[84 + 1116 + 100] = 1;
+  fs.writeFileSync(file, encodeSave(blocks));
+  service.runtime.careerManager.refreshTracked();
+  assert.notEqual((await (await fetch(route)).json()).coaching.checkpoint, after.coaching.checkpoint);
+  assert.ok(fs.readFileSync(file).equals(encodeSave(blocks)));
 });

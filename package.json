@@ -14,7 +14,7 @@
     "build": "tsc && vite build",
     "build:site": "tsc && node scripts/build-site.mjs",
     "check": "tsc --noEmit",
-    "test": "node --test --test-concurrency=1 test/api-security.test.js test/archive-installation.test.js test/bal-adapter.test.js test/career.test.js test/career-api.test.js test/coach-table.test.js test/coaching.test.js test/coaching-bridge.test.js test/cpk-reader.test.js test/schedule.test.js test/catalog.test.js test/dlss-manager.test.js test/game-detection.test.js test/mod-engine.test.js test/protocol-links.test.js test/repository.test.js test/sider-manager.test.js test/update-manager.test.js",
+    "test": "node --test --test-concurrency=1 test/api-security.test.js test/archive-installation.test.js test/bal-adapter.test.js test/career.test.js test/career-api.test.js test/coach-table.test.js test/coaching.test.js test/coaching-bridge.test.js test/cpk-reader.test.js test/schedule.test.js test/catalog.test.js test/dlss-manager.test.js test/game-detection.test.js test/mod-engine.test.js test/protocol-links.test.js test/repository.test.js test/sider-manager.test.js test/update-manager.test.js test/coaching-world.test.js test/coaching-store.test.js test/native-coaching-events.test.js test/coach-identities.test.js test/coaching-install-plan.test.js test/database-source.test.js",
     "preview": "vite preview",
     "predesktop": "npm run build",
     "desktop": "electron .",

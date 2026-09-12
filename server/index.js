@@ -717,6 +717,13 @@ export function createApp(runtime = createRuntime()) {
   app.get("/api/careers/:id", (req, res, next) => {
     try { res.json(runtime.careerManager.inspect(req.params.id)); } catch (error) { next(error); }
   });
+  app.post("/api/careers/:id/coaching", (req, res, next) => {
+    try {
+      const result = runtime.careerManager.trackCoaches(req.params.id, req.body?.hash);
+      store.addActivity("career", result.message, { save: req.params.id });
+      res.json(result);
+    } catch (error) { next(error); }
+  });
   app.post("/api/careers/:id/:action", async (req, res, next) => {
     try {
       const settings = store.snapshot().settings;
@@ -800,6 +807,12 @@ export async function startServer({ port = Number(process.env.STRYKER_API_PORT |
     instance.once("error", reject);
   });
   const address = server.address();
+  const careerTimer = runtime.publicHub ? null : setInterval(() => {
+    try { runtime.careerManager.refreshTracked((id, message) => runtime.store.addActivity("career", message, { save: id })); }
+    catch (error) { console.error(`[STRYKER] Suivi des carrières : ${error.message}`); }
+  }, 20_000);
+  careerTimer?.unref();
+  server.once("close", () => { if (careerTimer) clearInterval(careerTimer); });
   return {
     app,
     runtime,
