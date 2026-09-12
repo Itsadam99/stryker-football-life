@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { decodeSave, encodeSave } from './save-codec.js';
 import { readCareer, identityOperations, applyOperations, family, sha256, FIELDS } from './bal-adapter.js';
 import { leagueProgress } from './schedule.js';
+import { CoachingStore } from './coaching-store.js';
 
 const exec = promisify(execFile);
 const SAVE_NAME = /^BL000000(?:0[0-9]|1[0-9])$/;
@@ -144,6 +145,8 @@ export class CareerManager {
     this.gameClosed = gameClosed;
     this.busy = false;
     fs.mkdirSync(this.root, { recursive: true });
+    this.coaching = new CoachingStore(path.join(this.root, 'coaching'));
+    this.coachingErrors = new Map();
   }
 
   files() {
@@ -196,11 +199,46 @@ export class CareerManager {
     validateState(state, career, blocks);
     const operations = identityOperations(career);
     const preview = applyOperations(blocks, operations);
+    let coaching;
+    try { coaching = this.coaching.inspect(id, blocks); }
+    catch (error) { coaching = { tracked: true, error: error.message }; }
+    if (this.coachingErrors.has(id)) coaching.error = this.coachingErrors.get(id);
     return { id, hash: sha256(input), date: career.date, title: career.title, slot: item.slot, installed: Boolean(state?.installed),
       teamCount: career.teams.length, changedBytes: preview.changes.length, automaticCoaches: false,
+      coaching,
       leagues: leagueProgress(blocks, career),
       teams: career.teams.map((t, i) => ({ name: t.name, coach: t.coachName || 'Non renseigné', style: family(operations[i].plans[0].settings),
         results: t.results.map(({ competitionId, matches, points, wins, draws, losses }) => ({ competitionId, matches, points, wins, draws, losses })) })) };
+  }
+
+  trackCoaches(id, expectedHash) {
+    if (this.busy) throw new Error('Une modification de carrière est déjà en cours.');
+    if (!HASH.test(expectedHash || '')) throw new Error('Analyse récente de la sauvegarde obligatoire.');
+    this.busy = true;
+    try {
+      const item = this.resolve(id), input = readBounded(item.file);
+      if (sha256(input) !== expectedHash) throw new Error('La sauvegarde a changé depuis l’analyse. Actualisez.');
+      const result = this.coaching.track(id, decodeSave(input), expectedHash, () => {
+        if (this.resolve(id).file !== item.file || sha256(readBounded(item.file)) !== expectedHash) throw new Error('La sauvegarde a changé pendant la préparation du suivi.');
+      });
+      this.coachingErrors.delete(id);
+      return { success: true, coaching: result, message: 'Suivi des coachs enregistré. Il s’actualise tant que Striker reste ouvert. La sauvegarde du jeu reste intacte.' };
+    } finally { this.busy = false; }
+  }
+
+  refreshTracked(onError = () => {}) {
+    if (this.busy) return;
+    const ids = new Set(this.coaching.ids());
+    for (const item of this.files().filter(f => ids.has(f.id))) {
+      try {
+        const current = this.coaching.read(item.id), input = readBounded(item.file), hash = sha256(input);
+        if (current.checkpoint.saveHash !== hash) this.trackCoaches(item.id, hash);
+        else this.coachingErrors.delete(item.id);
+      } catch (error) {
+        if (this.coachingErrors.get(item.id) !== error.message) onError(item.id, error.message);
+        this.coachingErrors.set(item.id, error.message);
+      }
+    }
   }
 
   async mutate(id, expectedHash, action) {

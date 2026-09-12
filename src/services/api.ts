@@ -95,6 +95,7 @@ async function uploadWithProgress<T>(route: string, file: File, onProgress?: (pe
 export const api = {
   getCareers: () => request<CareerList>("/careers"),
   inspectCareer: (id: string) => request<CareerPreview>(`/careers/${encodeURIComponent(id)}`),
+  trackCareerCoaches: (id: string, hash: string) => request<{ success: boolean; message: string }>(`/careers/${encodeURIComponent(id)}/coaching`, { method: "POST", body: JSON.stringify({ hash }) }),
   changeCareer: (id: string, hash: string, action: "apply" | "remove") => request<{ success: boolean; message: string }>(`/careers/${encodeURIComponent(id)}/${action}`, { method: "POST", body: JSON.stringify({ hash }) }),
   getConfig: () => request<GameConfig>("/config"),
   saveConfig: (config: Pick<GameConfig, "autoStartSider" | "launchMode">) =>

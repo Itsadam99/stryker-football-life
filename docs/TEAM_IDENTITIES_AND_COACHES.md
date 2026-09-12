@@ -1,6 +1,6 @@
 # Identités d’équipes et entraîneurs — conception et faisabilité
 
-Statut : atelier intégré pour les styles manuels, moteur de coachs testé hors jeu et essais natifs. L’activation automatique et la publication restent en développement. Voir l’état détaillé du 9 septembre en fin de document.
+Statut : atelier intégré, suivi persistant des coachs et préparation des intersaisons à partir des calendriers natifs. L’écriture automatique dans le jeu et la publication du mod restent en développement. Voir l’état détaillé du 12 septembre en fin de document.
 Périmètre demandé : Football Life 2026, puis adaptations distinctes PES 2021 et FL2027.
 
 ## Comportement attendu
@@ -231,3 +231,84 @@ en match. L’atelier expose donc honnêtement l’application manuelle des styl
 avec les coachs automatiques désactivés. Aucune version finale n’a été publiée.
 
 ---
+
+## État intégré — 12 septembre 2026
+
+Le suivi des coachs est maintenant persistant dans l'atelier Striker. Il importe
+les clubs des calendriers natifs compatibles : 267 clubs et 14 championnats dans
+la copie réelle de novembre. Les autres équipes restent hors du marché des
+coachs, notamment les sélections et les phases non décodées. Chaque club reçoit
+un contrat de simulation de 1 à 3 ans à partir de l'initialisation, des objectifs
+explicites d'équilibrage et les préférences dérivées des consignes du jeu.
+Les contrats ne prétendent pas reproduire les contrats réels. Les formations
+importées sont classées parmi les six systèmes pris en charge, sans réécrire
+les compositions à l'initialisation. Le rythme non décodé reste neutre.
+
+Une réserve de 24 personnages fictifs est créée de façon reproductible, avec
+noms, dates de naissance et trois formations. Le moteur crée ensuite d'autres
+générations selon les besoins. Les biographies natives inconnues sont libellées
+« native », avec âge non renseigné et horizon de retraite explicite ; aucun
+nom de Coach.bin n'est automatiquement présenté comme une personne réelle.
+Les dates documentées actuellement importées concernent [Hansi Flick](https://www.fcbarcelona.com/en/football/first-team/staff/4030694/hansi-flick),
+[Diego Simeone](https://www.atleticodemadrid.com/noticias/un-heroe-del-doblete-para-el-banquillo-rojiblanco)
+et [Laurent Blanc](https://www.fff.fr/equipe-nationale/selectionneur/114-laurent-blanc/fiche.html).
+
+Les états, observations et propositions sont conservés dans des objets locaux
+immuables avec empreinte, reliés par des checkpoints. Le pointeur courant n'est
+remplacé qu'après une dernière vérification de la sauvegarde. Les contrats et
+noms restent identiques après redémarrage. Les sauvegardes enregistrées sont
+observées toutes les 20 secondes tant que Striker est ouvert ; ce suivi n'écrit
+que dans les données de l'application. Dates reculées, compteurs incohérents,
+coach remplacé ou nom réutilisé suspendent la mise à jour au lieu d'écraser
+l'historique. Le nom du joueur et la table d'équipes ne constituent toujours pas
+une preuve parfaite de lignée pour deux carrières différentes identiques.
+
+Une fin de championnat exige son calendrier complet et tous les matchs joués.
+Son bilan est conservé une seule fois. Une remise à zéro ultérieure des résultats,
+à date croissante et après une fin effectivement observée, ouvre le cycle
+suivant, même si les rencontres sont identiques. Un début de saison manqué de
+quelques matchs est toléré ; les grands sauts restent refusés. L'observation
+initiale n'est pas une fausse date de début de saison. Un championnat de référence
+fixe cadence les événements annuels du monde ; les 14 bilans doivent être
+collectés dans une période cohérente avant de préparer l'intersaison. Une erreur
+de préparation conserve les bilans déjà vérifiés.
+
+`coach-identities.js` attribue des identités natives distinctes entre carrières,
+préserve les numéros déjà occupés par d'autres mods et restaure les identités
+connues après un changement de base. Un numéro réutilisé avec un autre nom
+provoque un conflit explicite. `coaching-install-plan.js` prépare ensemble la
+nouvelle carrière, Coach.bin, le registre et l'état suivant ; il ne publie encore
+aucun de ces fichiers dans le jeu.
+
+Vérifications privées reproductibles : les copies réelles du 24 octobre et du
+18 novembre ont été suivies en conservant les mêmes contrats et personnages.
+Un contrôle hors jeu avec résultats de fin de saison **synthétiques** a préparé
+24 nominations pour 267 clubs / 14 championnats, ajouté 24 identités fictives,
+conservé tous les enregistrements de Coach.bin d'origine et vérifié les six blocs
+de la sauvegarde reconstruite. Ce contrôle ne constitue pas une saison jouée.
+Le script `verify_native_coaching_cycle.mjs` ne produit qu'un rapport local.
+
+L'interface affiche maintenant les contrats, les formations préférées, la réserve
+de coachs et les bilans préparés. L'application manuelle des styles reste
+réversible. La transaction d'installation conjointe, sa désinstallation, la
+réconciliation complète des promotions sortant des divisions prises en charge
+et le comportement en match restent à terminer avant publication du mod final.
+Le résultat du chargement du coach fictif dans l'emplacement 5 reste attendu ;
+les travaux indépendants de cet essai ont continué.
+
+Le lecteur local de Coach.bin respecte la première racine LiveCPK correspondante,
+puis l'ordre inverse de la liste native CPK prise en charge. Cette priorité est
+recoupée avec la [documentation Sider](https://mapote.com/doc/sider/sider7/readme.html)
+et les [indications de SmokePatch sur la liste](https://www.pessmokepatch.com/2018/11/dpfilelist.html).
+Une liste ambiguë, un fichier manquant ou une source modifiée pendant la lecture
+interrompt la préparation. Les redirections Lua à l'exécution ne sont pas
+évaluées. Le contrôle local retrouve les 981 coachs de la racine d'essai et les
+980 coachs de data_s25262b.cpk lorsque LiveCPK est désactivé dans une configuration
+privée de lecture, avec les empreintes attendues. Aucun fichier du jeu n'est modifié.
+
+Validation du lot : 131 tests Node de la suite complète, puis quatre tests isolés
+du lecteur de sources et deux contrôles répétés du plan d'installation réussis
+(135 tests distincts au total). La compilation TypeScript/Vite réussit. Les
+46 anciens tests Python restent une référence de l'étape précédente ; ils n'ont
+pas été relancés pour ces changements Node. Le suivi de l'emplacement 1 est
+initialisé dans les données isolées de l'aperçu local, au 18 novembre 2025.

@@ -14,6 +14,11 @@ def build_archive(output, revision):
     files.append(repository / 'docs' / 'TEAM_IDENTITIES_AND_COACHES.md')
     files.extend(path for path in (repository / 'server' / 'career').rglob('*')
                  if path.is_file() and path.suffix in ('.js', '.txt'))
+    files.extend((repository / 'test').glob('*coaching*.test.js'))
+    for name in ('coach-identities.test.js', 'database-source.test.js'):
+        candidate = repository / 'test' / name
+        if candidate.exists():
+            files.append(candidate)
     for relative in ('src/components/CareerStudio.tsx', 'src/services/careerApi.ts',
                      'test/career.test.js', 'test/career-api.test.js', 'test/bal-adapter.test.js',
                      'test/coach-table.test.js', 'test/coaching.test.js', 'test/coaching-bridge.test.js',

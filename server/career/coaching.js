@@ -45,7 +45,7 @@ function canonical(value) {
 }
 
 const hash = value => createHash('sha256').update(canonical(value)).digest('hex');
-const unknownAge = coach => coach.kind === 'real' && coach.birth_date === null;
+const unknownAge = coach => ['real', 'native'].includes(coach.kind) && coach.birth_date === null;
 
 function profile(value) {
   if (!plain(value) || Object.keys(value).length !== DIMENSIONS.length
@@ -60,7 +60,7 @@ export function validateState(state) {
   if (!plain(state.clubs) || !plain(state.coaches) || !Object.keys(state.clubs).length
     || !identifier(state.user_club) || !owns(state.clubs, state.user_club)) throw new Error('Player club must be explicitly identified.');
   for (const [identity, coach] of Object.entries(state.coaches)) {
-    if (!identifier(identity) || !plain(coach) || !['real', 'fictional'].includes(coach.kind)
+    if (!identifier(identity) || !plain(coach) || !['real', 'native', 'fictional'].includes(coach.kind)
       || typeof coach.name !== 'string' || !coach.name.trim() || /[\u0000-\u001f]/.test(coach.name)
       || typeof coach.retired !== 'boolean') throw new Error('Real and fictional coach identities must be explicit.');
     if (unknownAge(coach)) {
@@ -94,6 +94,13 @@ export function validateState(state) {
     if (!plain(last) || last.date !== state.date || last.engine !== ENGINE || !identifier(last.id)
       || !/^[a-f0-9]{64}$/.test(last.results_hash) || !/^[a-f0-9]{64}$/.test(last.event_hash)
       || !Array.isArray(last.events)) throw new Error('Invalid coaching checkpoint; restore a matching snapshot.');
+    if (last.type !== undefined && !['season_completed', 'native_season_completed'].includes(last.type)) {
+      throw new Error('Unknown coaching checkpoint event type.');
+    }
+    if (last.type === 'native_season_completed') validateNativeMetadata(last);
+    else if (['cycle', 'anchor_competition_id', 'observed_since'].some(key => owns(last, key))) {
+      throw new Error('Native cycle metadata requires a native coaching checkpoint.');
+    }
   }
   canonical(state);
   return true;
@@ -170,12 +177,35 @@ function newCoach(state, boundary, clubId) {
   return identity;
 }
 
+// Seed a small unemployed generation without advancing time or replacing anyone.
+// Imported database names may be fictional already; "native" does not assert a
+// real biography. Newly authored coaches always have explicit fictional origins.
+export function seedFictionalReserve(state, count = 24) {
+  validateState(state);
+  if (!Number.isInteger(count) || count < 0 || count > 200) throw new Error('Invalid fictional reserve size.');
+  const output = structuredClone(state), clubs = Object.keys(output.clubs).sort(compare);
+  for (let i = 0; i < count; i++) newCoach(output, output.date, clubs[i % clubs.length]);
+  validateState(output);
+  return output;
+}
+
+function validateNativeMetadata(event) {
+  if (!Number.isSafeInteger(event.cycle) || event.cycle < 0
+    || !Number.isSafeInteger(event.anchor_competition_id) || event.anchor_competition_id < 0
+    || event.anchor_competition_id >= 65535 || parseDate(event.observed_since) > parseDate(event.date)) {
+    throw new Error('Invalid native season cycle, anchor, or first observation date.');
+  }
+}
+
 function validateEvent(state, boundary, results, event) {
-  if (!plain(event) || event.type !== 'season_completed' || !identifier(event.id)
+  if (!plain(event) || !['season_completed', 'native_season_completed'].includes(event.type) || !identifier(event.id)
     || event.date !== boundary || typeof event.source !== 'string' || !event.source.trim()
     || !Array.isArray(event.leagues) || !event.leagues.length) throw new Error('An explicit verified season event and schedule source are required.');
-  const start = parseDate(event.season_start), target = parseDate(boundary);
-  if ((target - start) / DAY < 270 || (target - start) / DAY > 400) throw new Error('Invalid explicit season calendar.');
+  if (event.type === 'native_season_completed') validateNativeMetadata(event);
+  else {
+    const start = parseDate(event.season_start), target = parseDate(boundary);
+    if ((target - start) / DAY < 270 || (target - start) / DAY > 400) throw new Error('Invalid explicit season calendar.');
+  }
   if (!plain(results) || Object.keys(results).length !== Object.keys(state.clubs).length
     || Object.keys(state.clubs).some(id => !owns(results, id))) throw new Error('Every club needs recorded or explicitly unavailable results.');
   for (const outcome of Object.values(results)) {
@@ -207,6 +237,9 @@ function validateEvent(state, boundary, results, event) {
   for (const [clubId, outcome] of Object.entries(results)) {
     if (outcome.status !== 'unavailable' && !covered.has(clubId)) throw new Error('Recorded results lack a complete verified schedule.');
   }
+  if (event.type === 'native_season_completed' && !competitions.has(event.anchor_competition_id)) {
+    throw new Error('The native annual anchor must be one of the verified complete leagues.');
+  }
   // Membership order is not evidence of a different event; normalize before hashing.
   return { ...event, leagues: event.leagues.map(l => ({ ...l, clubs: [...l.clubs].sort(compare) }))
     .sort((a, b) => a.competition_id - b.competition_id) };
@@ -217,6 +250,11 @@ function validateEvent(state, boundary, results, event) {
  * season_start, source, leagues:[{competition_id, clubs, matches_per_club}]}.
  * Recorded results: {competition_id, matches, points}. The adapter must establish
  * actual season completion and all league members; the calendar alone proves neither.
+ * Native events instead use type:'native_season_completed', cycle,
+ * anchor_competition_id and observed_since. A persistent observer establishes
+ * the cycle from native schedule resets and completion; observed_since is only
+ * an observation date, never an invented start of season. The fixed anchor runs
+ * the entire coaching world once per cycle, not once for every finished league.
  */
 export function advanceSeason(state, boundary, results, { event } = {}) {
   validateState(state);
@@ -227,11 +265,23 @@ export function advanceSeason(state, boundary, results, { event } = {}) {
     if (state.last_event.results_hash !== resultsHash || state.last_event.event_hash !== eventHash) throw new Error('Conflicting replay; restore the matching career snapshot first.');
     return structuredClone(state);
   }
-  const start = parseDate(event.season_start);
-  const fullSeason = start.valueOf() === current.valueOf();
-  const partialFirst = !state.last_event && start < current && current < target;
-  if (target <= current || (!fullSeason && !partialFirst)
-    || (target - current) / DAY > 400 || event.id === state.last_event?.id) throw new Error('Advance one verified career season at a time.');
+  const elapsed = (target - current) / DAY;
+  if (event.type === 'native_season_completed') {
+    const last = state.last_event;
+    if (last && (last.type !== 'native_season_completed' || event.cycle !== last.cycle + 1
+      || event.anchor_competition_id !== last.anchor_competition_id)) {
+      throw new Error('Advance one consecutive native season cycle with the same annual anchor.');
+    }
+    if (elapsed <= 0 || elapsed > 550 || (last && elapsed < 180) || event.id === last?.id) {
+      throw new Error('Advance one plausible native career season at a time.');
+    }
+  } else {
+    const start = parseDate(event.season_start);
+    const fullSeason = start.valueOf() === current.valueOf();
+    const partialFirst = !state.last_event && start < current && current < target;
+    if (state.last_event?.type === 'native_season_completed' || target <= current || (!fullSeason && !partialFirst)
+      || elapsed > 400 || event.id === state.last_event?.id) throw new Error('Advance one verified career season at a time.');
+  }
   const output = structuredClone(state), events = [];
   for (const identity of Object.keys(output.coaches).sort(compare)) {
     const coach = output.coaches[identity];
@@ -291,7 +341,9 @@ export function advanceSeason(state, boundary, results, { event } = {}) {
     events.push({ type: 'appointed', club: clubId, coach: chosen });
   }
   Object.assign(output, { date: boundary, engine: ENGINE,
-    last_event: { id: event.id, date: boundary, engine: ENGINE, results_hash: resultsHash, event_hash: eventHash, events } });
+    last_event: { id: event.id, date: boundary, engine: ENGINE, results_hash: resultsHash, event_hash: eventHash, events,
+      ...(event.type === 'native_season_completed' ? { type: event.type, cycle: event.cycle,
+        anchor_competition_id: event.anchor_competition_id, observed_since: event.observed_since } : {}) } });
   validateState(output);
   return output;
 }

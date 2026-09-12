@@ -98,3 +98,18 @@ L’archive de sources inclut désormais le runtime Node et ses licences ; aucun
 exécutable externe ni Python n’est requis par le code de carrière intégré à
 l’app. Les anciens outils Python/C restent utiles pour la vérification
 indépendante. Les sauvegardes et Coach.bin de l’essai restent privés.
+
+## Suivi persistant — 12 septembre 2026
+
+L'atelier peut désormais créer un suivi local par carrière, conserver contrats
+et profils, ajouter une réserve de 24 coachs fictifs et collecter les fins de
+championnat sans inventer de calendrier annuel. Les checkpoints résistent aux
+redémarrages et refusent les retours arrière incohérents. Voir la section datée
+du 12 septembre dans `docs/TEAM_IDENTITIES_AND_COACHES.md` pour le périmètre et
+les limites d'activation.
+
+`verify_native_coaching_cycle.mjs SAVE RAW_COACH_TABLE REPORT_JSON` contrôle la
+chaîne entière sur une copie en mémoire : résultats finaux artificiels,
+nominations, identités natives, plans tactiques et chiffrement. Il écrit un
+rapport, jamais de sauvegarde de jeu. Les sources et tests de ce suivi sont
+inclus dans l'archive de recherche ; les données personnelles restent exclues.
