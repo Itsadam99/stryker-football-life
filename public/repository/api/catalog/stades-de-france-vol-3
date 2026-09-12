@@ -1,0 +1,29 @@
+{
+  "mod": {
+    "id": "stades-de-france-vol-3",
+    "title": "Stades de France — Vol. 3",
+    "author": "SmokePatch",
+    "version": "1.0.0",
+    "shortDesc": "Stades de Troyes, Nantes, Amiens, Strasbourg, Montpellier et Guingamp pour le serveur de stades de Football Life.",
+    "fullDesc": "Volume 3 sur 6 du pack de stades français SmokePatch. STRYKER installe les dossiers du serveur de stades dans content/stadiums et fusionne les lignes du volume avec la map d’équipes déjà en place : rien n’est écrasé et la désactivation rend la carte d’origine. Le pack complet pèse 10,2 Go : il est publié en 6 volumes indépendants pour rester sous la limite de 2 Gio par fichier de Release GitHub. Stades : Stade de l’Aube (Troyes), Stade de la Beaujoire (Nantes), Stade de la Licorne (Amiens), Stade de la Meinau (Strasbourg), Stade de la Mosson (Montpellier), Stade du Roudourou (Guingamp).",
+    "category": "turf",
+    "compatibility": [
+      "Football Life 2026",
+      "PES 2021",
+      "Sider 7",
+      "Stadium Server 1.60"
+    ],
+    "size": "1,46 Go",
+    "downloadUrl": "https://github.com/Itsadam99/stryker-football-life/releases/download/mods-2026.09/stades-de-france-vol-3.zip",
+    "installationType": "automatic",
+    "legalStatus": "verified_package",
+    "verificationDate": "2026-09-12",
+    "archiveHash": "7e16796210ec3ca0c5b49879aff772bb9f1b3120b5e90d7354445c3e5d1f6561",
+    "archiveSize": 1572125680,
+    "fileCount": 3572,
+    "status": "published",
+    "publishedAt": "2026-09-12T12:00:00.000Z",
+    "sourceUrl": "https://www.pessmokepatch.com/2025/10/spfl26.html",
+    "license": "Crédits : SmokePatch et les auteurs des stades SP Football Life. L’autorisation de redistribution doit être confirmée avant la mise en ligne de l’archive."
+  }
+}

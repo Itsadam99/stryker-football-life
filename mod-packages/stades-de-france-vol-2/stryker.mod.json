@@ -1,0 +1,11 @@
+{
+  "$schema": "../../docs/stryker.mod.schema.json",
+  "id": "stades-de-france-vol-2",
+  "name": "Stades de France — Vol. 2",
+  "version": "1.0.0",
+  "author": "SmokePatch",
+  "category": "turf",
+  "compatibility": ["Football Life 2026", "PES 2021", "Sider 7", "Stadium Server 1.60"],
+  "sourceUrl": "https://www.pessmokepatch.com/2025/10/spfl26.html",
+  "components": [{ "type": "sider", "root": "content", "target": "content" }]
+}

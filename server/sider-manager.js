@@ -81,6 +81,11 @@ function listRegularFiles(root) {
 }
 
 export function isKitMap(value) { return /^content\/(kits|kit-server)\/map\.txt$/i.test(value); }
+export function isStadiumTeamMap(value) { return /^content\/stadiums\/map_teams\.txt$/i.test(value); }
+// Maps where one numeric ID owns one entry: several packs may contribute their
+// own lines, so they are combined at deployment instead of being overwritten.
+export function isMergeableMap(value) { return isKitMap(value) || isStadiumTeamMap(value); }
+function mergeableMapLabel(value) { return isStadiumTeamMap(value) ? "map des stades" : "map Kitserver"; }
 
 function normalizeSiderDataTarget(value) {
   const normalized = String(value || "").replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/\/+$/, "");
@@ -568,7 +573,7 @@ export class SiderManager {
           const relativeSource = path.relative(sourceRoot, source).replace(/\\/g, "/");
           const relativeTarget = `${targetRoot}/${relativeSource}`;
           const key = relativeTarget.toLowerCase();
-          if (isKitMap(key) && desired.has(key)) {
+          if (isMergeableMap(key) && desired.has(key)) {
             desired.get(key).mergeSources.push({ source, modId });
             continue;
           }
@@ -619,14 +624,14 @@ export class SiderManager {
     const unchanged = new Set();
     try {
       for (const [key, item] of desired.entries()) {
-        if (!isKitMap(key)) continue;
+        if (!isMergeableMap(key)) continue;
         const previous = previousFiles[key];
         const baseline = previous?.originalBackup ? resolveOriginalBackup(previous.originalBackup)
           : !previous && fs.existsSync(item.destination) ? item.destination : null;
-        if (baseline && !fs.existsSync(baseline)) throw new Error("Sauvegarde de la map Kitserver manquante.");
+        if (baseline && !fs.existsSync(baseline)) throw new Error(`Sauvegarde de la ${mergeableMapLabel(key)} manquante.`);
         const sources = [...item.mergeSources, ...(baseline ? [{ source: baseline, modId: "Installation originale" }] : [])];
         const seen = new Set();
-        const lines = ["# STRYKER — map Kitserver fusionnée automatiquement"];
+        const lines = [`# STRYKER — ${mergeableMapLabel(key)} fusionnée automatiquement`];
         for (const sourceItem of sources) {
           lines.push("", "# " + inlineComment(sourceItem.modId));
           for (const line of fs.readFileSync(sourceItem.source, "utf8").split(/\r?\n/)) {
