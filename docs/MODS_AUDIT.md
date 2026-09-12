@@ -9,7 +9,7 @@
 - Analyse locale déterministe des archives sans manifeste : common/Asset, LiveCPK, modules Lua identifiables avec leurs fichiers auxiliaires, content et EDIT00000000.
 - Refus explicite des variantes ambiguës, manifestes invalides, CPK non pris en charge et exécutables. Aucun script fourni dans l’archive n’est exécuté pour deviner son installation.
 - Dépendances résolues par identifiant de paquet. Le correctif Pyro installe sa base depuis Découvrir et passe devant elle lors de sa première installation.
-- Détection des collisions étendue à content et aux Option Files. Les maps kits/map.txt et kit-server/map.txt sont fusionnées en conservant les équipes d’origine.
+- Détection des collisions étendue à content et aux Option Files. Les maps kits/map.txt, kit-server/map.txt et stadiums/map_teams.txt sont fusionnées en conservant les assignations d’origine : plusieurs paquets peuvent y ajouter leurs lignes sans que l’un écrase le fichier de l’autre.
 - Adaptation des chemins Lua vers les fichiers auxiliaires et les ressources LiveCPK du paquet isolé. Les archives et les sources en staging restent intactes.
 - Réapplication des corrections de déploiement aux installations existantes, une fois au démarrage. Un échec est journalisé et la migration sera retentée.
 - Installation d’un paquet déjà présent dans un autre profil : activation dans le profil courant, sans duplication des fichiers.
@@ -59,6 +59,16 @@ Signalé le 06/09/2026 : Football Life plante dès que l’overlay ReShade s’o
 Le paquet désactivé, le crash disparaît. Le suspect est `common/anime/Mbinfo/json/anim_infos.json` : l’auteur le livre à 534 Mo au lieu des 15 Mo d’origine, pour le même nombre d’entrées, en gonflant ses valeurs numériques avec 21,6 millions de suites de vingt-quatre 9 — des entiers de 38 chiffres.
 
 La fiche passe donc en `pending_review` et sort de Découvrir. Les neuf `common/match/constant/constant_*.bin` portent l’essentiel du réglage de gameplay ; une version sans la base d’animations reste à vérifier en jeu avant toute republication.
+
+## Stades de France (SmokePatch)
+
+Le pack de stades français du serveur SP Football Life pèse 10,2 Go pour 33 stades et 20 080 fichiers. Une Release GitHub n’accepte aucun fichier au-delà de 2 Gio : le pack est donc publié en six volumes indépendants, découpés dans l’ordre alphabétique et équilibrés entre 1,43 et 1,63 Go compressés, pour 20 083 fichiers installés au total.
+
+Sans assignation d’équipe, le serveur de stades ignore les dossiers installés : chaque volume livre donc ses propres lignes de `content/stadiums/map_teams.txt`. Une seule carte pour six paquets aurait désigné un gagnant et fait disparaître les cinq autres, alors le moteur fusionne désormais cette map comme celles de Kitserver : une ligne par identifiant d’équipe, priorité au mod le mieux classé, lignes d’origine conservées, fichier initial sauvegardé puis rendu intact à la désinstallation. La détection de collisions ignore ce fichier, comme pour les maps de maillots.
+
+Les trois `rename.bat` livrés par l’auteur dans Stade Geoffroy-Guichard ne sont pas redistribués : le moteur refuse les scripts, et les fichiers que ces commandes recopiaient sont déjà présents dans le dossier.
+
+Les volumes 1 et 5 ont été installés, désactivés, réactivés puis désinstallés dans l’installation FL2026 simulée : un composant de données Sider, empreintes et tailles conformes aux fiches, map de maillots et Option File d’origine restitués. Les six archives n’ont pas encore été téléversées dans la Release `mods-2026.09`, et l’autorisation de redistribution de SmokePatch reste à obtenir : la règle 1 de [MOD_STORAGE.md](MOD_STORAGE.md) l’exige avant toute mise en ligne.
 
 ## Paquets absents du catalogue installable
 

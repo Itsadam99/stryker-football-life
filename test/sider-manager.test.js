@@ -185,6 +185,48 @@ test("fusionne les maps Kitserver de plusieurs Kitpacks selon la priorité", (t)
   assert.equal(fs.readFileSync(destinationMap, "utf8"), originalMap);
 });
 
+test("fusionne la map des stades de plusieurs volumes puis rend celle d’origine", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-stadiummaps-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const data = ensureDataDirectories(path.join(root, "data"));
+  const siderPath = path.join(root, "game", "SiderAddons", "sider.ini");
+  fs.mkdirSync(path.dirname(siderPath), { recursive: true });
+  fs.writeFileSync(siderPath, "[sider]" + os.EOL);
+  const first = path.join(data.mods, "vol-1", "content", "stadiums");
+  const second = path.join(data.mods, "vol-2", "content", "stadiums");
+  fs.mkdirSync(first, { recursive: true });
+  fs.mkdirSync(second, { recursive: true });
+  fs.writeFileSync(path.join(first, "map_teams.txt"), ["113, 009, Stade Velodrome, Stade Velodrome", ""].join(os.EOL));
+  fs.writeFileSync(path.join(second, "map_teams.txt"), ["113, 009, Doublon, Doublon", "213, 009, Stade Pierre Mauroy, Stade Pierre Mauroy", ""].join(os.EOL));
+  const destinationMap = path.join(path.dirname(siderPath), "content", "stadiums", "map_teams.txt");
+  fs.mkdirSync(path.dirname(destinationMap), { recursive: true });
+  const originalMap = ["# carte du joueur", "103, 004, Anfield, Anfield", ""].join(os.EOL);
+  fs.writeFileSync(destinationMap, originalMap);
+  const state = {
+    settings: { siderPath },
+    mods: {
+      "vol-1": { id: "vol-1", name: "Volume 1", stagingPath: path.join(data.mods, "vol-1"), components: [{ type: "sider", root: "content", target: "content" }] },
+      "vol-2": { id: "vol-2", name: "Volume 2", stagingPath: path.join(data.mods, "vol-2"), components: [{ type: "sider", root: "content", target: "content" }] },
+    },
+  };
+  const manager = new SiderManager({ dataDirectories: data });
+  const profile = { id: "default", name: "Test", modOrder: ["vol-1", "vol-2"], enabledMods: ["vol-1", "vol-2"] };
+  manager.deploy(state, profile);
+  const merged = fs.readFileSync(destinationMap, "utf8");
+  assert.match(merged, /113, 009, Stade Velodrome/);
+  assert.doesNotMatch(merged, /Doublon/);
+  assert.match(merged, /213, 009, Stade Pierre Mauroy/);
+  assert.match(merged, /103, 004, Anfield/);
+  manager.deploy(state, { ...profile, enabledMods: ["vol-2"] });
+  const remaining = fs.readFileSync(destinationMap, "utf8");
+  assert.match(remaining, /Doublon/);
+  assert.doesNotMatch(remaining, /Velodrome/);
+  assert.match(remaining, /103, 004, Anfield/);
+  manager.deploy(state, { ...profile, enabledMods: [] });
+  assert.equal(fs.readFileSync(destinationMap, "utf8"), originalMap);
+});
+
+
 test("ne recopie pas les données Sider déjà déployées, mais répare celles qui ont bougé", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-redeploy-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

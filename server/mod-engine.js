@@ -2,7 +2,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { assertPathInside, sanitizeSegment } from "./paths.js";
-import { inferCategory, isKitMap } from "./sider-manager.js";
+import { inferCategory, isMergeableMap } from "./sider-manager.js";
 import { extractZipSafely } from "./zip-extractor.js";
 import { extractRarSafely } from "./rar-extractor.js";
 import { expandPackedPayload } from "./packed-payload.js";
@@ -462,8 +462,8 @@ export class ModEngine {
         for (const file of component.files || []) {
           const key = component.type === "sider" ? "content/" + file.toLowerCase()
             : component.type === "save" ? "save/" + file.toLowerCase() : file.toLowerCase();
-          // Kit maps are combined by team ID at deployment, not overwritten as a file.
-          if (isKitMap(key)) continue;
+          // Kit and stadium maps are combined by ID at deployment, not overwritten as a file.
+          if (isMergeableMap(key)) continue;
           const owners = fileOwners.get(key) || [];
           if (!owners.includes(modId)) owners.push(modId);
           fileOwners.set(key, owners);
